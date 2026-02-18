@@ -9,6 +9,8 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.17.1"
+    "@prisma/client": "^7.4.0",
+    "astro": "^5.17.1",
+    "prisma": "^7.4.0"
   }
 }

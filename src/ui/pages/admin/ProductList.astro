@@ -1,0 +1,176 @@
+---
+import MainLayout from "../../layouts/MainLayout.astro";
+import { formatPrice } from "@/lib/utils";
+
+interface Props {
+  products: any[];
+}
+
+const { products } = Astro.props;
+---
+
+<MainLayout title="Admin - Gestión de Productos">
+  <div class="max-w-[1280px] mx-auto px-6 py-12">
+    <!-- Header Section -->
+    <div
+      class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12"
+    >
+      <div class="space-y-2">
+        <p
+          class="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]"
+        >
+          Panel de Control
+        </p>
+        <h1 class="text-4xl font-black text-white uppercase tracking-tighter">
+          Archivo de Figuras
+        </h1>
+        <div class="w-12 h-1 bg-amber-500"></div>
+      </div>
+
+      <a
+        href="/admin/products/new"
+        class="inline-flex items-center justify-center bg-white text-black text-[11px] font-black uppercase tracking-widest px-8 py-4 hover:bg-amber-500 transition-colors duration-300"
+      >
+        Añadir Nueva Figura
+      </a>
+    </div>
+
+    <!-- Table Section -->
+    <div class="bg-zinc-950 border border-zinc-900 overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-black border-b border-zinc-900">
+          <tr>
+            <th
+              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest"
+              >Figura</th
+            >
+            <th
+              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest"
+              >Categoría</th
+            >
+            <th
+              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest"
+              >Precio</th
+            >
+            <th
+              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest"
+              >Estado</th
+            >
+            <th
+              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest"
+              >Fecha</th
+            >
+            <th
+              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest text-right"
+              >Acciones</th
+            >
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-900">
+          {
+            products.length === 0 ? (
+              <tr>
+                <td
+                  colspan="6"
+                  class="px-6 py-12 text-center text-zinc-500 text-xs uppercase tracking-widest italic"
+                >
+                  No hay figuras en el santuario todavía.
+                </td>
+              </tr>
+            ) : (
+              products.map((product) => (
+                <tr class="hover:bg-zinc-900/50 transition-colors group">
+                  <td class="px-6 py-5">
+                    <div class="flex items-center gap-4">
+                      <div class="w-12 h-12 bg-black border border-zinc-800 p-1 flex-shrink-0">
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          class="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <p class="text-white font-bold text-sm uppercase tracking-tight">
+                          {product.name}
+                        </p>
+                        <p class="text-zinc-600 text-[10px] tracking-widest">
+                          SLUG: {product.slug}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-zinc-400 text-xs font-bold uppercase">
+                      {product.category.name}
+                    </span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-white font-black text-sm">
+                      {formatPrice(product.price.toString())}
+                    </span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span
+                      class={`text-[9px] font-black uppercase px-2 py-1 tracking-tighter border ${
+                        product.status === "PUBLISHED"
+                          ? "text-green-500 border-green-500/30 bg-green-500/5"
+                          : product.status === "PRE_ORDER"
+                          ? "text-amber-500 border-amber-500/30 bg-amber-500/5"
+                          : "text-zinc-500 border-zinc-800 bg-zinc-900"
+                      }`}
+                    >
+                      {product.status}
+                    </span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-zinc-600 text-[10px] font-bold">
+                      {new Date(product.createdAt).toLocaleDateString("es-ES")}
+                    </span>
+                  </td>
+                  <td class="px-6 py-5 text-right">
+                    <div class="flex justify-end items-center gap-3">
+                      <a
+                        href={`/admin/products/${product.id}`}
+                        class="text-[10px] font-black text-white hover:text-amber-500 uppercase transition-colors"
+                      >
+                        Editar
+                      </a>
+                      <span class="text-zinc-800">|</span>
+                      <form
+                        action="/admin/products/actions"
+                        method="POST"
+                        onsubmit="return confirm('¿Archivar esta figura?')"
+                      >
+                        <input type="hidden" name="id" value={product.id} />
+                        <input type="hidden" name="_action" value="delete" />
+                        <button
+                          type="submit"
+                          class="text-[10px] font-black text-zinc-600 hover:text-red-500 uppercase transition-colors"
+                        >
+                          Archivar
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</MainLayout>
+
+<style>
+  /* Custom scrollbar for table container */
+  .overflow-x-auto::-webkit-scrollbar {
+    height: 4px;
+  }
+  .overflow-x-auto::-webkit-scrollbar-track {
+    background: #000;
+  }
+  .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #27272a;
+  }
+</style>

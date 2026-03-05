@@ -1,0 +1,35 @@
+---
+import MainLayout from "../../layouts/MainLayout.astro";
+---
+
+<MainLayout title="ACCOUNT | ORDERS">
+  <main class="min-h-screen bg-black container mx-auto px-4 py-20">
+    <h1 class="text-4xl font-black uppercase text-white mb-12">
+      Sacred Orders & Shipping History
+    </h1>
+    <div class="space-y-4">
+      {
+        Array.from({ length: 3 }).map((_, i) => (
+          <div class="p-6 border border-zinc-900 flex justify-between items-center group hover:border-amber-500 transition-all duration-300 transform group-hover:px-8">
+            <div class="space-y-2">
+              <span class="text-amber-500 font-black block text-xs tracking-widest uppercase mb-2">
+                Order #777-{i}
+              </span>
+              <h2 class="text-white font-bold text-lg uppercase tracking-tight">
+                Gemini Saga EX
+              </h2>
+            </div>
+            <div class="text-right">
+              <span class="text-white font-bold block mb-1 text-sm uppercase">
+                Pending
+              </span>
+              <span class="text-zinc-600 block text-xs uppercase tracking-widest">
+                Tracking: TAM-{8800 + i}
+              </span>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </main>
+</MainLayout>

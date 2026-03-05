@@ -1,0 +1,143 @@
+---
+/**
+ * FOOTER COMPONENT
+ * Functional: Structured site information and links.
+ * UI: Dark, minimal, uppercase headings, gold hover states.
+ */
+---
+
+<footer class="bg-black border-t border-zinc-900 py-24 mt-24">
+  <div
+    class="max-w-[1280px] mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16"
+  >
+    <!-- Section 1: Brand Statement -->
+    <div class="space-y-8">
+      <h3 class="text-white text-lg font-black uppercase tracking-[0.2em]">
+        SANCTUARY
+      </h3>
+      <p
+        class="text-zinc-500 text-xs font-medium leading-relaxed max-w-xs uppercase tracking-wider"
+      >
+        EL ARCHIVO DEFINITIVO PARA COLECCIONISTAS DE SAINT SEIYA. PRECISIÓN
+        MECÁNICA, ESTÉTICA PREMIUM Y LEGADO ETERNO.
+      </p>
+      <div class="flex gap-4">
+        {
+          ["TW", "IG", "FB", "YT"].map((social) => (
+            <a
+              href="#"
+              class="w-8 h-8 border border-zinc-800 flex items-center justify-center text-zinc-500 text-[10px] font-bold hover:border-amber-500 hover:text-white transition-all duration-300"
+            >
+              {social}
+            </a>
+          ))
+        }
+      </div>
+    </div>
+
+    <!-- Section 2: Explorar -->
+    <div class="space-y-6">
+      <h4
+        class="text-amber-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4"
+      >
+        EXPLORAR
+      </h4>
+      <ul class="flex flex-col gap-3">
+        {
+          [
+            "CATÁLOGO COMPLETO",
+            "MYTH CLOTH EX",
+            "SOUL OF GOLD",
+            "VINTAGE 80S",
+            "PRÓXIMOS LANZAMIENTOS",
+          ].map((link) => (
+            <li>
+              <a
+                href="#"
+                class="text-white text-[11px] font-bold uppercase tracking-widest hover:text-amber-500 transition-colors duration-200"
+              >
+                {link}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <!-- Section 3: Soporte -->
+    <div class="space-y-6">
+      <h4
+        class="text-amber-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4"
+      >
+        SOPORTE
+      </h4>
+      <ul class="flex flex-col gap-3">
+        {
+          [
+            "AYUDA Y CONTACTO",
+            "ESTADO DEL PEDIDO",
+            "GUÍA DE ENVÍOS",
+            "PRE-PEDIDOS",
+            "AUTENTICIDAD",
+          ].map((link) => (
+            <li>
+              <a
+                href="#"
+                class="text-white text-[11px] font-bold uppercase tracking-widest hover:text-amber-500 transition-colors duration-200"
+              >
+                {link}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <!-- Section 4: Legal -->
+    <div class="space-y-6">
+      <h4
+        class="text-amber-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4"
+      >
+        LEGAL
+      </h4>
+      <ul class="flex flex-col gap-3">
+        {
+          [
+            "TÉRMINOS Y CONDICIONES",
+            "POLÍTICA DE PRIVACIDAD",
+            "POLÍTICA DE COOKIES",
+            "RECLAMACIONES",
+          ].map((link) => (
+            <li>
+              <a
+                href="#"
+                class="text-white text-[11px] font-bold uppercase tracking-widest hover:text-amber-500 transition-colors duration-200"
+              >
+                {link}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+
+  <!-- Bottom Bar -->
+  <div
+    class="max-w-[1280px] mx-auto px-6 mt-24 pt-8 border-t border-zinc-900 flex flex-col md:flex-row justify-between items-center gap-4"
+  >
+    <p class="text-zinc-700 text-[9px] font-black uppercase tracking-[0.2em]">
+      © 2026 THE SANCTUARY | INSPIRADO POR EL COSMOS.
+    </p>
+    <div class="flex gap-8">
+      <span
+        class="text-zinc-800 text-[10px] font-black uppercase tracking-[0.3em]"
+        >TAMASHII NATIONS VIBE</span
+      >
+      <span
+        class="text-zinc-800 text-[10px] font-black uppercase tracking-[0.3em]"
+        >GLOBAL SHIPPING OK</span
+      >
+    </div>
+  </div>
+</footer>

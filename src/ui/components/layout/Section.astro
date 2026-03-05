@@ -1,0 +1,23 @@
+---
+/**
+ * SECTION COMPONENT
+ * Functional: Layout wrapper for logical segments.
+ * UI: Vertical spacing of 96px, optional dark gray bg, hard border breaks.
+ */
+interface Props {
+  variant?: "black" | "dark";
+  withBorder?: boolean;
+  className?: string;
+}
+
+const { variant = "black", withBorder = false, className = "" } = Astro.props;
+
+const bgClass = variant === "dark" ? "bg-[#1A1A1A]" : "bg-black";
+const borderClass = withBorder ? "border-t border-zinc-900" : "";
+---
+
+<section class={`${bgClass} ${borderClass} py-24 md:py-32 ${className}`}>
+  <div class="max-w-[1280px] mx-auto px-6">
+    <slot />
+  </div>
+</section>

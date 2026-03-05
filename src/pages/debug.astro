@@ -1,0 +1,7 @@
+---
+const user = Astro.locals.user;
+---
+
+<h1>Debug Session</h1>
+
+<pre>{JSON.stringify(user, null, 2)}</pre>

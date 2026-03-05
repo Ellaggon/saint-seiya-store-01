@@ -1,0 +1,101 @@
+---
+import TopNavigationBar from "../components/layout/TopNavigationBar.astro";
+import Footer from "../components/layout/Footer.astro";
+import "../styles/global.css";
+
+/**
+ * MAIN MASTER LAYOUT
+ * Structural foundation for all pages.
+ */
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="es" class="bg-black">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="description"
+      content="The Sanctuary - Premium Saint Seiya Collector Experience"
+    />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <!-- Preload fonts if possible -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <title>{title} | THE SANCTUARY</title>
+  </head>
+  <body
+    class="min-h-screen bg-black text-white selection:bg-amber-500 selection:text-black antialiased overflow-x-hidden pt-16 md:pt-20"
+  >
+    <TopNavigationBar />
+
+    <main id="main-content">
+      <slot />
+    </main>
+
+    <Footer />
+
+    <style is:global>
+      /* Spotlight Simulation */
+      .spotlight-hover {
+        position: relative;
+        overflow: hidden;
+      }
+      .spotlight-hover::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          circle at var(--x) var(--y),
+          rgba(212, 175, 55, 0.15) 0%,
+          transparent 50%
+        );
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+      }
+      .spotlight-hover:hover::after {
+        opacity: 1;
+      }
+
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #000;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #1a1a1a;
+        border: 1px solid #333;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #d4af37;
+      }
+    </style>
+
+    <script>
+      // Global spotlight effect
+      document.querySelectorAll(".spotlight-hover").forEach((el) => {
+        el.addEventListener("mousemove", (e: any) => {
+          const rect = el.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          (el as HTMLElement).style.setProperty("--x", `${x}px`);
+          (el as HTMLElement).style.setProperty("--y", `${y}px`);
+        });
+      });
+    </script>
+  </body>
+</html>

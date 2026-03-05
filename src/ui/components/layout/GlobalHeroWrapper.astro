@@ -1,0 +1,102 @@
+---
+/**
+ * GLOBAL HERO WRAPPER
+ * Functional: Campaign headers or collection intros.
+ * UI: Full viewport height option, large headlines, gold accent line.
+ */
+interface Props {
+  title: string;
+  subtitle?: string;
+  fullHeight?: boolean;
+  backgroundImage?: string;
+}
+
+const { title, subtitle, fullHeight = false, backgroundImage } = Astro.props;
+
+const heightClass = fullHeight
+  ? "min-h-[calc(100vh-80px)]"
+  : "min-h-[60vh] md:min-h-[70vh]";
+const bgStyle = backgroundImage
+  ? `background-image: url('${backgroundImage}')`
+  : "";
+---
+
+<header
+  class={`relative flex items-center justify-center overflow-hidden bg-black ${heightClass}`}
+  style={bgStyle}
+>
+  <!-- Content Overlay -->
+  <div
+    class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/80 z-10"
+  >
+  </div>
+
+  <!-- Architectural Lines -->
+  <div class="absolute inset-0 z-0 pointer-events-none opacity-20">
+    <div class="absolute left-1/4 top-0 w-px h-full bg-zinc-800"></div>
+    <div class="absolute right-1/4 top-0 w-px h-full bg-zinc-800"></div>
+    <div class="absolute top-1/2 left-0 w-full h-px bg-zinc-800"></div>
+  </div>
+
+  <div
+    class="relative z-20 max-w-[1280px] w-full mx-auto px-6 text-center animate-fade-in-up"
+  >
+    <div class="flex flex-col items-center gap-6">
+      <div class="w-12 h-[1px] bg-amber-500 mb-2"></div>
+
+      <h1
+        class="text-5xl md:text-8xl lg:text-9xl font-black text-white uppercase tracking-tighter leading-[0.8] mb-4"
+      >
+        {title}
+      </h1>
+
+      {
+        subtitle && (
+          <p class="text-zinc-400 text-sm md:text-lg font-bold uppercase tracking-[0.4em] max-w-2xl leading-relaxed opacity-80">
+            {subtitle}
+          </p>
+        )
+      }
+
+      <div
+        class="mt-12 group cursor-pointer inline-flex items-center gap-4 border border-zinc-800 py-4 px-8 hover:border-amber-500 transition-all duration-300"
+      >
+        <span
+          class="text-white text-[11px] font-black uppercase tracking-widest"
+          >DESCUBRIR COLECCIÓN</span
+        >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="square"
+          stroke-linejoin="round"
+          class="text-amber-500 group-hover:translate-x-1 transition-transform"
+          ><line x1="5" y1="12" x2="19" y2="12"></line><polyline
+            points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </div>
+    </div>
+  </div>
+</header>
+
+<style>
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+</style>

@@ -1,0 +1,288 @@
+---
+/**
+ * TOP NAVIGATION BAR
+ * Functional: Sticky navigation with Spanish UI.
+ * UI: #000000 black bar, 1px gold line on scroll, hover animations.
+ * Refactored: Centered desktop links and improved mobile interactions.
+ */
+const navItems = [
+  { label: "CATÁLOGO", href: "/catalog" },
+  { label: "COLECCIONES", href: "/collections" },
+  { label: "NUEVOS", href: "/new" },
+  { label: "EXCLUSIVOS", href: "/exclusive" },
+];
+---
+
+<nav
+  id="master-nav"
+  class="fixed top-0 left-0 w-full z-[30] bg-[#000000] border-b border-transparent transition-all duration-300 h-16 md:h-20 flex items-center"
+>
+  <div
+    class="max-w-[1280px] mx-auto w-full px-6 flex items-center justify-between"
+  >
+    <!-- Left: Logo -->
+    <div class="flex-1 flex justify-start">
+      <a href="/" class="flex-shrink-0">
+        <span
+          class="text-white text-xl md:text-2xl font-black uppercase tracking-[0.2em]"
+          >SANCTUARY</span
+        >
+      </a>
+    </div>
+
+    <!-- Center: Navigation (Desktop) -->
+    <div class="hidden md:flex flex-1 justify-center">
+      <ul class="flex items-center gap-8 lg:gap-12">
+        {
+          navItems.map((item) => (
+            <li class="relative group h-full flex items-center">
+              <a
+                href={item.href}
+                class="text-white font-bold text-[11px] tracking-[0.15em] uppercase transition-colors duration-200 hover:text-amber-500 whitespace-nowrap"
+              >
+                {item.label}
+              </a>
+              <div class="absolute -bottom-[2px] left-0 w-0 h-[1px] bg-amber-500 transition-all duration-300 group-hover:w-full" />
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <!-- Right: Icons & Mobile Trigger -->
+    <div class="flex-1 flex justify-end items-center gap-4 md:gap-6">
+      <div class="flex items-center gap-4 md:gap-6">
+        <button
+          class="text-white hover:text-amber-500 transition-colors"
+          aria-label="Buscar"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="square"
+            stroke-linejoin="round"
+            ><circle cx="11" cy="11" r="8"></circle><line
+              x1="21"
+              y1="21"
+              x2="16.65"
+              y2="16.65"></line>
+          </svg>
+        </button>
+        <a
+          class="text-white hover:text-amber-500 transition-colors"
+          aria-label="Usuario"
+          href="/admin"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="square"
+            stroke-linejoin="round"
+            ><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle
+              cx="12"
+              cy="7"
+              r="4"></circle>
+          </svg>
+        </a>
+        <button
+          class="text-white hover:text-amber-500 transition-colors relative"
+          aria-label="Carrito"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="square"
+            stroke-linejoin="round"
+            ><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"
+            ></path><line x1="3" y1="6" x2="21" y2="6"></line><path
+              d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span
+            class="absolute -top-1 -right-1 bg-amber-500 text-black text-[8px] font-black w-3.5 h-3.5 flex items-center justify-center"
+            >0</span
+          >
+        </button>
+      </div>
+
+      <!-- Mobile Menu Trigger -->
+      <button
+        id="mobile-menu-trigger"
+        class="md:hidden text-white hover:text-amber-500 transition-colors p-2"
+        aria-label="Menú"
+      >
+        <svg
+          id="burger-icon"
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="square"
+          stroke-linejoin="round"
+          ><line x1="3" y1="12" x2="21" y2="12"></line><line
+            x1="3"
+            y1="6"
+            x2="21"
+            y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile Menu Overlay (slide-in) -->
+<div
+  id="mobile-overlay"
+  class="fixed inset-0 z-[40] bg-black/70 opacity-0 transition-opacity duration-300 md:hidden hidden"
+>
+</div>
+<aside
+  id="mobile-panel"
+  class="fixed top-0 right-0 z-[50] h-full w-[85%] max-w-sm bg-[#000000] border-l border-zinc-900 translate-x-full transition-transform duration-300 md:hidden"
+>
+  <div
+    class="flex flex-col h-full bg-[#000000] border-l border-zinc-900 p-8 pt-6 gap-12 relative overflow-y-auto"
+  >
+    <!-- Menu Header: Search for "Explorar Santuario" and Close Button -->
+    <div class="flex items-center justify-between">
+      <div class="space-y-2">
+        <p
+          class="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]"
+        >
+          Explorar Santuario
+        </p>
+        <div class="w-12 h-px bg-amber-500"></div>
+      </div>
+
+      <button
+        id="mobile-menu-close"
+        class="text-white hover:text-amber-500 transition-colors p-2"
+        aria-label="Cerrar Menú"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="32"
+          height="32"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="square"
+          stroke-linejoin="round"
+          ><line x1="18" y1="6" x2="6" y2="18"></line><line
+            x1="6"
+            y1="6"
+            x2="18"
+            y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <ul class="flex-1 px-4 py-6 flex flex-col justify-center list-none m-0 p-0">
+      {
+        ["CATÁLOGO", "COLECCIONES", "NUEVOS", "EXCLUSIVOS"].map((item) => (
+          <li class="py-4 border-b border-zinc-900 last:border-0">
+            <a
+              href="#"
+              class="block text-white text-3xl font-black uppercase tracking-widest transition-colors duration-200 hover:text-amber-500 no-underline"
+            >
+              {item}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="mt-auto space-y-6 pb-8">
+      <div class="flex flex-col gap-4">
+        <button
+          class="w-full border border-zinc-800 py-4 text-[11px] font-black uppercase tracking-widest text-zinc-500 hover:text-white hover:border-amber-500 transition-all"
+          >SOPORTE</button
+        >
+        <button
+          class="w-full bg-zinc-900 py-4 text-[11px] font-black uppercase tracking-widest text-white hover:bg-zinc-800 transition-all"
+          >CUENTA</button
+        >
+      </div>
+      <p
+        class="text-zinc-700 text-[10px] uppercase tracking-widest font-bold text-center"
+      >
+        The Sanctuary Archive © 2026
+      </p>
+    </div>
+  </div>
+</aside>
+
+<script lang="ts">
+  console.log("SCRIPT CARGADO");
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("DOM LISTO");
+
+    const nav = document.getElementById("master-nav");
+    const trigger = document.getElementById("mobile-menu-trigger");
+    const close = document.getElementById("mobile-menu-close");
+    const panel = document.getElementById("mobile-panel");
+    const overlay = document.getElementById("mobile-overlay");
+    console.log("Trigger:", trigger);
+    console.log("Panel:", panel);
+    // console.log("Overlay:", overlay);
+
+    // Scroll behavior
+    window.addEventListener("scroll", () => {
+      if (window.scrollY > 50) {
+        nav?.classList.add("border-amber-500");
+      } else {
+        nav?.classList.remove("border-amber-500");
+      }
+    });
+
+    const toggleMenu = (open) => {
+      if (!panel || !overlay) return;
+
+      if (open) {
+        overlay.classList.remove("hidden");
+        panel.classList.remove("translate-x-full");
+
+        setTimeout(() => {
+          overlay.classList.remove("opacity-0");
+        }, 10);
+
+        document.body.style.overflow = "hidden";
+      } else {
+        overlay.classList.add("opacity-0");
+        panel.classList.add("translate-x-full");
+
+        setTimeout(() => {
+          overlay.classList.add("hidden");
+        }, 300);
+
+        document.body.style.overflow = "";
+      }
+    };
+
+    trigger?.addEventListener("click", () => toggleMenu(true));
+    close?.addEventListener("click", () => toggleMenu(false));
+    overlay?.addEventListener("click", () => toggleMenu(false));
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") toggleMenu(false);
+    });
+  });
+</script>

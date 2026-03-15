@@ -8,9 +8,7 @@ export class PrismaUserRepository implements UserRepository {
       where: { id },
     });
 
-    if (!prismaUser) {
-      return null;
-    }
+    if (!prismaUser) return null;
 
     return this.mapToDomain(prismaUser);
   }
@@ -20,16 +18,14 @@ export class PrismaUserRepository implements UserRepository {
       where: { email },
     });
 
-    if (!prismaUser) {
-      return null;
-    }
+    if (!prismaUser) return null;
 
     return this.mapToDomain(prismaUser);
   }
 
   async findAll(): Promise<User[]> {
     const prismaUsers = await prisma.user.findMany();
-    return prismaUsers.map((u) => this.mapToDomain(u));
+    return prismaUsers.map((u: any) => this.mapToDomain(u));
   }
 
   async save(user: User): Promise<void> {

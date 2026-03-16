@@ -4,10 +4,13 @@ const prisma = new PrismaClient();
 
 async function main() {
   const categories = [
-    { name: "Myth Cloth EX", slug: "myth-cloth-ex" },
-    { name: "Myth Cloth Classic", slug: "myth-cloth-classic" },
-    { name: "Crown", slug: "crown" },
-    { name: "D.D. Panoramation", slug: "dd-panoramation" },
+    { name: "Sanctuario", slug: "sanctuary" },
+    { name: "Poseidon", slug: "poseidon" },
+    { name: "Hades", slug: "hades" },
+    { name: "Soul of Gold", slug: "soul-of-gold" },
+    { name: "Asgard", slug: "asgard" },
+    { name: "Omega", slug: "omega" },
+    { name: "Lost Canvas", slug: "lost-canvas" },
   ];
 
   for (const cat of categories) {
@@ -18,7 +21,7 @@ async function main() {
     });
   }
 
-  console.log("Categorías inicializadas correctamente.");
+  console.log("Sagas (Categorías) inicializadas correctamente.");
 }
 
 main()

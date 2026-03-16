@@ -1,0 +1,138 @@
+---
+import MainLayout from "../../layouts/MainLayout.astro";
+import GlobalHeroWrapper from "../../components/layout/GlobalHeroWrapper.astro";
+import Section from "../../components/layout/Section.astro";
+import CatalogToolbar from "../../components/catalog/CatalogToolbar.astro";
+import CatalogSidebarFilters from "../../components/catalog/CatalogSidebarFilters.astro";
+import CatalogGrid from "../../components/catalog/CatalogGrid.astro";
+import CatalogCategoryHero from "../../components/catalog/CatalogCategoryHero.astro";
+
+import { CatalogQueryService } from "../../../application/services/CatalogQueryService";
+import { GetCatalogPageDataUseCase } from "../../../application/use-cases/catalog/GetCatalogPageDataUseCase";
+
+// Instantiate Service and Use Case
+const queryService = new CatalogQueryService();
+const getCatalogPageData = new GetCatalogPageDataUseCase(queryService);
+
+// Read search params for filtering
+const params = Astro.url.searchParams;
+const currentFilters = {
+  category: params.get("category") || undefined,
+  collection: params.get("collection") || undefined,
+  character: params.get("character") || undefined,
+  status: params.get("status") || undefined,
+};
+
+// Execute Use Case for consolidated data fetching and caching
+const { products: fetchedProducts, filters: metadata } = await getCatalogPageData.execute(currentFilters);
+
+// Dark placeholder for empty images
+const placeholderImage =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%2309090b'/%3E%3Cpath d='M150 150h100v100h-100z' fill='%2327272a'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%2352525b' font-weight='bold' letter-spacing='0.2em' text-anchor='middle' dominant-baseline='middle'%3EIMAGE UNAVAILABLE%3C/text%3E%3C/svg%3E";
+
+const products = fetchedProducts.map((p: any) => ({
+  id: p.id,
+  name: p.name,
+  character: p.character || "UNKNOWN",
+  line: p.line || "UNKNOWN LINE",
+  price: typeof p.price === "number" ? p.price : parseFloat(p.price || 0),
+  image: p.imageUrl || placeholderImage,
+  status: p.status,
+}));
+
+// Helper to build category URL
+const getCategoryUrl = (slug?: string) => {
+  const url = new URL("/catalog", Astro.url.origin);
+  if (slug) url.searchParams.set("category", slug);
+  // Keep other filters if needed
+  params.forEach((val, key) => {
+    if (key !== "category") url.searchParams.set(key, val);
+  });
+  return url.pathname + url.search;
+};
+---
+
+<MainLayout title="CATALOG - THE SANCTUARY">
+  <GlobalHeroWrapper
+    title="THE SANCTUARY"
+    subtitle="SACRED ARCHIVE OF PREMIUM COLLECTIBLES."
+  />
+
+  <CatalogCategoryHero
+    categories={metadata?.categories || []}
+    currentCategory={currentFilters.category}
+    getCategoryUrl={getCategoryUrl}
+  />
+
+  <Section variant="black">
+    <div class="px-4" id="catalog-marketplace">
+      <div
+        class="flex flex-col lg:flex-row gap-12 max-w-[1400px] mx-auto pt-12"
+      >
+        <!-- Sidebar -->
+        <div class="w-full lg:w-auto">
+          <CatalogSidebarFilters
+            metadata={metadata}
+            currentFilters={currentFilters}
+          />
+        </div>
+
+        <!-- Main Content (Toolbar + Grid) -->
+        <main class="flex-1 min-w-0 flex flex-col">
+          <CatalogToolbar resultCount={products.length} />
+
+          <div id="catalog-grid-container">
+            {
+              products.length > 0 ? (
+                <CatalogGrid products={products} />
+              ) : (
+                <div class="flex flex-col items-center justify-center py-32 border border-zinc-900 bg-zinc-950/50">
+                  <span class="text-zinc-800 text-6xl mb-8 font-black">∅</span>
+                  <h2 class="text-amber-500 font-black text-xs tracking-[0.5em] uppercase">
+                    NO COLLECTIBLES FOUND
+                  </h2>
+                  <p class="text-zinc-600 text-[10px] mt-4 tracking-widest uppercase">
+                    STRETCH YOUR SEARCH PARAMETERS
+                  </p>
+                  <a
+                    href="/catalog"
+                    data-filter-link
+                    class="mt-8 text-amber-500 text-[9px] font-black uppercase tracking-[0.2em] border border-amber-500/30 px-6 py-3 hover:bg-amber-500 hover:text-black transition-all"
+                  >
+                    RESET ARCHIVE
+                  </a>
+                </div>
+              )
+            }
+          </div>
+        </main>
+      </div>
+    </div>
+  </Section>
+
+  <!-- Skeleton Template for AJAX loading (Step 8) -->
+  <template id="catalog-skeleton-template">
+    <div
+      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[24px]"
+    >
+      {
+        Array.from({ length: 8 }).map(() => (
+          <div class="flex flex-col gap-4 animate-pulse">
+            <div class="w-full aspect-square bg-zinc-950 border border-zinc-900" />
+            <div class="flex flex-col gap-2">
+              <div class="h-3 bg-zinc-900 w-1/3 mt-1" />
+              <div class="h-4 bg-zinc-800 w-full mt-1" />
+              <div class="h-4 bg-zinc-800 w-5/6" />
+              <div class="flex items-center justify-between mt-3">
+                <div class="h-2 bg-zinc-900 w-1/4" />
+                <div class="h-4 bg-zinc-800 w-1/5" />
+              </div>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </template>
+
+  <script src="../../scripts/catalogFilters.ts"></script>
+</MainLayout>

@@ -1,0 +1,91 @@
+---
+interface Props {
+  product: {
+    id: string;
+    name: string;
+    character: string;
+    line: string;
+    price: number;
+    image: string;
+    status: string;
+  };
+}
+
+const { product } = Astro.props;
+---
+
+<a
+  href={`/product/${product.id}`}
+  class="group flex flex-col gap-4 cursor-pointer block"
+>
+  <!-- Image Area -->
+  <div
+    class="relative w-full aspect-square bg-zinc-950 border border-zinc-900 group-hover:border-amber-500 transition-all duration-300 overflow-hidden transform group-hover:scale-[1.03]"
+  >
+    <!-- Image -->
+    <img
+      src={product.image}
+      alt={product.name}
+      class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:brightness-110 transition-all duration-300"
+      loading="lazy"
+    />
+
+    <!-- Badges -->
+    <div class="absolute top-3 left-3 flex flex-col gap-2 z-10">
+      {
+        product.status === "PRE-ORDER" && (
+          <span class="bg-[#E60012] text-white text-[10px] font-black uppercase tracking-widest px-2 py-1">
+            PRE-ORDER
+          </span>
+        )
+      }
+      {
+        product.status === "NEW" && (
+          <span class="bg-[#E60012] text-white text-[10px] font-black uppercase tracking-widest px-2 py-1">
+            NEW
+          </span>
+        )
+      }
+      {
+        product.status === "OUT OF STOCK" && (
+          <span class="bg-zinc-800 text-zinc-400 border border-zinc-700 text-[10px] font-black uppercase tracking-widest px-2 py-1">
+            OUT OF STOCK
+          </span>
+        )
+      }
+    </div>
+
+    <!-- View Details Overlay -->
+    <div
+      class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20"
+    >
+      <span
+        class="border border-amber-500 text-amber-500 text-xs font-black uppercase tracking-[0.2em] px-6 py-3 bg-black/80 backdrop-blur-sm shadow-[inset_0_0_10px_rgba(212,175,55,0.2)]"
+      >
+        VIEW DETAILS
+      </span>
+    </div>
+  </div>
+
+  <!-- Product Info -->
+  <div class="flex flex-col gap-1">
+    <span
+      class="text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em]"
+      >{product.character}</span
+    >
+    <h3
+      class="text-white text-sm font-black uppercase tracking-tight leading-snug"
+    >
+      {product.name}
+    </h3>
+    <div class="flex items-center justify-between mt-1">
+      <span
+        class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest"
+        >{product.line}</span
+      >
+      <span class="text-amber-500 text-sm font-black uppercase tracking-widest"
+        >${product.price.toFixed(2)}</span
+      >
+    </div>
+  </div>
+</a>

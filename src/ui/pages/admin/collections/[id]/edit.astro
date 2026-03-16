@@ -1,0 +1,19 @@
+---
+import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
+import CollectionForm from "@/ui/components/admin/CollectionForm.astro";
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+
+const repo = new PrismaProductRepository();
+const collection = await repo.findCollectionById(id);
+
+if (!collection) {
+  // Should have been checked by caller or redirect here
+}
+---
+
+<CollectionForm collection={collection} isEditing={true} />

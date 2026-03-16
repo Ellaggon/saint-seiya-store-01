@@ -1,0 +1,290 @@
+---
+import MainLayout from "@/ui/layouts/MainLayout.astro";
+
+interface Props {
+  category?: any;
+  isEditing?: boolean;
+}
+
+const { category, isEditing = false } = Astro.props;
+---
+
+<MainLayout
+  title={isEditing
+    ? `Editar Categoría - ${category.name}`
+    : "Admin - Nueva Categoría"}
+>
+  <div class="max-w-[800px] mx-auto px-6 py-12">
+    <!-- Back Button -->
+    <a
+      href="/admin/categories"
+      class="inline-flex items-center text-zinc-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest mb-8"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="3"
+        stroke-linecap="square"
+        stroke-linejoin="round"
+        class="mr-2"
+        ><path d="m15 18-6-6 6-6"></path>
+      </svg>
+      Volver al Listado
+    </a>
+
+    <!-- Header -->
+    <div class="space-y-2 mb-12">
+      <p
+        class="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]"
+      >
+        {isEditing ? "Gestión de Categoría" : "Nueva Categoría"}
+      </p>
+      <h1 class="text-4xl font-black text-white uppercase tracking-tighter">
+        {isEditing ? category.name : "Crear Categoría"}
+      </h1>
+      <div class="w-12 h-1 bg-amber-500"></div>
+    </div>
+
+    <!-- Form Section -->
+    <form
+      action="/api/admin/categories/actions"
+      method="POST"
+      class="space-y-8 bg-zinc-950 p-8 border border-zinc-900 shadow-2xl"
+    >
+      <input
+        type="hidden"
+        name="_action"
+        value={isEditing ? "update" : "create"}
+      />
+      {Astro.url.searchParams.has("popup") && (
+        <input type="hidden" name="isPopup" value="true" />
+      )}
+      {isEditing && <input type="hidden" name="id" value={category.id} />}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Name -->
+        <div class="space-y-2">
+          <label
+            for="name"
+            class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
+            >Nombre de la Categoría</label
+          >
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value={category?.name || ""}
+            required
+            placeholder="Ej: Saga del Santuario"
+            class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
+          />
+        </div>
+
+        <!-- Slug -->
+        <div class="space-y-2">
+          <label
+            for="slug"
+            class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
+            >Slug (URL)</label
+          >
+          <input
+            type="text"
+            id="slug"
+            name="slug"
+            value={category?.slug || ""}
+            required
+            placeholder="saga-santuario"
+            class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
+          />
+        </div>
+      </div>
+
+      <!-- Image Upload Section -->
+      <div class="space-y-4">
+        <label
+          class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
+          >Imagen de Cabecera (Hero Image)</label
+        >
+
+        <div class="flex flex-col gap-4">
+          <!-- File Input -->
+          <div class="relative group">
+            <input
+              type="file"
+              id="image-upload"
+              accept="image/jpeg,image/png,image/webp"
+              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <div
+              class="w-full bg-black border border-zinc-800 px-4 py-8 text-center border-dashed group-hover:border-amber-500 transition-colors"
+            >
+              <span
+                id="upload-status"
+                class="text-zinc-500 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="square"
+                  stroke-linejoin="round"
+                  ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                  ></path><polyline points="17 8 12 3 7 8"></polyline><line
+                    x1="12"
+                    x2="12"
+                    y1="3"
+                    y2="15"></line>
+                </svg>
+                Seleccionar Banner (Max 5MB)
+              </span>
+            </div>
+          </div>
+
+          <!-- Hidden Input for the URL -->
+          <input
+            type="hidden"
+            id="imageUrl"
+            name="imageUrl"
+            value={category?.imageUrl || ""}
+          />
+
+          <!-- Preview Container -->
+          <div
+            id="image-preview-container"
+            class={`space-y-2 ${category?.imageUrl ? "" : "hidden"}`}
+          >
+            <p
+              class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest"
+            >
+              Previsualización de Capítulo:
+            </p>
+            <div
+              class="flex items-center gap-3 bg-zinc-900/50 p-3 border border-zinc-800"
+            >
+              <div
+                class="w-24 h-16 bg-black border border-zinc-700 overflow-hidden flex-shrink-0"
+              >
+                <img
+                  id="image-preview"
+                  src={category?.imageUrl || ""}
+                  class="w-full h-full object-cover"
+                />
+              </div>
+              <div class="flex flex-col min-w-0">
+                <span
+                  id="image-url-text"
+                  class="text-[10px] text-zinc-400 truncate font-mono"
+                >
+                  {category?.imageUrl}
+                </span>
+                <span class="text-[8px] text-amber-500/50 font-black uppercase"
+                  >Activo en el Archivo Sacro</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IsActive (Soft Delete Toggle) -->
+      <div class="flex items-center gap-4">
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            name="isActive"
+            value="true"
+            checked={category ? !category.deletedAt : true}
+            class="sr-only peer"
+          />
+          <div
+            class="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 peer-checked:after:bg-white"
+          >
+          </div>
+          <span
+            class="ml-3 text-[10px] font-black text-amber-500 uppercase tracking-widest"
+            >Estado Activo</span
+          >
+        </label>
+      </div>
+
+      <!-- Submit Button -->
+      <div class="pt-6">
+        <button
+          type="submit"
+          class="w-full bg-white text-black text-[11px] font-black uppercase tracking-[0.2em] py-5 hover:bg-amber-500 transition-all duration-300"
+        >
+          {isEditing ? "Actualizar Categoría" : "Crear Categoría"}
+        </button>
+      </div>
+    </form>
+  </div>
+</MainLayout>
+
+<script>
+  const fileInput = document.getElementById("image-upload") as HTMLInputElement;
+  const statusText = document.getElementById("upload-status");
+  const imageUrlInput = document.getElementById("imageUrl") as HTMLInputElement;
+  const previewContainer = document.getElementById("image-preview-container");
+  const previewImg = document.getElementById(
+    "image-preview",
+  ) as HTMLImageElement;
+  const urlText = document.getElementById("image-url-text");
+
+  fileInput?.addEventListener("change", async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+
+    // Visual feedback
+    const originalStatus = statusText?.innerHTML;
+    if (statusText) statusText.textContent = "COPIANDO AL ARCHIVO... (SUBIENDO)";
+    fileInput.disabled = true;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("/api/upload-category-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error en la subida");
+      }
+
+      const data = await response.json();
+
+      // Update hidden input
+      if (imageUrlInput) {
+        imageUrlInput.value = data.url;
+      }
+
+      // Update preview
+      if (previewImg) previewImg.src = data.url;
+      if (urlText) urlText.textContent = data.url;
+      if (previewContainer) previewContainer.classList.remove("hidden");
+      if (statusText) statusText.textContent = "¡BANNER VINCULADO!";
+
+      setTimeout(() => {
+        if (statusText && originalStatus) statusText.innerHTML = originalStatus;
+      }, 3000);
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      if (statusText) {
+        statusText.textContent = "ERROR: " + error.message;
+        statusText.classList.add("text-red-500");
+      }
+    } finally {
+      fileInput.disabled = false;
+    }
+  });
+</script>

@@ -1,0 +1,38 @@
+---
+/**
+ * SUCCESS PAGE FOR POPUPS
+ * This page is loaded after a successful creation in a popup window.
+ * It sends a postMessage to the opener and closes itself.
+ */
+const label = Astro.url.searchParams.get("label");
+const value = Astro.url.searchParams.get("value");
+const type = Astro.url.searchParams.get("type");
+---
+
+<div class="min-h-screen bg-black flex items-center justify-center">
+  <div class="text-center space-y-4">
+    <div class="w-12 h-px bg-amber-500 mx-auto"></div>
+    <p class="text-white text-xs font-black uppercase tracking-[0.3em]">
+      Entidad Consagrada con Éxito
+    </p>
+    <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
+      Sincronizando con el Santuario...
+    </p>
+  </div>
+</div>
+
+<script is:inline define:vars={{ label, value, type }}>
+  if (window.opener) {
+    window.opener.postMessage(
+      {
+        type: `${type}-created`,
+        [type]: {
+          id: value,
+          name: label,
+        },
+      },
+      "*"
+    );
+  }
+  window.close();
+</script>

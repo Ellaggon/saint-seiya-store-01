@@ -1,0 +1,277 @@
+---
+interface Props {
+  metadata: {
+    categories: { name: string; slug: string; count: number }[];
+    collections: { name: string; slug: string; count: number }[];
+    characters: { name: string; slug: string; count: number }[];
+  } | null;
+  currentFilters: {
+    collection?: string;
+    character?: string;
+    status?: string;
+  };
+}
+
+const { metadata, currentFilters } = Astro.props;
+
+const statuses = [
+  { name: "PRE-ORDER", value: "PRE_ORDER" },
+  { name: "PUBLISHED", value: "PUBLISHED" },
+  { name: "OUT OF STOCK", value: "OUT_OF_STOCK" },
+];
+
+// Helper to build filter URL
+const getFilterUrl = (key: string, value: string | null) => {
+  const url = new URL(Astro.url.pathname, Astro.url.origin);
+  const params = new URLSearchParams(Astro.url.search);
+
+  if (value === null) {
+    params.delete(key);
+  } else {
+    params.set(key, value);
+  }
+
+  return `${url.pathname}?${params.toString()}`;
+};
+
+const hasActiveFilters = Object.values(currentFilters).some((v) => !!v);
+---
+
+<aside class="w-full lg:w-[280px] flex-shrink-0">
+  <input type="checkbox" id="filter-toggle" class="peer sr-only" />
+
+  <label
+    for="filter-toggle"
+    class="lg:hidden flex items-center justify-between border border-zinc-900 bg-zinc-950 px-5 py-4 cursor-pointer hover:border-amber-500 transition-colors mb-8 group"
+  >
+    <span
+      class="text-amber-500 font-black text-[11px] uppercase tracking-widest group-hover:text-amber-400 transition-colors"
+      >TOGGLE FILTERS</span
+    >
+    <span class="text-amber-500 text-lg leading-none">+</span>
+  </label>
+
+  <!-- Filter content -->
+  <div
+    class="hidden peer-checked:block lg:block space-y-8 animate-in fade-in slide-in-from-top-4 duration-300"
+  >
+    {
+      hasActiveFilters && (
+        <a
+          href="/catalog"
+          data-filter-link
+          class="inline-block text-amber-500 text-[9px] font-black uppercase tracking-[0.2em] border border-amber-500/30 px-4 py-2 hover:bg-amber-500 hover:text-black transition-all mb-4"
+        >
+          CLEAR ALL FILTERS
+        </a>
+      )
+    }
+
+    <!-- POPULAR COLLECTIONS (Step 3) -->
+    <div class="space-y-4 pt-4">
+      <h4
+        class="text-zinc-700 font-black text-[8px] uppercase tracking-[0.4em]"
+      >
+        POPULAR ARCHIVES
+      </h4>
+      <div class="flex flex-wrap gap-2">
+        {
+          metadata?.collections.slice(0, 3).map((coll) => (
+            <a
+              href={getFilterUrl("collection", coll.slug)}
+              data-filter-link
+              class={`text-[9px] font-black uppercase tracking-widest border px-3 py-2 transition-all ${
+                currentFilters.collection === coll.slug
+                  ? "border-amber-500 text-amber-500 bg-amber-500/5"
+                  : "border-zinc-900 text-zinc-600 hover:border-amber-500/50 hover:text-amber-500"
+              }`}
+            >
+              {coll.name} ({coll.count})
+            </a>
+          ))
+        }
+      </div>
+    </div>
+
+    <!-- FILTER BY LINE -->
+    <details open class="group/section">
+      <summary
+        class="flex items-center justify-between cursor-pointer list-none py-3 border-b border-zinc-900"
+      >
+        <h3
+          class="text-amber-500 font-black text-[10px] uppercase tracking-[0.3em]"
+        >
+          FILTER BY LINE
+        </h3>
+        <span
+          class="text-amber-500 text-xs transition-transform group-open/section:rotate-45"
+          >+</span
+        >
+      </summary>
+      <ul class="flex flex-col gap-2 mt-4">
+        {
+          metadata?.collections.map((coll) => (
+            <li>
+              <a
+                href={getFilterUrl("collection", coll.slug)}
+                data-filter-link
+                class={`group/item block border px-5 py-3 transition-colors bg-zinc-950 ${
+                  currentFilters.collection === coll.slug
+                    ? "border-amber-500"
+                    : "border-zinc-900 hover:border-zinc-700"
+                }`}
+              >
+                <span
+                  class={`text-[11px] font-black uppercase tracking-widest transition-colors flex items-center justify-between ${
+                    currentFilters.collection === coll.slug
+                      ? "text-amber-500"
+                      : "text-zinc-500 group-hover/item:text-zinc-300"
+                  }`}
+                >
+                  <span class="flex items-center gap-2">
+                    {coll.name}
+                    <span
+                      class={`text-[9px] opacity-40 font-bold ${
+                        currentFilters.collection === coll.slug
+                          ? "text-amber-500/60"
+                          : "text-zinc-600"
+                      }`}
+                    >
+                      ({coll.count})
+                    </span>
+                  </span>
+                  <span
+                    class={`transition-opacity text-amber-500 ${
+                      currentFilters.collection === coll.slug
+                        ? "opacity-100"
+                        : "opacity-0 group-hover/item:opacity-100"
+                    }`}
+                  >
+                    {currentFilters.collection === coll.slug ? "✓" : "+"}
+                  </span>
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </details>
+
+    <!-- FILTER BY CHARACTER -->
+    <details class="group/section">
+      <summary
+        class="flex items-center justify-between cursor-pointer list-none py-3 border-b border-zinc-900"
+      >
+        <h3
+          class="text-amber-500 font-black text-[10px] uppercase tracking-[0.3em]"
+        >
+          FILTER BY CHARACTER
+        </h3>
+        <span
+          class="text-amber-500 text-xs transition-transform group-open/section:rotate-45"
+          >+</span
+        >
+      </summary>
+      <ul class="flex flex-col gap-2 mt-4">
+        {
+          metadata?.characters.map((char) => (
+            <li>
+              <a
+                href={getFilterUrl("character", char.slug)}
+                data-filter-link
+                class={`group/item block border px-5 py-3 transition-colors bg-zinc-950 ${
+                  currentFilters.character === char.slug
+                    ? "border-amber-500"
+                    : "border-zinc-900 hover:border-zinc-700"
+                }`}
+              >
+                <span
+                  class={`text-[11px] font-black uppercase tracking-widest transition-colors flex items-center justify-between ${
+                    currentFilters.character === char.slug
+                      ? "text-amber-500"
+                      : "text-zinc-500 group-hover/item:text-zinc-300"
+                  }`}
+                >
+                  <span class="flex items-center gap-2">
+                    {char.name}
+                    <span
+                      class={`text-[9px] opacity-40 font-bold ${
+                        currentFilters.character === char.slug
+                          ? "text-amber-500/60"
+                          : "text-zinc-600"
+                      }`}
+                    >
+                      ({char.count})
+                    </span>
+                  </span>
+                  <span
+                    class={`transition-opacity text-amber-500 ${
+                      currentFilters.character === char.slug
+                        ? "opacity-100"
+                        : "opacity-0 group-hover/item:opacity-100"
+                    }`}
+                  >
+                    {currentFilters.character === char.slug ? "✓" : "+"}
+                  </span>
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </details>
+
+    <!-- FILTER BY STATUS -->
+    <details class="group/section">
+      <summary
+        class="flex items-center justify-between cursor-pointer list-none py-3 border-b border-zinc-900"
+      >
+        <h3
+          class="text-amber-500 font-black text-[10px] uppercase tracking-[0.3em]"
+        >
+          FILTER BY STATUS
+        </h3>
+        <span
+          class="text-amber-500 text-xs transition-transform group-open/section:rotate-45"
+          >+</span
+        >
+      </summary>
+      <ul class="flex flex-col gap-2 mt-4">
+        {
+          statuses.map((status) => (
+            <li>
+              <a
+                href={getFilterUrl("status", status.value)}
+                data-filter-link
+                class={`group/item block border px-5 py-3 transition-colors bg-zinc-950 ${
+                  currentFilters.status === status.value
+                    ? "border-amber-500"
+                    : "border-zinc-900 hover:border-zinc-700"
+                }`}
+              >
+                <span
+                  class={`text-[11px] font-black uppercase tracking-widest transition-colors flex items-center justify-between ${
+                    currentFilters.status === status.value
+                      ? "text-amber-500"
+                      : "text-zinc-500 group-hover/item:text-zinc-300"
+                  }`}
+                >
+                  {status.name}
+                  <span
+                    class={`transition-opacity text-amber-500 ${
+                      currentFilters.status === status.value
+                        ? "opacity-100"
+                        : "opacity-0 group-hover/item:opacity-100"
+                    }`}
+                  >
+                    {currentFilters.status === status.value ? "✓" : "+"}
+                  </span>
+                </span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </details>
+  </div>
+</aside>

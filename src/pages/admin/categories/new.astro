@@ -1,0 +1,10 @@
+---
+import NewCategoryPage from "@/ui/pages/admin/categories/new.astro";
+
+const user = Astro.locals.user;
+if (!user || user.role !== "ADMIN") {
+  return Astro.redirect("/login");
+}
+---
+
+<NewCategoryPage />

@@ -1,0 +1,136 @@
+---
+import MainLayout from "../../layouts/MainLayout.astro";
+
+interface Props {
+  collections: any[];
+}
+
+const { collections } = Astro.props;
+---
+
+<MainLayout title="Admin - Gestión de Colecciones">
+  <div class="max-w-[1280px] mx-auto px-6 py-12">
+    <!-- Header Section -->
+    <div
+      class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12"
+    >
+      <div class="space-y-2">
+        <p
+          class="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]"
+        >
+          Panel de Control
+        </p>
+        <h1 class="text-4xl font-black text-white uppercase tracking-tighter">
+          Colecciones de Productos
+        </h1>
+        <div class="w-12 h-1 bg-amber-500"></div>
+      </div>
+
+      <a
+        href="/admin/collections/new"
+        class="inline-flex items-center justify-center bg-white text-black text-[11px] font-black uppercase tracking-widest px-8 py-4 hover:bg-amber-500 transition-colors duration-300"
+      >
+        Añadir Nueva Colección
+      </a>
+    </div>
+
+    <!-- Table Section -->
+    <div class="bg-zinc-950 border border-zinc-900 overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-black border-b border-zinc-900">
+          <tr>
+            <th
+              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest"
+              >Nombre</th
+            >
+            <th
+              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest"
+              >Slug</th
+            >
+            <th
+              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest"
+              >Estado</th
+            >
+            <th
+              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest text-right"
+              >Acciones</th
+            >
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-zinc-900">
+          {
+            collections.length === 0 ? (
+              <tr>
+                <td
+                  colspan="4"
+                  class="px-6 py-12 text-center text-zinc-500 text-xs uppercase tracking-widest italic"
+                >
+                  No hay colecciones registradas todavía.
+                </td>
+              </tr>
+            ) : (
+              collections.map((coll) => (
+                <tr class="hover:bg-zinc-900/50 transition-colors group">
+                  <td class="px-6 py-5">
+                    <span class="text-white font-bold text-sm uppercase tracking-tight">
+                      {coll.name}
+                    </span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span class="text-zinc-600 text-[10px] tracking-widest uppercase">
+                      {coll.slug}
+                    </span>
+                  </td>
+                  <td class="px-6 py-5">
+                    <span
+                      class={`text-[9px] font-black uppercase px-2 py-1 tracking-tighter border ${
+                        !coll.deletedAt
+                          ? "text-green-500 border-green-500/30 bg-green-500/5"
+                          : "text-zinc-500 border-zinc-800 bg-zinc-900"
+                      }`}
+                    >
+                      {!coll.deletedAt ? "ACTIVO" : "ARCHIVADO"}
+                    </span>
+                  </td>
+                  <td class="px-6 py-5 text-right">
+                    <div class="flex justify-end items-center gap-3">
+                      <a
+                        href={`/admin/collections/${coll.id}/edit`}
+                        class="text-[10px] font-black text-white hover:text-amber-500 uppercase transition-colors"
+                      >
+                        Editar
+                      </a>
+                      {!coll.deletedAt && (
+                        <>
+                          <span class="text-zinc-800">|</span>
+                          <form
+                            action="/api/admin/collections/actions"
+                            method="POST"
+                            onsubmit="return confirm('¿Archivar esta colección?')"
+                          >
+                            <input type="hidden" name="id" value={coll.id} />
+                            <input
+                              type="hidden"
+                              name="_action"
+                              value="archive"
+                            />
+                            <button
+                              type="submit"
+                              class="text-[10px] font-black text-zinc-600 hover:text-red-500 uppercase transition-colors"
+                            >
+                              Archivar
+                            </button>
+                          </form>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</MainLayout>

@@ -32,10 +32,11 @@ Esta guía detalla los pasos para desplegar el proyecto "Saint Seiya Store" en V
 | `PUBLIC_SUPABASE_URL`      | Igual que `SUPABASE_URL` (para uso en el cliente).                                                     | `https://xxxx.supabase.co`                         |
 | `PUBLIC_SUPABASE_ANON_KEY` | Igual que `SUPABASE_ANON_KEY` (para uso en el cliente).                                                | `eyJhbGci...`                                      |
 | `RESEND_API_KEY`           | API Key de Resend para envío de correos.                                                               | `re_...`                                           |
+| `R2_ACCOUNT_ID`            | Account ID de Cloudflare (usado para construir el endpoint de R2).                                      | `xxxxxx`                                           |
 | `R2_ACCESS_KEY_ID`         | Access Key ID de Cloudflare R2.                                                                        | `...`                                              |
 | `R2_SECRET_ACCESS_KEY`     | Secret Access Key de Cloudflare R2.                                                                    | `...`                                              |
-| `R2_BUCKET`                | Nombre del bucket en R2.                                                                               | `saint-seiya-store`                                |
-| `R2_ENDPOINT`              | Endpoint S3 de tu bucket R2.                                                                           | `https://xxxx.r2.cloudflarestorage.com`            |
+| `R2_BUCKET_NAME`           | Nombre del bucket en R2.                                                                               | `saint-seiya-store`                                |
+| `R2_PUBLIC_URL`            | Base URL pública donde se sirven los assets subidos a R2.                                               | `https://cdn.example.com`                          |
 
 ## Consideraciones Post-Despliegue
 

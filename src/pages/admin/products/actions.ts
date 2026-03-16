@@ -18,12 +18,12 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
 
     if (action === "create") {
       const name = formData.get("name") as string;
-      // const slug = (formData.get("slug") as string) || slugify(name);
       const description = formData.get("description") as string;
       const price = parseFloat(formData.get("price") as string);
       const height = parseFloat(formData.get("height") as string);
       const imageUrl = formData.get("imageUrl") as string;
       const categoryId = formData.get("categoryId") as string;
+      const collectionId = formData.get("collectionId") as string;
       const status = formData.get("status") as any;
 
       let baseSlug = (formData.get("slug") as string) || slugify(name);
@@ -50,6 +50,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
           height,
           imageUrl,
           categoryId,
+          collectionId,
           status,
         },
       });
@@ -66,6 +67,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       const height = parseFloat(formData.get("height") as string);
       const imageUrl = formData.get("imageUrl") as string;
       const categoryId = formData.get("categoryId") as string;
+      const collectionId = formData.get("collectionId") as string;
       const status = formData.get("status") as any;
 
       await prisma.product.update({
@@ -78,6 +80,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
           height,
           imageUrl,
           categoryId,
+          collectionId,
           status,
         },
       });

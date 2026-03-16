@@ -1,0 +1,10 @@
+---
+import CollectionsPage from "@/ui/pages/admin/collections/index.astro";
+
+const user = Astro.locals.user;
+if (!user || user.role !== "ADMIN") {
+  return Astro.redirect("/login");
+}
+---
+
+<CollectionsPage />

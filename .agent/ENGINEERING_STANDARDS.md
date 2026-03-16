@@ -78,8 +78,23 @@ refactor(inventory): extract reservation service
 • Do not mix feature and refactor
 • Do not mix formatting and logic
 • Stage only related files (no blind git add .)
+• A commit should not exceed ~300 lines of change when possible. Large changes must be split.
 
 Before starting a task: 1. Generate a commit plan 2. List intended commits 3. Execute commits per logical unit
+
+⸻
+
+## 🔬 Scope rules
+
+- auth
+- catalog
+- products
+- orders
+- inventory
+- api
+- ui
+- infra
+- database
 
 ⸻
 
@@ -99,6 +114,18 @@ All changes must respect:
 • Service isolation
 • SSR-first philosophy
 • Security constraints
+
+⸻
+
+## Pull Request Rules
+
+All changes must go through pull request review.
+PRs must be small and focused.
+PR description must explain:
+
+- what changed
+- why
+- testing performed
 
 ⸻
 

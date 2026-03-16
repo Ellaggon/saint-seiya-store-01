@@ -1,0 +1,11 @@
+---
+import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
+import { ListCategoriesUseCase } from "@/application/use-cases/admin/categories/ListCategoriesUseCase";
+import CategoryList from "@/ui/components/admin/CategoryList.astro";
+
+const repo = new PrismaProductRepository();
+const listUseCase = new ListCategoriesUseCase(repo);
+const categories = await listUseCase.execute();
+---
+
+<CategoryList categories={categories} />

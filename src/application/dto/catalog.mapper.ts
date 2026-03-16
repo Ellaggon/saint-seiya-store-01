@@ -1,7 +1,13 @@
 import type { Product } from "../../domain/entities/Product";
 import type { Category } from "../../domain/entities/Category";
 import type { Character } from "../../domain/entities/Character";
-import type { ProductDTO, CategoryDTO, CharacterDTO } from "./catalog.dto";
+import type { Collection } from "../../domain/entities/Collection";
+import type {
+  ProductDTO,
+  CategoryDTO,
+  CharacterDTO,
+  CollectionDTO,
+} from "./catalog.dto";
 
 export class CatalogMapper {
   static productToDTO(product: Product): ProductDTO {
@@ -11,11 +17,22 @@ export class CatalogMapper {
       description: product.description,
       price: product.price,
       categoryId: product.categoryId,
+      collectionId: product.collectionId,
       height: product.height,
       material: product.material,
       imageUrl: product.imageUrl,
       stock: product.stock,
       status: product.status,
+      line: product.line,
+      character: product.character,
+    };
+  }
+
+  static collectionToDTO(collection: Collection): CollectionDTO {
+    return {
+      id: collection.id,
+      name: collection.name,
+      slug: collection.slug,
     };
   }
 
@@ -23,6 +40,8 @@ export class CatalogMapper {
     return {
       id: category.id,
       name: category.name,
+      slug: category.slug,
+      imageUrl: category.imageUrl,
     };
   }
 
@@ -43,5 +62,9 @@ export class CatalogMapper {
 
   static characterListToDTO(characters: Character[]): CharacterDTO[] {
     return characters.map((c) => this.characterToDTO(c));
+  }
+
+  static collectionListToDTO(collections: Collection[]): CollectionDTO[] {
+    return collections.map((c) => this.collectionToDTO(c));
   }
 }

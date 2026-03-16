@@ -1,0 +1,10 @@
+---
+import CategoriesPage from "@/ui/pages/admin/categories/index.astro";
+
+const user = Astro.locals.user;
+if (!user || user.role !== "ADMIN") {
+  return Astro.redirect("/login");
+}
+---
+
+<CategoriesPage />

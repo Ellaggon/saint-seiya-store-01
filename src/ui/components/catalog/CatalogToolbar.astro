@@ -1,0 +1,44 @@
+---
+interface Props {
+  resultCount: number;
+}
+const { resultCount } = Astro.props;
+---
+
+<div
+  class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-zinc-900 pb-4 mb-8"
+>
+  <div
+    class="text-zinc-500 text-[11px] font-black uppercase tracking-widest mb-4 sm:mb-0"
+  >
+    SHOWING <span id="catalog-result-count" class="text-white"
+      >{resultCount}</span
+    > RESULTS
+  </div>
+
+  <div class="flex items-center gap-4 w-full sm:w-auto">
+    <span
+      class="text-zinc-500 text-[10px] font-black uppercase tracking-widest hidden sm:inline-block"
+      >SORT BY:</span
+    >
+    <div class="relative w-full sm:w-auto">
+      <select
+        class="w-full sm:w-auto bg-black border border-zinc-800 text-white text-[11px] font-black uppercase tracking-widest px-4 py-3 hover:border-amber-500 transition-colors focus:outline-none focus:border-amber-500 appearance-none cursor-pointer pr-10"
+      >
+        <option value="latest">LATEST RELEASE</option>
+        <option value="price-asc">PRICE ASCENDING</option>
+        <option value="price-desc">PRICE DESCENDING</option>
+        <option value="name">CHARACTER NAME</option>
+      </select>
+      <div
+        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-500"
+      >
+        <svg class="w-3 h-3 fill-current" viewBox="0 0 20 20"
+          ><path
+            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+          ></path>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>

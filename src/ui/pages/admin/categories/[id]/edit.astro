@@ -1,0 +1,15 @@
+---
+import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
+import CategoryForm from "@/ui/components/admin/CategoryForm.astro";
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+
+const repo = new PrismaProductRepository();
+const category = await repo.findCategoryById(id);
+---
+
+<CategoryForm category={category} isEditing={true} />

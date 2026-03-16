@@ -197,13 +197,13 @@ const navItems = [
 
     <ul class="flex-1 px-4 py-6 flex flex-col justify-center list-none m-0 p-0">
       {
-        ["CATÁLOGO", "COLECCIONES", "NUEVOS", "EXCLUSIVOS"].map((item) => (
+        navItems.map((item) => (
           <li class="py-4 border-b border-zinc-900 last:border-0">
             <a
-              href="#"
+              href={item.href}
               class="block text-white text-3xl font-black uppercase tracking-widest transition-colors duration-200 hover:text-amber-500 no-underline"
             >
-              {item}
+              {item.label}
             </a>
           </li>
         ))

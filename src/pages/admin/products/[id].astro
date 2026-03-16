@@ -1,5 +1,4 @@
 ---
-import { prisma } from "@/infrastructure/database/prisma";
 import ProductForm from "@/ui/pages/admin/ProductForm.astro";
 
 // Protect route
@@ -10,20 +9,30 @@ if (!user || user.role !== "ADMIN") {
 
 const { id } = Astro.params;
 
-// Fetch the product to edit
-const product = await prisma.product.findUnique({
-  where: { id },
-  include: { category: true },
-});
+// Fetch data from endpoints
+const productResponse = await fetch(
+  new URL(`/api/products/${id}`, Astro.url.origin),
+);
+const product = await productResponse.json();
 
 if (!product || product.deletedAt) {
   return Astro.redirect("/admin/products");
 }
 
-// Fetch categories for the select dropdown
-const categories = await prisma.category.findMany({
-  orderBy: { name: "asc" },
-});
+const categoriesResponse = await fetch(
+  new URL("/api/categories", Astro.url.origin),
+);
+const categories = await categoriesResponse.json();
+
+const collectionsResponse = await fetch(
+  new URL("/api/collections", Astro.url.origin),
+);
+const collections = await collectionsResponse.json();
 ---
 
-<ProductForm product={product} categories={categories} isEditing={true} />
+<ProductForm
+  product={product}
+  categories={categories}
+  collections={collections}
+  isEditing={true}
+/>

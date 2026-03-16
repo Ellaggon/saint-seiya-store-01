@@ -1,13 +1,14 @@
 ---
-import MainLayout from "../../layouts/MainLayout.astro";
+import MainLayout from "@/ui/layouts/MainLayout.astro";
 
 interface Props {
   product?: any;
   categories: any[];
+  collections: any[];
   isEditing?: boolean;
 }
 
-const { product, categories, isEditing = false } = Astro.props;
+const { product, categories, collections, isEditing = false } = Astro.props;
 
 const statusOptions = [
   "DRAFT",
@@ -60,6 +61,7 @@ const statusOptions = [
     <form
       action="/admin/products/actions"
       method="POST"
+      onsubmit="this.querySelector('button[type=submit]').disabled = true;"
       class="space-y-8 bg-zinc-950 p-8 border border-zinc-900 shadow-2xl"
     >
       <input
@@ -143,13 +145,20 @@ const statusOptions = [
           />
         </div>
 
-        <!-- Category -->
         <div class="space-y-2">
-          <label
-            for="categoryId"
-            class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
-            >Línea / Colección</label
-          >
+          <div class="flex justify-between items-center">
+            <label
+              for="categoryId"
+              class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
+              >Saga de la Historia</label
+            >
+            <button
+              type="button"
+              data-create-popup="/admin/categories/new?popup=true"
+              class="text-[8px] font-black text-zinc-500 hover:text-amber-500 uppercase tracking-widest transition-colors cursor-pointer"
+              >+ Crear nueva saga</button
+            >
+          </div>
           <select
             id="categoryId"
             name="categoryId"
@@ -157,7 +166,7 @@ const statusOptions = [
             class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors appearance-none cursor-pointer"
           >
             <option value="" disabled={!isEditing} selected={!isEditing}
-              >Seleccionar línea...</option
+              >Seleccionar saga...</option
             >
             {
               categories.map((cat) => (
@@ -166,6 +175,42 @@ const statusOptions = [
                   selected={cat.id === product?.categoryId}
                 >
                   {cat.name}
+                </option>
+              ))
+            }
+          </select>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <label
+              for="collectionId"
+              class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
+              >Línea de Producto</label
+            >
+            <button
+              type="button"
+              data-create-popup="/admin/collections/new?popup=true"
+              class="text-[8px] font-black text-zinc-500 hover:text-amber-500 uppercase tracking-widest transition-colors cursor-pointer"
+              >+ Crear nueva línea</button
+            >
+          </div>
+          <select
+            id="collectionId"
+            name="collectionId"
+            required
+            class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors appearance-none cursor-pointer"
+          >
+            <option value="" disabled={!isEditing} selected={!isEditing}
+              >Seleccionar línea...</option
+            >
+            {
+              collections.map((coll) => (
+                <option
+                  value={coll.id}
+                  selected={coll.id === product?.collectionId}
+                >
+                  {coll.name}
                 </option>
               ))
             }
@@ -196,22 +241,96 @@ const statusOptions = [
         </div>
       </div>
 
-      <!-- Image URL -->
-      <div class="space-y-2">
+      <!-- Image Upload Component -->
+      <div class="space-y-4">
         <label
-          for="imageUrl"
           class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
-          >Ruta de Imagen (URL)</label
+          >Imagen de la Figura</label
         >
-        <input
-          type="url"
-          id="imageUrl"
-          name="imageUrl"
-          value={product?.imageUrl || ""}
-          required
-          placeholder="https://servidor.com/imagenes/seiya.jpg"
-          class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
-        />
+
+        <div class="flex flex-col gap-4">
+          <!-- File Input -->
+          <div class="relative group">
+            <input
+              type="file"
+              id="image-upload"
+              accept="image/jpeg,image/png,image/webp"
+              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <div
+              class="w-full bg-black border border-zinc-800 px-4 py-8 text-center border-dashed group-hover:border-amber-500 transition-colors"
+            >
+              <span
+                id="upload-status"
+                class="text-zinc-500 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="square"
+                  stroke-linejoin="round"
+                  ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                  ></path><polyline points="17 8 12 3 7 8"></polyline><line
+                    x1="12"
+                    x2="12"
+                    y1="3"
+                    y2="15"></line>
+                </svg>
+                Seleccionar Archivo (Max 5MB)
+              </span>
+            </div>
+          </div>
+
+          <!-- Hidden Input for the URL -->
+          <input
+            type="hidden"
+            id="imageUrl"
+            name="imageUrl"
+            value={product?.imageUrl || ""}
+            required
+          />
+
+          <!-- Preview Container -->
+          <div
+            id="image-preview-container"
+            class={`space-y-2 ${product?.imageUrl ? "" : "hidden"}`}
+          >
+            <p
+              class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest"
+            >
+              Previsualización del Archivo:
+            </p>
+            <div
+              class="flex items-center gap-3 bg-zinc-900/50 p-3 border border-zinc-800"
+            >
+              <div
+                class="w-12 h-12 bg-black border border-zinc-700 overflow-hidden flex-shrink-0"
+              >
+                <img
+                  id="image-preview"
+                  src={product?.imageUrl}
+                  class="w-full h-full object-contain"
+                />
+              </div>
+              <div class="flex flex-col min-w-0">
+                <span
+                  id="image-url-text"
+                  class="text-[10px] text-zinc-400 truncate font-mono"
+                >
+                  {product?.imageUrl}
+                </span>
+                <span class="text-[8px] text-amber-500/50 font-black uppercase"
+                  >Subido al Servidor R2</span
+                >
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Description -->
@@ -236,7 +355,6 @@ const statusOptions = [
       <div class="pt-6">
         <button
           type="submit"
-          onclick="this.disabled=true; this.form.submit();"
           class="w-full bg-white text-black text-[11px] font-black uppercase tracking-[0.2em] py-5 hover:bg-amber-500 transition-all duration-300"
         >
           {
@@ -249,3 +367,108 @@ const statusOptions = [
     </form>
   </div>
 </MainLayout>
+
+<script>
+  const fileInput = document.getElementById("image-upload") as HTMLInputElement;
+  const statusText = document.getElementById("upload-status");
+  const imageUrlInput = document.getElementById("imageUrl") as HTMLInputElement;
+  const previewContainer = document.getElementById("image-preview-container");
+  const previewImg = document.getElementById(
+    "image-preview",
+  ) as HTMLImageElement;
+  const urlText = document.getElementById("image-url-text");
+
+  fileInput?.addEventListener("change", async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+
+    // Visual feedback
+    const originalStatus = statusText?.innerHTML;
+    if (statusText)
+      statusText.textContent = "CONSIGNANDO AL SANTUARIO (SUBIENDO)...";
+    fileInput.disabled = true;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("/api/upload-product-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Error en la subida");
+      }
+
+      const data = await response.json();
+
+      // Update hidden input
+      if (imageUrlInput) {
+        imageUrlInput.value = data.url;
+      }
+
+      // Update preview
+      if (previewImg) previewImg.src = data.url;
+      if (urlText) urlText.textContent = data.url;
+      if (previewContainer) previewContainer.classList.remove("hidden");
+      if (statusText)
+        statusText.textContent = "¡ARMADURA REGISTRADA CON ÉXITO!";
+
+      setTimeout(() => {
+        if (statusText && originalStatus) statusText.innerHTML = originalStatus;
+      }, 3000);
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      if (statusText) {
+        statusText.textContent = "ERROR EN EL REGISTRO: " + error.message;
+        statusText.classList.add("text-red-500");
+      }
+    } finally {
+      fileInput.disabled = false;
+    }
+  });
+
+  // Popup Management
+  document.querySelectorAll("[data-create-popup]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const url = btn.getAttribute("data-create-popup");
+      if (url) {
+        window.open(
+          url,
+          "createPopup",
+          "width=600,height=700,resizable=yes,scrollbars=yes"
+        );
+      }
+    });
+  });
+
+  window.addEventListener("message", (event) => {
+    if (event.data.type === "category-created") {
+      const { id, name } = event.data.category;
+      const select = document.getElementById("categoryId") as HTMLSelectElement;
+      if (select) {
+        const option = document.createElement("option");
+        option.value = id;
+        option.textContent = name;
+        option.selected = true;
+        select.appendChild(option);
+      }
+    }
+
+    if (event.data.type === "collection-created") {
+      const { id, name } = event.data.collection;
+      const select = document.getElementById(
+        "collectionId"
+      ) as HTMLSelectElement;
+      if (select) {
+        const option = document.createElement("option");
+        option.value = id;
+        option.textContent = name;
+        option.selected = true;
+        select.appendChild(option);
+      }
+    }
+  });
+</script>

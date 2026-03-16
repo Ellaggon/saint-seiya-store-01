@@ -1,6 +1,8 @@
 export interface CategoryProps {
   id: string;
   name: string;
+  slug: string;
+  imageUrl?: string;
 }
 
 export class Category {
@@ -12,6 +14,14 @@ export class Category {
 
   get name(): string {
     return this.props.name;
+  }
+
+  get slug(): string {
+    return this.props.slug;
+  }
+
+  get imageUrl(): string | undefined {
+    return this.props.imageUrl;
   }
 
   static create(props: CategoryProps): Category {

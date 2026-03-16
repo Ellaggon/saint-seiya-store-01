@@ -9,13 +9,16 @@ export interface ProductProps {
   id: string;
   name: string;
   description: string;
-  price: number; // Decimal implementation in domain logic, stored as number in simple TS
+  price: number;
   categoryId: string;
+  collectionId: string;
   height: number;
   material: string;
   imageUrl: string;
   stock: number;
   status: ProductStatus;
+  line?: string;
+  character?: string;
 }
 
 export class Product {
@@ -41,6 +44,10 @@ export class Product {
     return this.props.categoryId;
   }
 
+  get collectionId(): string {
+    return this.props.collectionId;
+  }
+
   get height(): number {
     return this.props.height;
   }
@@ -59,6 +66,14 @@ export class Product {
 
   get status(): ProductStatus {
     return this.props.status;
+  }
+
+  get line(): string | undefined {
+    return this.props.line;
+  }
+
+  get character(): string | undefined {
+    return this.props.character;
   }
 
   static create(props: ProductProps): Product {

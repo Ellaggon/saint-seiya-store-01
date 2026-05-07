@@ -7,10 +7,11 @@ class CatalogFilters {
   private gridContainer: HTMLElement | null = null;
   private toolbarCount: HTMLElement | null = null;
   private sidebarContainer: HTMLElement | null = null;
+  private sortSelect: HTMLSelectElement | null = null;
   private currentUrl: string = window.location.href;
 
   // Task 7: Cache catalog responses on client
-  private productsCache = new Map<string, any[]>();
+  private productsCache = new Map<string, any>();
   private metadataCache: any = null;
   
   // Abort controller for cancelling pending requests
@@ -24,6 +25,9 @@ class CatalogFilters {
     this.gridContainer = document.getElementById("catalog-grid-container");
     this.toolbarCount = document.getElementById("catalog-result-count");
     this.sidebarContainer = document.querySelector("aside");
+    this.sortSelect = document.getElementById(
+      "catalog-sort-select",
+    ) as HTMLSelectElement | null;
 
     if (!this.gridContainer) return;
 
@@ -47,6 +51,13 @@ class CatalogFilters {
     // Handle back/forward navigation
     window.addEventListener("popstate", () => {
       this.applyFilters(new URL(window.location.href), false);
+    });
+
+    this.sortSelect?.addEventListener("change", () => {
+      const nextUrl = new URL(window.location.href);
+      nextUrl.searchParams.set("sort", this.sortSelect?.value || "created-desc");
+      nextUrl.searchParams.delete("page");
+      this.applyFilters(nextUrl);
     });
   }
 
@@ -92,8 +103,8 @@ class CatalogFilters {
     const key = url.search || "default";
     if (this.productsCache.has(key)) {
       console.log(`[Client Filters] Cache Hit for key: ${key}`);
-      const products = this.productsCache.get(key)!;
-      this.updateUI(products, url, updateHistory);
+      const cachedData = this.productsCache.get(key)!;
+      this.updateUI(cachedData, url, updateHistory);
       console.log(`[Client Filters] Total Latency (Cached): ${(performance.now() - startTotal).toFixed(2)}ms`);
       return;
     }
@@ -112,13 +123,16 @@ class CatalogFilters {
     }, 120);
 
     try {
-      const products = await this.fetchProducts(url, this.abortController.signal);
+      const productsData = await this.fetchProducts(
+        url,
+        this.abortController.signal,
+      );
       
       // Task 7: results stored after fetch
-      this.productsCache.set(key, products);
+      this.productsCache.set(key, productsData);
 
       clearTimeout(skeletonTimer);
-      this.updateUI(products, url, updateHistory);
+      this.updateUI(productsData, url, updateHistory);
       console.log(`[Client Filters] Total Latency (Network): ${(performance.now() - startTotal).toFixed(2)}ms`);
 
     } catch (error: any) {
@@ -133,8 +147,12 @@ class CatalogFilters {
     }
   }
 
-  private updateUI(products: any[], url: URL, updateHistory: boolean) {
+  private updateUI(data: any, url: URL, updateHistory: boolean) {
     console.time("client_ui_render_total");
+    const products = Array.isArray(data) ? data : data.items || [];
+    const total = Array.isArray(data)
+      ? products.length
+      : data.pagination?.total ?? products.length;
     
     console.time("client_render_products");
     this.renderProducts(products);
@@ -149,6 +167,10 @@ class CatalogFilters {
     if (updateHistory) {
       window.history.pushState({}, "", url.href);
     }
+    if (this.sortSelect) {
+      this.sortSelect.value = url.searchParams.get("sort") || "created-desc";
+    }
+    this.updateCount(total);
 
     this.currentUrl = url.href;
 
@@ -173,10 +195,8 @@ class CatalogFilters {
     if (!this.gridContainer) return;
     if (products.length === 0) {
       this.renderEmpty();
-      this.updateCount(0);
       return;
     }
-    this.updateCount(products.length);
 
     const fragment = document.createDocumentFragment();
     const container = document.createElement("div");
@@ -197,7 +217,7 @@ class CatalogFilters {
             <div class="absolute top-3 left-3 flex flex-col gap-2 z-10">
               ${p.status === "PRE_ORDER" ? '<span class="bg-[#E60012] text-white text-[10px] font-black uppercase tracking-widest px-2 py-1">PRE-ORDER</span>' : ""}
               ${p.status === "NEW" ? '<span class="bg-[#E60012] text-white text-[10px] font-black uppercase tracking-widest px-2 py-1">NEW</span>' : ""}
-              ${p.status === "OUT OF STOCK" ? '<span class="bg-zinc-800 text-zinc-400 border border-zinc-700 text-[10px] font-black uppercase tracking-widest px-2 py-1">OUT OF STOCK</span>' : ""}
+              ${p.status === "OUT_OF_STOCK" ? '<span class="bg-zinc-800 text-zinc-400 border border-zinc-700 text-[10px] font-black uppercase tracking-widest px-2 py-1">OUT OF STOCK</span>' : ""}
             </div>
             <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
               <span class="border border-amber-500 text-amber-500 text-xs font-black uppercase tracking-[0.2em] px-6 py-3 bg-black/80 backdrop-blur-sm shadow-[inset_0_0_10px_rgba(212,175,55,0.2)]">VIEW DETAILS</span>

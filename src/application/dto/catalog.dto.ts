@@ -1,4 +1,5 @@
 import type { ProductStatus } from "../../domain/entities/Product";
+import type { CatalogSort } from "../../domain/repositories/ProductRepository";
 
 export interface ProductDTO {
   id: string;
@@ -73,5 +74,18 @@ export interface CatalogProductDTO {
   imageUrl: string | null;
   character?: string;
   line?: string;
-  status: string;
+  status: ProductStatus;
+}
+
+export interface CatalogPaginationDTO {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface CatalogProductsResponseDTO {
+  items: CatalogProductDTO[];
+  pagination: CatalogPaginationDTO;
+  sort: CatalogSort;
 }

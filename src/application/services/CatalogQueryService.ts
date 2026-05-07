@@ -1,9 +1,13 @@
 import { prisma } from "@/infrastructure/database/prisma";
 import { ProductStatus } from "@/domain/entities/Product";
-import type { ProductFilters } from "@/domain/repositories/ProductRepository";
+import type {
+  CatalogSort,
+  ProductFilters,
+} from "@/domain/repositories/ProductRepository";
 import type {
   CatalogMetadataDTO,
   CatalogProductDTO,
+  CatalogProductsResponseDTO,
 } from "@/application/dto/catalog.dto";
 
 interface CachedMetadata {
@@ -12,34 +16,83 @@ interface CachedMetadata {
 }
 
 const METADATA_TTL = 10 * 60 * 1000; // 10 minutes
-const ALL_PRODUCTS_TTL = 10 * 60 * 1000; // 10 minutes
-
-// Phase 3: Server Memory Catalog Cache
-let allProductsCache: any[] | null = null;
-let allProductsCacheExpires = 0;
 
 let metadataCache: CachedMetadata | null = null;
 
+const DEFAULT_PAGE_SIZE = 24;
+const MAX_PAGE_SIZE = 100;
+const DEFAULT_SORT: CatalogSort = "created-desc";
+
 export class CatalogQueryService {
+  private resolveSort(sort?: string): CatalogSort {
+    const allowed: CatalogSort[] = [
+      "created-desc",
+      "price-asc",
+      "price-desc",
+      "name-asc",
+    ];
+    return allowed.includes(sort as CatalogSort)
+      ? (sort as CatalogSort)
+      : DEFAULT_SORT;
+  }
+
+  private buildOrderBy(sort: CatalogSort) {
+    if (sort === "price-asc")
+      return [{ price: "asc" as const }, { createdAt: "desc" as const }];
+    if (sort === "price-desc")
+      return [{ price: "desc" as const }, { createdAt: "desc" as const }];
+    if (sort === "name-asc")
+      return [{ name: "asc" as const }, { createdAt: "desc" as const }];
+    return [{ createdAt: "desc" as const }];
+  }
+
   async getCatalogProducts(
     filters?: ProductFilters,
-  ): Promise<CatalogProductDTO[]> {
-    const now = Date.now();
-
+  ): Promise<CatalogProductsResponseDTO> {
     const startTotal = performance.now();
 
-    // 1. Fetch ALL published products if cache is empty or expired
-    if (!allProductsCache || allProductsCacheExpires <= now) {
-      console.log(`[CatalogQueryService] All Products Cache Miss. Fetching from DB...`);
-      console.time("query_products_db");
-      
-      const allProducts = await prisma.product.findMany({
-        where: {
-          deletedAt: null,
-          status: {
-            in: [ProductStatus.PUBLISHED, ProductStatus.PRE_ORDER],
-          },
+    const page = Math.max(1, Math.trunc(Number(filters?.page || 1)));
+    const requestedPageSize = Math.trunc(
+      Number(filters?.pageSize || DEFAULT_PAGE_SIZE),
+    );
+    const pageSize = Math.min(
+      MAX_PAGE_SIZE,
+      Math.max(1, requestedPageSize || DEFAULT_PAGE_SIZE),
+    );
+    const sort = this.resolveSort(filters?.sort);
+
+    const whereClause: any = {
+      deletedAt: null,
+      status: {
+        in: [ProductStatus.PUBLISHED, ProductStatus.PRE_ORDER],
+      },
+    };
+
+    if (
+      filters?.status &&
+      Object.values(ProductStatus).includes(filters.status as ProductStatus)
+    ) {
+      whereClause.status = filters.status;
+    }
+    if (filters?.category) {
+      whereClause.category = { slug: filters.category };
+    }
+    if (filters?.collection) {
+      whereClause.collection = { slug: filters.collection };
+    }
+    if (filters?.character) {
+      whereClause.characters = {
+        some: {
+          character: { slug: filters.character },
         },
+      };
+    }
+
+    console.time("catalog_products_db_query");
+    const [total, products] = await Promise.all([
+      prisma.product.count({ where: whereClause }),
+      prisma.product.findMany({
+        where: whereClause,
         select: {
           id: true,
           name: true,
@@ -47,9 +100,6 @@ export class CatalogQueryService {
           imageUrl: true,
           status: true,
           createdAt: true,
-          category: {
-            select: { slug: true },
-          },
           collection: {
             select: { name: true, slug: true },
           },
@@ -61,41 +111,14 @@ export class CatalogQueryService {
             },
           },
         },
-        orderBy: { createdAt: "desc" },
-      });
-      console.timeEnd("query_products_db");
+        orderBy: this.buildOrderBy(sort),
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+    console.timeEnd("catalog_products_db_query");
 
-      allProductsCache = allProducts;
-      allProductsCacheExpires = now + ALL_PRODUCTS_TTL;
-    } else {
-      console.log(`[CatalogQueryService] All Products Cache Hit.`);
-    }
-
-    // 2. Apply filtering in memory
-    console.time("catalog_memory_filter_time");
-    let filteredProducts = allProductsCache || [];
-
-    if (filters) {
-      if (filters.status && Object.values(ProductStatus).includes(filters.status as ProductStatus)) {
-        filteredProducts = filteredProducts.filter((p) => p.status === filters.status);
-      }
-      if (filters.category) {
-        filteredProducts = filteredProducts.filter((p) => p.category?.slug === filters.category);
-      }
-      if (filters.collection) {
-        filteredProducts = filteredProducts.filter((p) => p.collection?.slug === filters.collection);
-      }
-      if (filters.character) {
-        filteredProducts = filteredProducts.filter((p) => 
-          p.characters?.some((c: any) => c.character?.slug === filters.character)
-        );
-      }
-    }
-
-    // Limit to 50 as requirement Phase 2 ("keep take: 50")
-    filteredProducts = filteredProducts.slice(0, 50);
-
-    const result = filteredProducts.map((p: any) => ({
+    const result: CatalogProductDTO[] = products.map((p: any) => ({
       id: p.id,
       name: p.name,
       price: Number(p.price),
@@ -104,12 +127,20 @@ export class CatalogQueryService {
       line: p.collection?.name,
       status: p.status,
     }));
-    console.timeEnd("catalog_memory_filter_time");
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     const totalTime = performance.now() - startTotal;
     console.log(`[CatalogQueryService] catalog_total_request_time (Products): ${totalTime.toFixed(2)}ms`);
-
-    return result;
+    return {
+      items: result,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages,
+      },
+      sort,
+    };
   }
 
   async getCatalogMetadata(): Promise<CatalogMetadataDTO> {

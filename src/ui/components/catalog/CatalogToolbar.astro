@@ -1,8 +1,9 @@
 ---
 interface Props {
   resultCount: number;
+  currentSort: string;
 }
-const { resultCount } = Astro.props;
+const { resultCount, currentSort } = Astro.props;
 ---
 
 <div
@@ -23,12 +24,21 @@ const { resultCount } = Astro.props;
     >
     <div class="relative w-full sm:w-auto">
       <select
+        id="catalog-sort-select"
         class="w-full sm:w-auto bg-black border border-zinc-800 text-white text-[11px] font-black uppercase tracking-widest px-4 py-3 hover:border-amber-500 transition-colors focus:outline-none focus:border-amber-500 appearance-none cursor-pointer pr-10"
       >
-        <option value="latest">LATEST RELEASE</option>
-        <option value="price-asc">PRICE ASCENDING</option>
-        <option value="price-desc">PRICE DESCENDING</option>
-        <option value="name">CHARACTER NAME</option>
+        <option value="created-desc" selected={currentSort === "created-desc"}>
+          LATEST RELEASE
+        </option>
+        <option value="price-asc" selected={currentSort === "price-asc"}>
+          PRICE ASCENDING
+        </option>
+        <option value="price-desc" selected={currentSort === "price-desc"}>
+          PRICE DESCENDING
+        </option>
+        <option value="name-asc" selected={currentSort === "name-asc"}>
+          CHARACTER NAME
+        </option>
       </select>
       <div
         class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-500"

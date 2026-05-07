@@ -1,6 +1,20 @@
 import type { APIRoute } from "astro";
 import { CatalogQueryService } from "../../../application/services/CatalogQueryService";
 import { GetCatalogProductsUseCase } from "../../../application/use-cases/catalog/GetCatalogProductsUseCase";
+import type { CatalogSort } from "@/domain/repositories/ProductRepository";
+
+const resolveSort = (sort?: string): CatalogSort | undefined => {
+  const allowed: CatalogSort[] = [
+    "created-desc",
+    "price-asc",
+    "price-desc",
+    "name-asc",
+  ];
+  if (!sort) return undefined;
+  return allowed.includes(sort as CatalogSort)
+    ? (sort as CatalogSort)
+    : undefined;
+};
 
 export const GET: APIRoute = async ({ request }) => {
   const start = performance.now();
@@ -14,6 +28,11 @@ export const GET: APIRoute = async ({ request }) => {
       collection: params.get("collection") || undefined,
       character: params.get("character") || undefined,
       status: params.get("status") || undefined,
+      sort: resolveSort(params.get("sort") || undefined),
+      page: params.get("page") ? Number(params.get("page")) : undefined,
+      pageSize: params.get("pageSize")
+        ? Number(params.get("pageSize"))
+        : undefined,
     };
 
     const queryService = new CatalogQueryService();

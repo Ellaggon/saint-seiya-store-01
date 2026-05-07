@@ -5,7 +5,16 @@ export interface ProductFilters {
   collection?: string;
   character?: string;
   status?: string;
+  sort?: CatalogSort;
+  page?: number;
+  pageSize?: number;
 }
+
+export type CatalogSort =
+  | "created-desc"
+  | "price-asc"
+  | "price-desc"
+  | "name-asc";
 
 export interface CatalogMetadata {
   categories: {
@@ -36,7 +45,7 @@ export interface CollectionData {
   id: string;
   name: string;
   slug: string;
-  description?: string;
+  description?: string | null;
   deletedAt?: Date | null;
 }
 

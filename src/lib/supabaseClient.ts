@@ -1,5 +1,9 @@
 // import { createClient } from "@supabase/supabase-js";
 import { createBrowserClient } from "@supabase/ssr";
+import {
+  supabasePublishableKey,
+  supabaseUrl,
+} from "@/lib/supabaseBrowserEnv";
 
 // const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 // const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -13,6 +17,6 @@ import { createBrowserClient } from "@supabase/ssr";
 // });
 
 export const supabase = createBrowserClient(
-  import.meta.env.PUBLIC_SUPABASE_URL,
-  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  supabaseUrl,
+  supabasePublishableKey,
 );

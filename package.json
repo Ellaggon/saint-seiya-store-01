@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "prisma generate && astro build",
+    "build:safe": "PATH=/opt/homebrew/bin:$PATH prisma generate && PATH=/opt/homebrew/bin:$PATH astro build",
     "preview": "astro preview",
     "astro": "astro",
     "db:generate": "prisma generate",

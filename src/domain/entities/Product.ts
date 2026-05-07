@@ -3,6 +3,7 @@ export enum ProductStatus {
   PUBLISHED = "PUBLISHED",
   PRE_ORDER = "PRE_ORDER",
   OUT_OF_STOCK = "OUT_OF_STOCK",
+  ARCHIVED = "ARCHIVED",
 }
 
 export interface ProductProps {

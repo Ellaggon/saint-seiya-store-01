@@ -33,7 +33,7 @@ const { product } = Astro.props;
     <!-- Badges -->
     <div class="absolute top-3 left-3 flex flex-col gap-2 z-10">
       {
-        product.status === "PRE-ORDER" && (
+        product.status === "PRE_ORDER" && (
           <span class="bg-[#E60012] text-white text-[10px] font-black uppercase tracking-widest px-2 py-1">
             PRE-ORDER
           </span>
@@ -47,7 +47,7 @@ const { product } = Astro.props;
         )
       }
       {
-        product.status === "OUT OF STOCK" && (
+        product.status === "OUT_OF_STOCK" && (
           <span class="bg-zinc-800 text-zinc-400 border border-zinc-700 text-[10px] font-black uppercase tracking-widest px-2 py-1">
             OUT OF STOCK
           </span>

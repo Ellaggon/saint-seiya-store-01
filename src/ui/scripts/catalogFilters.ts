@@ -5,6 +5,7 @@
 
 class CatalogFilters {
   private gridContainer: HTMLElement | null = null;
+  private paginationContainer: HTMLElement | null = null;
   private toolbarCount: HTMLElement | null = null;
   private sidebarContainer: HTMLElement | null = null;
   private sortSelect: HTMLSelectElement | null = null;
@@ -23,6 +24,9 @@ class CatalogFilters {
 
   private init() {
     this.gridContainer = document.getElementById("catalog-grid-container");
+    this.paginationContainer = document.getElementById(
+      "catalog-pagination-container",
+    );
     this.toolbarCount = document.getElementById("catalog-result-count");
     this.sidebarContainer = document.querySelector("aside");
     this.sortSelect = document.getElementById(
@@ -44,6 +48,9 @@ class CatalogFilters {
       if (link && link instanceof HTMLAnchorElement) {
         e.preventDefault();
         const url = new URL(link.href);
+        if (!link.hasAttribute("data-page-link")) {
+          url.searchParams.delete("page");
+        }
         this.applyFilters(url);
       }
     });
@@ -157,6 +164,7 @@ class CatalogFilters {
     console.time("client_render_products");
     this.renderProducts(products);
     console.timeEnd("client_render_products");
+    this.renderPagination(data.pagination, url);
 
     // Only update sidebar bounds if metadata is cached
     if (this.metadataCache) {
@@ -180,6 +188,55 @@ class CatalogFilters {
     }
     
     console.timeEnd("client_ui_render_total");
+  }
+
+  private renderPagination(
+    pagination:
+      | { page: number; pageSize: number; total: number; totalPages: number }
+      | undefined,
+    url: URL,
+  ) {
+    if (!this.paginationContainer) return;
+    if (!pagination || pagination.totalPages <= 1) {
+      this.paginationContainer.innerHTML = "";
+      return;
+    }
+
+    const { page, totalPages } = pagination;
+    const buildPageUrl = (targetPage: number) => {
+      const nextUrl = new URL(url.href);
+      nextUrl.searchParams.set("page", String(targetPage));
+      return `${nextUrl.pathname}?${nextUrl.searchParams.toString()}`;
+    };
+
+    const buttons = Array.from({ length: totalPages }, (_, index) => {
+      const pageNumber = index + 1;
+      const isCurrent = pageNumber === page;
+      return `<a href="${buildPageUrl(pageNumber)}" data-page-link aria-current="${isCurrent ? "page" : "false"}" class="min-w-9 text-center border px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
+        isCurrent
+          ? "border-amber-500 text-amber-500 bg-amber-500/10"
+          : "border-zinc-800 text-zinc-300 hover:border-amber-500 hover:text-amber-500"
+      }">${pageNumber}</a>`;
+    }).join("");
+
+    const previousHref = page > 1 ? buildPageUrl(page - 1) : "#";
+    const nextHref = page < totalPages ? buildPageUrl(page + 1) : "#";
+
+    this.paginationContainer.innerHTML = `
+      <nav class="mt-10 border-t border-zinc-900 pt-6 flex items-center justify-between gap-4" aria-label="Catalog pagination">
+        <a href="${previousHref}" data-page-link aria-disabled="${page > 1 ? "false" : "true"}" class="border px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
+          page > 1
+            ? "border-zinc-800 text-zinc-300 hover:border-amber-500 hover:text-amber-500"
+            : "border-zinc-900 text-zinc-700 pointer-events-none"
+        }">Prev</a>
+        <div class="flex items-center gap-2 flex-wrap justify-center">${buttons}</div>
+        <a href="${nextHref}" data-page-link aria-disabled="${page < totalPages ? "false" : "true"}" class="border px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
+          page < totalPages
+            ? "border-zinc-800 text-zinc-300 hover:border-amber-500 hover:text-amber-500"
+            : "border-zinc-900 text-zinc-700 pointer-events-none"
+        }">Next</a>
+      </nav>
+    `;
   }
 
   private showLoading() {

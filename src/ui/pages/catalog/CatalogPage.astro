@@ -6,6 +6,7 @@ import CatalogToolbar from "../../components/catalog/CatalogToolbar.astro";
 import CatalogSidebarFilters from "../../components/catalog/CatalogSidebarFilters.astro";
 import CatalogGrid from "../../components/catalog/CatalogGrid.astro";
 import CatalogCategoryHero from "../../components/catalog/CatalogCategoryHero.astro";
+import CatalogPagination from "../../components/catalog/CatalogPagination.astro";
 
 import { CatalogQueryService } from "../../../application/services/CatalogQueryService";
 import { GetCatalogPageDataUseCase } from "../../../application/use-cases/catalog/GetCatalogPageDataUseCase";
@@ -52,7 +53,15 @@ const getCategoryUrl = (slug?: string) => {
   params.forEach((val, key) => {
     if (key !== "category") url.searchParams.set(key, val);
   });
+  url.searchParams.delete("page");
   return url.pathname + url.search;
+};
+
+const getPageUrl = (page: number) => {
+  const url = new URL(Astro.url.pathname, Astro.url.origin);
+  params.forEach((val, key) => url.searchParams.set(key, val));
+  url.searchParams.set("page", String(page));
+  return `${url.pathname}?${url.searchParams.toString()}`;
 };
 ---
 
@@ -111,6 +120,15 @@ const getCategoryUrl = (slug?: string) => {
                 </div>
               )
             }
+          </div>
+
+          <div id="catalog-pagination-container">
+            <CatalogPagination
+              currentPage={catalogResult.pagination.page}
+              totalPages={catalogResult.pagination.totalPages}
+              pageSize={catalogResult.pagination.pageSize}
+              getPageUrl={getPageUrl}
+            />
           </div>
         </main>
       </div>

@@ -23,6 +23,13 @@ const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_SORT: CatalogSort = "created-desc";
 
+const toPositiveInt = (value: unknown, fallback: number): number => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const normalized = Math.trunc(parsed);
+  return normalized > 0 ? normalized : fallback;
+};
+
 export class CatalogQueryService {
   private resolveSort(sort?: string): CatalogSort {
     const allowed: CatalogSort[] = [
@@ -51,10 +58,8 @@ export class CatalogQueryService {
   ): Promise<CatalogProductsResponseDTO> {
     const startTotal = performance.now();
 
-    const page = Math.max(1, Math.trunc(Number(filters?.page || 1)));
-    const requestedPageSize = Math.trunc(
-      Number(filters?.pageSize || DEFAULT_PAGE_SIZE),
-    );
+    const page = toPositiveInt(filters?.page, 1);
+    const requestedPageSize = toPositiveInt(filters?.pageSize, DEFAULT_PAGE_SIZE);
     const pageSize = Math.min(
       MAX_PAGE_SIZE,
       Math.max(1, requestedPageSize || DEFAULT_PAGE_SIZE),
@@ -89,33 +94,33 @@ export class CatalogQueryService {
     }
 
     console.time("catalog_products_db_query");
-    const [total, products] = await Promise.all([
-      prisma.product.count({ where: whereClause }),
-      prisma.product.findMany({
-        where: whereClause,
-        select: {
-          id: true,
-          name: true,
-          price: true,
-          imageUrl: true,
-          status: true,
-          createdAt: true,
-          collection: {
-            select: { name: true, slug: true },
-          },
-          characters: {
-            select: {
-              character: {
-                select: { name: true, slug: true },
-              },
+    const total = await prisma.product.count({ where: whereClause });
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(page, totalPages);
+    const products = await prisma.product.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        imageUrl: true,
+        status: true,
+        createdAt: true,
+        collection: {
+          select: { name: true, slug: true },
+        },
+        characters: {
+          select: {
+            character: {
+              select: { name: true, slug: true },
             },
           },
         },
-        orderBy: this.buildOrderBy(sort),
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-    ]);
+      },
+      orderBy: this.buildOrderBy(sort),
+      skip: (safePage - 1) * pageSize,
+      take: pageSize,
+    });
     console.timeEnd("catalog_products_db_query");
 
     const result: CatalogProductDTO[] = products.map((p: any) => ({
@@ -127,14 +132,12 @@ export class CatalogQueryService {
       line: p.collection?.name,
       status: p.status,
     }));
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-
     const totalTime = performance.now() - startTotal;
     console.log(`[CatalogQueryService] catalog_total_request_time (Products): ${totalTime.toFixed(2)}ms`);
     return {
       items: result,
       pagination: {
-        page,
+        page: safePage,
         pageSize,
         total,
         totalPages,

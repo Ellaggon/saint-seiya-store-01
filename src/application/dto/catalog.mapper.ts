@@ -25,6 +25,8 @@ export class CatalogMapper {
       status: product.status,
       line: product.line,
       character: product.character,
+      category: product.category,
+      characters: product.characters,
     };
   }
 

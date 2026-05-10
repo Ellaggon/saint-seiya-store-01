@@ -41,6 +41,15 @@ export class PrismaProductRepository implements ProductRepository {
   async findById(id: string): Promise<Product | null> {
     const p = await (prisma.product as any).findUnique({
       where: { id },
+      include: {
+        category: { select: { name: true } },
+        collection: { select: { name: true } },
+        characters: {
+          select: {
+            character: { select: { name: true } },
+          },
+        },
+      },
     });
 
     if (!p) return null;
@@ -57,6 +66,12 @@ export class PrismaProductRepository implements ProductRepository {
       imageUrl: p.imageUrl,
       stock: p.stock || 0,
       status: p.status as ProductStatus,
+      line: p.collection?.name,
+      character: p.characters?.[0]?.character?.name || undefined,
+      category: p.category?.name,
+      characters:
+        p.characters?.map((entry: any) => entry.character?.name).filter(Boolean) ||
+        [],
     });
   }
 

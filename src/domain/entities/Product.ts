@@ -20,6 +20,8 @@ export interface ProductProps {
   status: ProductStatus;
   line?: string;
   character?: string;
+  category?: string;
+  characters?: string[];
 }
 
 export class Product {
@@ -75,6 +77,14 @@ export class Product {
 
   get character(): string | undefined {
     return this.props.character;
+  }
+
+  get category(): string | undefined {
+    return this.props.category;
+  }
+
+  get characters(): string[] | undefined {
+    return this.props.characters;
   }
 
   static create(props: ProductProps): Product {

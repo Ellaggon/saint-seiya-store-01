@@ -5,13 +5,14 @@
 
 class CatalogFilters {
   private gridContainer: HTMLElement | null = null;
+  private paginationContainer: HTMLElement | null = null;
   private toolbarCount: HTMLElement | null = null;
   private sidebarContainer: HTMLElement | null = null;
   private sortSelect: HTMLSelectElement | null = null;
   private currentUrl: string = window.location.href;
 
-  // Task 7: Cache catalog responses on client
-  private productsCache = new Map<string, any>();
+  // Cache partial HTML responses by querystring
+  private partialCache = new Map<string, string>();
   private metadataCache: any = null;
   
   // Abort controller for cancelling pending requests
@@ -23,6 +24,9 @@ class CatalogFilters {
 
   private init() {
     this.gridContainer = document.getElementById("catalog-grid-container");
+    this.paginationContainer = document.getElementById(
+      "catalog-pagination-container",
+    );
     this.toolbarCount = document.getElementById("catalog-result-count");
     this.sidebarContainer = document.querySelector("aside");
     this.sortSelect = document.getElementById(
@@ -44,6 +48,9 @@ class CatalogFilters {
       if (link && link instanceof HTMLAnchorElement) {
         e.preventDefault();
         const url = new URL(link.href);
+        if (!link.hasAttribute("data-page-link")) {
+          url.searchParams.delete("page");
+        }
         this.applyFilters(url);
       }
     });
@@ -74,9 +81,9 @@ class CatalogFilters {
     console.timeEnd("client_catalog_metadata");
   }
 
-  private async fetchProducts(url: URL, signal?: AbortSignal) {
-    console.time("client_catalog_products");
-    const apiUrl = new URL("/api/catalog/products", window.location.origin);
+  private async fetchPartialHtml(url: URL, signal?: AbortSignal) {
+    console.time("client_catalog_partial");
+    const apiUrl = new URL("/catalog/partials/products", window.location.origin);
     url.searchParams.forEach((val, key) =>
       apiUrl.searchParams.append(key, val),
     );
@@ -84,11 +91,11 @@ class CatalogFilters {
     try {
       const res = await fetch(apiUrl, { signal });
       if (!res.ok) throw new Error("Fetch failed");
-      const data = await res.json();
-      console.timeEnd("client_catalog_products");
-      return data;
+      const html = await res.text();
+      console.timeEnd("client_catalog_partial");
+      return html;
     } catch (e) {
-      console.timeEnd("client_catalog_products");
+      console.timeEnd("client_catalog_partial");
       throw e;
     }
   }
@@ -99,12 +106,12 @@ class CatalogFilters {
     const startTotal = performance.now();
     console.log(`[Client Filters] Start applyFilters for: ${url.search}`);
 
-    // Task 7: cache lookup happens before fetch
+    // Cache lookup before network fetch
     const key = url.search || "default";
-    if (this.productsCache.has(key)) {
+    if (this.partialCache.has(key)) {
       console.log(`[Client Filters] Cache Hit for key: ${key}`);
-      const cachedData = this.productsCache.get(key)!;
-      this.updateUI(cachedData, url, updateHistory);
+      const cachedHtml = this.partialCache.get(key)!;
+      this.updateUIFromPartial(cachedHtml, url, updateHistory);
       console.log(`[Client Filters] Total Latency (Cached): ${(performance.now() - startTotal).toFixed(2)}ms`);
       return;
     }
@@ -123,16 +130,15 @@ class CatalogFilters {
     }, 120);
 
     try {
-      const productsData = await this.fetchProducts(
+      const partialHtml = await this.fetchPartialHtml(
         url,
         this.abortController.signal,
       );
       
-      // Task 7: results stored after fetch
-      this.productsCache.set(key, productsData);
+      this.partialCache.set(key, partialHtml);
 
       clearTimeout(skeletonTimer);
-      this.updateUI(productsData, url, updateHistory);
+      this.updateUIFromPartial(partialHtml, url, updateHistory);
       console.log(`[Client Filters] Total Latency (Network): ${(performance.now() - startTotal).toFixed(2)}ms`);
 
     } catch (error: any) {
@@ -147,16 +153,25 @@ class CatalogFilters {
     }
   }
 
-  private updateUI(data: any, url: URL, updateHistory: boolean) {
+  private updateUIFromPartial(partialHtml: string, url: URL, updateHistory: boolean) {
     console.time("client_ui_render_total");
-    const products = Array.isArray(data) ? data : data.items || [];
-    const total = Array.isArray(data)
-      ? products.length
-      : data.pagination?.total ?? products.length;
-    
-    console.time("client_render_products");
-    this.renderProducts(products);
-    console.timeEnd("client_render_products");
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(partialHtml, "text/html");
+    const nextGrid = doc.getElementById("catalog-grid-container");
+    const nextPagination = doc.getElementById("catalog-pagination-container");
+    const nextCount = doc.getElementById("catalog-result-count-partial");
+
+    if (nextGrid && this.gridContainer) {
+      this.gridContainer.replaceWith(nextGrid);
+      this.gridContainer = nextGrid;
+    }
+    if (nextPagination && this.paginationContainer) {
+      this.paginationContainer.replaceWith(nextPagination);
+      this.paginationContainer = nextPagination;
+    }
+    if (nextCount && this.toolbarCount) {
+      this.toolbarCount.textContent = nextCount.textContent || "0";
+    }
 
     // Only update sidebar bounds if metadata is cached
     if (this.metadataCache) {
@@ -170,7 +185,6 @@ class CatalogFilters {
     if (this.sortSelect) {
       this.sortSelect.value = url.searchParams.get("sort") || "created-desc";
     }
-    this.updateCount(total);
 
     this.currentUrl = url.href;
 
@@ -190,70 +204,6 @@ class CatalogFilters {
     }
   }
 
-  // Task 6: Frontend rendering optimization with DocumentFragment
-  private renderProducts(products: any[]) {
-    if (!this.gridContainer) return;
-    if (products.length === 0) {
-      this.renderEmpty();
-      return;
-    }
-
-    const fragment = document.createDocumentFragment();
-    const container = document.createElement("div");
-    container.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[24px] animate-in fade-in duration-500";
-
-    const placeholderImage =
-      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%2309090b'/%3E%3Cpath d='M150 150h100v100h-100z' fill='%2327272a'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%2352525b' font-weight='bold' letter-spacing='0.2em' text-anchor='middle' dominant-baseline='middle'%3EIMAGE UNAVAILABLE%3C/text%3E%3C/svg%3E";
-
-    products.forEach((p) => {
-      const image = p.imageUrl || placeholderImage;
-      const price = typeof p.price === "number" ? p.price.toFixed(2) : parseFloat(p.price || 0).toFixed(2);
-      
-      const itemWrapper = document.createElement("div");
-      itemWrapper.innerHTML = `
-        <a href="/product/${p.id}" class="group flex flex-col gap-4 cursor-pointer block">
-          <div class="relative w-full aspect-square bg-zinc-950 border border-zinc-900 group-hover:border-amber-500 transition-all duration-300 overflow-hidden transform group-hover:scale-[1.03]">
-            <img src="${image}" alt="${p.name}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:brightness-110 transition-all duration-300" loading="lazy" />
-            <div class="absolute top-3 left-3 flex flex-col gap-2 z-10">
-              ${p.status === "PRE_ORDER" ? '<span class="bg-[#E60012] text-white text-[10px] font-black uppercase tracking-widest px-2 py-1">PRE-ORDER</span>' : ""}
-              ${p.status === "NEW" ? '<span class="bg-[#E60012] text-white text-[10px] font-black uppercase tracking-widest px-2 py-1">NEW</span>' : ""}
-              ${p.status === "OUT_OF_STOCK" ? '<span class="bg-zinc-800 text-zinc-400 border border-zinc-700 text-[10px] font-black uppercase tracking-widest px-2 py-1">OUT OF STOCK</span>' : ""}
-            </div>
-            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20">
-              <span class="border border-amber-500 text-amber-500 text-xs font-black uppercase tracking-[0.2em] px-6 py-3 bg-black/80 backdrop-blur-sm shadow-[inset_0_0_10px_rgba(212,175,55,0.2)]">VIEW DETAILS</span>
-            </div>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em]">${p.character || "UNKNOWN"}</span>
-            <h3 class="text-white text-sm font-black uppercase tracking-tight leading-snug">${p.name}</h3>
-            <div class="flex items-center justify-between mt-1">
-              <span class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">${p.line || "UNKNOWN LINE"}</span>
-              <span class="text-amber-500 text-sm font-black uppercase tracking-widest">$${price}</span>
-            </div>
-          </div>
-        </a>
-      `;
-      container.appendChild(itemWrapper.firstElementChild!);
-    });
-
-    fragment.appendChild(container);
-    this.gridContainer.innerHTML = "";
-    this.gridContainer.appendChild(fragment);
-  }
-
-  private renderEmpty() {
-    if (!this.gridContainer) return;
-    this.gridContainer.innerHTML = `
-      <div class="flex flex-col items-center justify-center py-32 border border-zinc-900 bg-zinc-950/50 animate-in fade-in duration-500">
-        <span class="text-zinc-800 text-6xl mb-8 font-black">∅</span>
-        <h2 class="text-amber-500 font-black text-xs tracking-[0.5em] uppercase">NO COLLECTIBLES FOUND</h2>
-        <p class="text-zinc-600 text-[10px] mt-4 tracking-widest uppercase">STRETCH YOUR SEARCH PARAMETERS</p>
-        <a href="/catalog" data-filter-link class="mt-8 text-amber-500 text-[9px] font-black uppercase tracking-[0.2em] border border-amber-500/30 px-6 py-3 hover:bg-amber-500 hover:text-black transition-all">
-          RESET ARCHIVE
-        </a>
-      </div>
-    `;
-  }
 
   private renderError() {
     if (!this.gridContainer) return;
@@ -265,10 +215,6 @@ class CatalogFilters {
         </button>
       </div>
     `;
-  }
-
-  private updateCount(count: number) {
-    if (this.toolbarCount) this.toolbarCount.textContent = count.toString();
   }
 
   private updateCategoryActive(url: URL) {

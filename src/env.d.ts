@@ -13,8 +13,12 @@ declare global {
 interface ImportMetaEnv {
   readonly SUPABASE_URL: string;
   readonly SUPABASE_ANON_KEY: string;
+  readonly SUPABASE_PUBLISHABLE_KEY: string;
   readonly PUBLIC_SUPABASE_URL: string;
   readonly PUBLIC_SUPABASE_ANON_KEY: string;
+  readonly PUBLIC_SUPABASE_PUBLISHABLE_KEY: string;
+  readonly NEXT_PUBLIC_SUPABASE_URL: string;
+  readonly NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: string;
   readonly DATABASE_URL: string;
   readonly DIRECT_URL: string;
   readonly RESEND_API_KEY: string;

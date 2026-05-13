@@ -13,6 +13,7 @@ export default defineConfig({
   }),
 
   vite: {
+    envPrefix: ["PUBLIC_", "NEXT_PUBLIC_"],
     plugins: [tailwindcss()],
   },
 });

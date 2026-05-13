@@ -1,35 +1,108 @@
 ---
 import MainLayout from "../../layouts/MainLayout.astro";
+
+interface Props {
+  product: {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    categoryId: string;
+    collectionId: string;
+    height: number;
+    material: string;
+    imageUrl: string;
+    stock: number;
+    status: string;
+    line?: string;
+    character?: string;
+    category?: string;
+    characters?: string[];
+  } | null;
+}
+
+const { product } = Astro.props;
+
+const statusLabelMap: Record<string, string> = {
+  DRAFT: "DRAFT",
+  PUBLISHED: "PUBLISHED",
+  PRE_ORDER: "PRE-ORDER",
+  OUT_OF_STOCK: "OUT OF STOCK",
+  ARCHIVED: "ARCHIVED",
+};
 ---
 
-<MainLayout title="PRODUCT | DETAIL">
+<MainLayout title={product ? `${product.name} | PRODUCT DETAIL` : "PRODUCT | DETAIL"}>
   <main class="min-h-screen bg-black">
-    <div class="container mx-auto px-4 py-20 flex gap-20">
-      <div class="w-1/2 aspect-square border border-zinc-900 group relative">
-        <div class="absolute inset-0 bg-zinc-900 animate-pulse"></div>
-      </div>
-      <div class="flex-1 space-y-12">
-        <div class="border-b border-zinc-900 pb-8">
-          <h1 class="text-5xl font-black uppercase text-white leading-none">
-            Gemini Saga (Myth Cloth EX)
-          </h1>
-          <span
-            class="text-amber-500 font-black block mt-4 text-xs tracking-widest uppercase"
-            >Tamashii Nations Limited</span
-          >
+    {
+      product ? (
+        <div class="max-w-[1280px] mx-auto px-4 py-16 grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <div class="w-full aspect-square border border-zinc-900 bg-zinc-950 overflow-hidden">
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              class="w-full h-full object-cover"
+              loading="eager"
+            />
+          </div>
+
+          <div class="flex flex-col gap-10">
+            <div class="border-b border-zinc-900 pb-6">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[10px] font-black uppercase tracking-widest px-2 py-1">
+                  {statusLabelMap[product.status] ?? product.status}
+                </span>
+                <span class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[10px] font-black uppercase tracking-widest px-2 py-1">
+                  Stock: {product.stock}
+                </span>
+              </div>
+              <h1 class="text-3xl md:text-5xl font-black uppercase text-white leading-tight">
+                {product.name}
+              </h1>
+              <p class="text-amber-500 font-black mt-4 text-sm uppercase tracking-widest">
+                ${product.price.toFixed(2)}
+              </p>
+            </div>
+
+            <div class="space-y-4 border border-zinc-900 bg-zinc-950 px-5 py-5">
+              <p class="text-zinc-300 text-xs uppercase tracking-widest font-bold">
+                {product.description}
+              </p>
+              <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
+                Category: <span class="text-white">{product.category ?? "N/A"}</span>
+              </p>
+              <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
+                Collection: <span class="text-white">{product.line ?? "N/A"}</span>
+              </p>
+              <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
+                Characters:
+                <span class="text-white">
+                  {(product.characters && product.characters.length > 0
+                    ? product.characters.join(", ")
+                    : product.character) || "N/A"}
+                </span>
+              </p>
+              <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
+                Height: <span class="text-white">{product.height} CM</span>
+              </p>
+              <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
+                Material: <span class="text-white">{product.material || "N/A"}</span>
+              </p>
+            </div>
+          </div>
         </div>
-        <div
-          class="space-y-4 text-white uppercase font-bold text-xs tracking-widest text-zinc-400"
-        >
-          <p>Height: 18cm</p>
-          <p>Material: Die-cast & ABS</p>
-          <p>Status: Pre-order</p>
+      ) : (
+        <div class="max-w-[1280px] mx-auto px-4 py-20">
+          <div class="border border-zinc-900 bg-zinc-950 px-8 py-12">
+            <h1 class="text-white text-xl font-black uppercase tracking-widest">
+              Product not found
+            </h1>
+            <p class="text-zinc-500 text-xs uppercase tracking-widest mt-4">
+              The requested product does not exist or is unavailable.
+            </p>
+          </div>
         </div>
-        <button
-          class="w-full bg-amber-500 text-black py-4 font-black uppercase tracking-widest hover:bg-amber-400 transition-colors"
-          >Add to Sanctuary Collection</button
-        >
-      </div>
-    </div>
+      )
+    }
   </main>
 </MainLayout>

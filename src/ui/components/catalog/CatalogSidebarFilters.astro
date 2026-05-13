@@ -6,6 +6,7 @@ interface Props {
     characters: { name: string; slug: string; count: number }[];
   } | null;
   currentFilters: {
+    category?: string;
     collection?: string;
     character?: string;
     status?: string;
@@ -33,11 +34,17 @@ const getFilterUrl = (key: string, value: string | null) => {
   } else {
     params.set(key, value);
   }
+  params.delete("page");
 
   return `${url.pathname}?${params.toString()}`;
 };
 
-const hasActiveFilters = Object.values(currentFilters).some((v) => !!v);
+const hasActiveFilters = Boolean(
+  currentFilters.category ||
+    currentFilters.collection ||
+    currentFilters.character ||
+    currentFilters.status,
+);
 ---
 
 <aside class="w-full lg:w-[280px] flex-shrink-0">

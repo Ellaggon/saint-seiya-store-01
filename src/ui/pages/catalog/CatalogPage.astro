@@ -4,8 +4,8 @@ import GlobalHeroWrapper from "../../components/layout/GlobalHeroWrapper.astro";
 import Section from "../../components/layout/Section.astro";
 import CatalogToolbar from "../../components/catalog/CatalogToolbar.astro";
 import CatalogSidebarFilters from "../../components/catalog/CatalogSidebarFilters.astro";
-import CatalogGrid from "../../components/catalog/CatalogGrid.astro";
 import CatalogCategoryHero from "../../components/catalog/CatalogCategoryHero.astro";
+import CatalogResults from "../../components/catalog/CatalogResults.astro";
 
 import { CatalogQueryService } from "../../../application/services/CatalogQueryService";
 import { GetCatalogPageDataUseCase } from "../../../application/use-cases/catalog/GetCatalogPageDataUseCase";
@@ -52,7 +52,15 @@ const getCategoryUrl = (slug?: string) => {
   params.forEach((val, key) => {
     if (key !== "category") url.searchParams.set(key, val);
   });
+  url.searchParams.delete("page");
   return url.pathname + url.search;
+};
+
+const getPageUrl = (page: number) => {
+  const url = new URL(Astro.url.pathname, Astro.url.origin);
+  params.forEach((val, key) => url.searchParams.set(key, val));
+  url.searchParams.set("page", String(page));
+  return `${url.pathname}?${url.searchParams.toString()}`;
 };
 ---
 
@@ -88,30 +96,11 @@ const getCategoryUrl = (slug?: string) => {
             currentSort={catalogResult.sort}
           />
 
-          <div id="catalog-grid-container">
-            {
-              products.length > 0 ? (
-                <CatalogGrid products={products} />
-              ) : (
-                <div class="flex flex-col items-center justify-center py-32 border border-zinc-900 bg-zinc-950/50">
-                  <span class="text-zinc-800 text-6xl mb-8 font-black">∅</span>
-                  <h2 class="text-amber-500 font-black text-xs tracking-[0.5em] uppercase">
-                    NO COLLECTIBLES FOUND
-                  </h2>
-                  <p class="text-zinc-600 text-[10px] mt-4 tracking-widest uppercase">
-                    STRETCH YOUR SEARCH PARAMETERS
-                  </p>
-                  <a
-                    href="/catalog"
-                    data-filter-link
-                    class="mt-8 text-amber-500 text-[9px] font-black uppercase tracking-[0.2em] border border-amber-500/30 px-6 py-3 hover:bg-amber-500 hover:text-black transition-all"
-                  >
-                    RESET ARCHIVE
-                  </a>
-                </div>
-              )
-            }
-          </div>
+          <CatalogResults
+            catalogResult={catalogResult}
+            products={products}
+            getPageUrl={getPageUrl}
+          />
         </main>
       </div>
     </div>

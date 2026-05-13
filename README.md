@@ -63,6 +63,13 @@ Ensure you have your `.env` configured for:
 - Supabase public/private keys
 - S3 credentials (if applicable)
 
+Supabase now recommends publishable keys (`sb_publishable_...`) for browser-safe clients. This project accepts either the Astro-style variables (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_PUBLISHABLE_KEY`) or the dashboard/Next.js aliases (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). Legacy `*_ANON_KEY` names still work as fallbacks.
+
+For Supabase with Prisma, keep the two database URLs separate:
+
+- `DATABASE_URL`: pooled runtime URL, usually Supavisor transaction mode on port `6543` with `?pgbouncer=true`.
+- `DIRECT_URL`: direct database URL for Prisma CLI migrations, usually `postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres`.
+
 ### Scripts
 
 - **Run local development server:**

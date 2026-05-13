@@ -1,4 +1,6 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npm run -s build
+# Use local project binaries so the hook does not depend on global npm in PATH.
+# Keep pre-commit checks stable and fast in local/dev environments.
+./node_modules/.bin/prisma validate && ./node_modules/.bin/tsc --noEmit

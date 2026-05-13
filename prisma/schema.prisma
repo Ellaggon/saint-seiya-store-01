@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model AuditLog {
@@ -46,14 +47,14 @@ model Category {
 }
 
 model Collection {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  slug      String    @unique
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
   description String?
-  createdAt DateTime  @default(now())
-  deletedAt DateTime?
-  updatedAt DateTime  @updatedAt
-  products  Product[]
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
 }
 
 model Character {

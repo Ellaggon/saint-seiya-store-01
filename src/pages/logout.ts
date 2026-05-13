@@ -1,11 +1,15 @@
 import type { APIRoute } from "astro";
 import { createServerClient, parseCookieHeader } from "@supabase/ssr";
+import {
+  supabasePublishableKey,
+  supabaseUrl,
+} from "@/lib/supabaseServerEnv";
 
 export const GET: APIRoute = async ({ cookies, redirect, request }) => {
   // We use the server client to sign out and clear cookies
   const supabase = createServerClient(
-    import.meta.env.SUPABASE_URL,
-    import.meta.env.SUPABASE_ANON_KEY,
+    supabaseUrl,
+    supabasePublishableKey,
     {
       cookies: {
         getAll() {
@@ -33,8 +37,8 @@ export const GET: APIRoute = async ({ cookies, redirect, request }) => {
 export const POST: APIRoute = async ({ cookies, redirect, request }) => {
   // Same logic for POST
   const supabase = createServerClient(
-    import.meta.env.SUPABASE_URL,
-    import.meta.env.SUPABASE_ANON_KEY,
+    supabaseUrl,
+    supabasePublishableKey,
     {
       cookies: {
         getAll() {

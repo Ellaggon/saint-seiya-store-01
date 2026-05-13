@@ -15,6 +15,8 @@ export interface ProductDTO {
   status: ProductStatus;
   line?: string;
   character?: string;
+  category?: string;
+  characters?: string[];
 }
 
 export interface CollectionDTO {

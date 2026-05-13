@@ -1,11 +1,15 @@
 import { defineMiddleware } from "astro:middleware";
 import { createServerClient, parseCookieHeader } from "@supabase/ssr";
 import { AuthSyncService } from "./modules/auth/syncService";
+import {
+  supabasePublishableKey,
+  supabaseUrl,
+} from "./lib/supabaseServerEnv";
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const supabase = createServerClient(
-    import.meta.env.SUPABASE_URL,
-    import.meta.env.SUPABASE_ANON_KEY,
+    supabaseUrl,
+    supabasePublishableKey,
     {
       cookies: {
         getAll() {

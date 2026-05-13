@@ -1,5 +1,15 @@
 ---
 import DetailPage from "../../ui/pages/product/detail.astro";
+
+const id = Astro.params.id;
+let product = null;
+
+if (id) {
+  const response = await fetch(new URL(`/api/products/${id}`, Astro.url.origin));
+  if (response.ok) {
+    product = await response.json();
+  }
+}
 ---
 
-<DetailPage />
+<DetailPage product={product} />

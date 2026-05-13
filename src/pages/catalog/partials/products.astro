@@ -1,0 +1,47 @@
+---
+import CatalogResults from "@/ui/components/catalog/CatalogResults.astro";
+import { CatalogQueryService } from "@/application/services/CatalogQueryService";
+import { GetCatalogProductsUseCase } from "@/application/use-cases/catalog/GetCatalogProductsUseCase";
+
+const params = Astro.url.searchParams;
+const currentFilters = {
+  category: params.get("category") || undefined,
+  collection: params.get("collection") || undefined,
+  character: params.get("character") || undefined,
+  status: params.get("status") || undefined,
+  sort: params.get("sort") || "created-desc",
+  page: params.get("page") ? Number(params.get("page")) : 1,
+  pageSize: params.get("pageSize") ? Number(params.get("pageSize")) : 24,
+};
+
+const queryService = new CatalogQueryService();
+const useCase = new GetCatalogProductsUseCase(queryService);
+const catalogResult = await useCase.execute(currentFilters);
+
+const placeholderImage =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%2309090b'/%3E%3Cpath d='M150 150h100v100h-100z' fill='%2327272a'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%2352525b' font-weight='bold' letter-spacing='0.2em' text-anchor='middle' dominant-baseline='middle'%3EIMAGE UNAVAILABLE%3C/text%3E%3C/svg%3E";
+
+const products = catalogResult.items.map((p: any) => ({
+  id: p.id,
+  name: p.name,
+  character: p.character || "UNKNOWN",
+  line: p.line || "UNKNOWN LINE",
+  price: typeof p.price === "number" ? p.price : parseFloat(p.price || 0),
+  image: p.imageUrl || placeholderImage,
+  status: p.status,
+}));
+
+const getPageUrl = (page: number) => {
+  const url = new URL("/catalog", Astro.url.origin);
+  params.forEach((val, key) => url.searchParams.set(key, val));
+  url.searchParams.set("page", String(page));
+  return `${url.pathname}?${url.searchParams.toString()}`;
+};
+---
+
+<CatalogResults
+  catalogResult={catalogResult}
+  products={products}
+  getPageUrl={getPageUrl}
+  includeCountMarker={true}
+/>

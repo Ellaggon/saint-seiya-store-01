@@ -1,0 +1,67 @@
+---
+import CatalogGrid from "./CatalogGrid.astro";
+import CatalogPagination from "./CatalogPagination.astro";
+import type { CatalogProductsResponseDTO } from "@/application/dto/catalog.dto";
+
+interface Props {
+  catalogResult: CatalogProductsResponseDTO;
+  products: {
+    id: string;
+    name: string;
+    character: string;
+    line: string;
+    price: number;
+    image: string;
+    status: string;
+  }[];
+  getPageUrl: (page: number) => string;
+  includeCountMarker?: boolean;
+}
+
+const {
+  catalogResult,
+  products,
+  getPageUrl,
+  includeCountMarker = false,
+} = Astro.props;
+---
+
+{
+  includeCountMarker && (
+    <span id="catalog-result-count-partial">{catalogResult.pagination.total}</span>
+  )
+}
+
+<div id="catalog-grid-container">
+  {
+    products.length > 0 ? (
+      <CatalogGrid products={products} />
+    ) : (
+      <div class="flex flex-col items-center justify-center py-32 border border-zinc-900 bg-zinc-950/50">
+        <span class="text-zinc-800 text-6xl mb-8 font-black">∅</span>
+        <h2 class="text-amber-500 font-black text-xs tracking-[0.5em] uppercase">
+          NO COLLECTIBLES FOUND
+        </h2>
+        <p class="text-zinc-600 text-[10px] mt-4 tracking-widest uppercase">
+          STRETCH YOUR SEARCH PARAMETERS
+        </p>
+        <a
+          href="/catalog"
+          data-filter-link
+          class="mt-8 text-amber-500 text-[9px] font-black uppercase tracking-[0.2em] border border-amber-500/30 px-6 py-3 hover:bg-amber-500 hover:text-black transition-all"
+        >
+          RESET ARCHIVE
+        </a>
+      </div>
+    )
+  }
+</div>
+
+<div id="catalog-pagination-container">
+  <CatalogPagination
+    currentPage={catalogResult.pagination.page}
+    totalPages={catalogResult.pagination.totalPages}
+    pageSize={catalogResult.pagination.pageSize}
+    getPageUrl={getPageUrl}
+  />
+</div>

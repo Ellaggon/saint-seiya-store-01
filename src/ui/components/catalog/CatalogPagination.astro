@@ -20,6 +20,7 @@ const hasNext = currentPage < totalPages;
     >
       <a
         href={hasPrevious ? getPageUrl(currentPage - 1) : "#"}
+        data-filter-link
         data-page-link
         aria-disabled={hasPrevious ? "false" : "true"}
         class={`border px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
@@ -37,6 +38,7 @@ const hasNext = currentPage < totalPages;
             (pageNumber) => (
               <a
                 href={getPageUrl(pageNumber)}
+                data-filter-link
                 data-page-link
                 aria-current={pageNumber === currentPage ? "page" : "false"}
                 class={`min-w-9 text-center border px-3 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${
@@ -54,6 +56,7 @@ const hasNext = currentPage < totalPages;
 
       <a
         href={hasNext ? getPageUrl(currentPage + 1) : "#"}
+        data-filter-link
         data-page-link
         aria-disabled={hasNext ? "false" : "true"}
         class={`border px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors ${

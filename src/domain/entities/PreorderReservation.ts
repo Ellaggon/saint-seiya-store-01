@@ -1,4 +1,5 @@
 import { Money } from "../value-objects/Money";
+import { PreorderPayment } from "./PreorderPayment";
 
 export enum PreorderReservationStatus {
   PENDING = "PENDING",
@@ -72,6 +73,10 @@ export class PreorderReservation {
     return new PreorderReservation(props);
   }
 
+  static paidAmountFromPayments(payments: PreorderPayment[]): Money {
+    return PreorderPayment.sumPaid(payments);
+  }
+
   confirmPayment(amount: Money, confirmedAt?: Date): PreorderReservation {
     if (
       this.props.status === PreorderReservationStatus.CANCELED ||
@@ -93,7 +98,10 @@ export class PreorderReservation {
 
     const nextStatus = nextPaidAmount.equals(this.props.totalAmount)
       ? PreorderReservationStatus.PAID
-      : PreorderReservationStatus.PARTIALLY_PAID;
+      : nextPaidAmount.greaterThan(this.props.depositRequired) ||
+          nextPaidAmount.equals(this.props.depositRequired)
+        ? PreorderReservationStatus.CONFIRMED
+        : PreorderReservationStatus.PARTIALLY_PAID;
 
     return new PreorderReservation({
       ...this.props,
@@ -106,11 +114,21 @@ export class PreorderReservation {
   }
 
   cancel(canceledAt?: Date): PreorderReservation {
-    if (this.props.status === PreorderReservationStatus.FULFILLED) {
-      throw new Error("Cannot cancel a fulfilled preorder reservation");
+    if (
+      this.props.status === PreorderReservationStatus.PAID ||
+      this.props.status === PreorderReservationStatus.FULFILLED
+    ) {
+      throw new Error("Cannot cancel a paid or fulfilled preorder reservation");
     }
 
-    if (this.props.status === PreorderReservationStatus.CANCELED) {
+    if (this.props.paidAmount.greaterThan(Money.zero())) {
+      throw new Error("Cannot cancel a paid preorder reservation without a refund workflow");
+    }
+
+    if (
+      this.props.status === PreorderReservationStatus.CANCELED ||
+      this.props.status === PreorderReservationStatus.EXPIRED
+    ) {
       return this;
     }
 
@@ -122,13 +140,7 @@ export class PreorderReservation {
   }
 
   expire(now: Date): PreorderReservation {
-    if (
-      this.props.status === PreorderReservationStatus.CONFIRMED ||
-      this.props.status === PreorderReservationStatus.PARTIALLY_PAID ||
-      this.props.status === PreorderReservationStatus.PAID ||
-      this.props.status === PreorderReservationStatus.FULFILLED ||
-      this.props.status === PreorderReservationStatus.CANCELED
-    ) {
+    if (this.props.status !== PreorderReservationStatus.PENDING) {
       return this;
     }
 
@@ -151,16 +163,28 @@ export class PreorderReservation {
       throw new Error("Cannot mark inactive preorder reservation as awaiting balance");
     }
 
+    if (this.props.paidAmount.equals(Money.zero())) {
+      throw new Error("Awaiting balance requires a paid deposit");
+    }
+
+    if (this.props.paidAmount.greaterThan(this.props.totalAmount)) {
+      throw new Error("Paid amount cannot exceed reservation total");
+    }
+
+    if (this.props.paidAmount.equals(this.props.totalAmount)) {
+      throw new Error("Paid preorder reservation has no balance pending");
+    }
+
     if (
-      this.props.paidAmount.equals(Money.zero()) ||
-      this.props.paidAmount.equals(this.props.totalAmount)
+      !this.props.paidAmount.greaterThan(this.props.depositRequired) &&
+      !this.props.paidAmount.equals(this.props.depositRequired)
     ) {
-      throw new Error("Awaiting balance requires a partial payment");
+      throw new Error("Awaiting balance requires deposit payment to be satisfied");
     }
 
     return new PreorderReservation({
       ...this.props,
-      status: PreorderReservationStatus.PARTIALLY_PAID,
+      status: PreorderReservationStatus.CONFIRMED,
     });
   }
 

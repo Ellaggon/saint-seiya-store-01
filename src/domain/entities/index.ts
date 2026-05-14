@@ -4,4 +4,5 @@ export * from "./Category";
 export * from "./Character";
 export * from "./ProductCharacter";
 export * from "./PreorderCampaign";
+export * from "./PreorderPayment";
 export * from "./PreorderReservation";

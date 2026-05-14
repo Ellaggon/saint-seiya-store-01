@@ -3,6 +3,7 @@ import type {
   PreorderCampaignStatus,
 } from "../entities/PreorderCampaign";
 import type { PreorderReservation } from "../entities/PreorderReservation";
+import type { Money } from "../value-objects/Money";
 
 export interface PreorderCampaignFilters {
   productId?: string;
@@ -29,7 +30,14 @@ export interface UpdatePreorderCampaignInput {
 }
 
 export interface ReservePreorderInput {
-  reservation: PreorderReservation;
+  campaignId: string;
+  userId: string;
+  quantity: number;
+  unitPrice: Money;
+  payInFull: boolean;
+  requestedAt: Date;
+  expiresAt?: Date | null;
+  metadata?: Record<string, string | number | boolean | null>;
 }
 
 export interface PreorderRepository {

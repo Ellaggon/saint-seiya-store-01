@@ -6,7 +6,6 @@ export enum PreorderCampaignStatus {
   ARRIVED = "ARRIVED",
   CLOSED = "CLOSED",
   CANCELED = "CANCELED",
-  ARCHIVED = "ARCHIVED",
 }
 
 export enum PreorderDepositType {

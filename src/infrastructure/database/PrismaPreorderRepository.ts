@@ -40,6 +40,12 @@ import {
 
 type TransactionClient = Prisma.TransactionClient;
 
+const activeReservationWhere = {
+  status: {
+    in: ACTIVE_RESERVATION_STATUSES,
+  },
+} satisfies Prisma.PreorderReservationWhereInput;
+
 const campaignDetailInclude = {
   product: {
     include: {
@@ -53,8 +59,21 @@ const campaignDetailInclude = {
     },
   },
   reservations: {
-    include: {
-      payments: true,
+    where: activeReservationWhere,
+    select: {
+      id: true,
+      campaignId: true,
+      userId: true,
+      quantity: true,
+      unitPrice: true,
+      totalAmount: true,
+      depositRequired: true,
+      status: true,
+      expiresAt: true,
+      confirmedAt: true,
+      canceledAt: true,
+      createdAt: true,
+      updatedAt: true,
     },
   },
 } satisfies Prisma.PreorderCampaignInclude;
@@ -82,12 +101,6 @@ const campaignWhere = (
     ? { status: mapCampaignStatusToPrisma(filters.status) }
     : {}),
 });
-
-const activeReservationWhere = {
-  status: {
-    in: ACTIVE_RESERVATION_STATUSES,
-  },
-} satisfies Prisma.PreorderReservationWhereInput;
 
 const mapCampaignStatusToPrisma = (
   status: PreorderCampaignStatus,
@@ -125,6 +138,25 @@ const lockReservation = async (
     WHERE id = ${reservationId}
     FOR UPDATE
   `;
+};
+
+const expireStalePendingReservations = async (
+  tx: TransactionClient,
+  campaignId: string,
+  now: Date,
+): Promise<void> => {
+  await tx.preorderReservation.updateMany({
+    where: {
+      campaignId,
+      status: PrismaReservationStatus.PENDING,
+      expiresAt: {
+        lt: now,
+      },
+    },
+    data: {
+      status: PrismaReservationStatus.EXPIRED,
+    },
+  });
 };
 
 export class PrismaPreorderRepository implements PreorderRepository {
@@ -215,6 +247,8 @@ export class PrismaPreorderRepository implements PreorderRepository {
       if (!campaign || campaign.deletedAt) {
         throw new Error("Preorder campaign not found");
       }
+
+      await expireStalePendingReservations(tx, input.campaignId, input.requestedAt);
 
       const activeUserReservation = await tx.preorderReservation.findFirst({
         where: {
@@ -365,15 +399,20 @@ export class PrismaPreorderRepository implements PreorderRepository {
       }
 
       if (input.provider && input.providerPaymentId) {
-        const existingPayment = await tx.preorderPayment.findFirst({
+        const existingPayment = await tx.preorderPayment.findUnique({
           where: {
-            reservationId: input.reservationId,
-            provider: paymentProviderToPrisma[input.provider],
-            providerPaymentId: input.providerPaymentId,
+            provider_providerPaymentId: {
+              provider: paymentProviderToPrisma[input.provider],
+              providerPaymentId: input.providerPaymentId,
+            },
           },
         });
 
         if (existingPayment) {
+          if (existingPayment.reservationId !== input.reservationId) {
+            throw new Error("Provider payment is already linked to another preorder reservation");
+          }
+
           return toDomainPayment(existingPayment);
         }
       }

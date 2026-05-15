@@ -97,6 +97,42 @@ export class PreorderCampaign {
     return this.props.closesAt;
   }
 
+  get releaseDate(): Date | null | undefined {
+    return this.props.releaseDate;
+  }
+
+  get etaStart(): Date | null | undefined {
+    return this.props.etaStart;
+  }
+
+  get etaEnd(): Date | null | undefined {
+    return this.props.etaEnd;
+  }
+
+  get etaLabel(): string | null | undefined {
+    return this.props.etaLabel;
+  }
+
+  get terms(): string | null | undefined {
+    return this.props.terms;
+  }
+
+  get arrivalNotes(): string | null | undefined {
+    return this.props.arrivalNotes;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
+  get deletedAt(): Date | null | undefined {
+    return this.props.deletedAt;
+  }
+
   static create(props: PreorderCampaignProps): PreorderCampaign {
     return new PreorderCampaign(props);
   }

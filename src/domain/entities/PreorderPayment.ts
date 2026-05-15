@@ -62,6 +62,26 @@ export class PreorderPayment {
     return this.props.status;
   }
 
+  get provider(): PreorderPaymentProvider | null | undefined {
+    return this.props.provider;
+  }
+
+  get providerPaymentId(): string | null | undefined {
+    return this.props.providerPaymentId;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+
+  get paidAt(): Date | null | undefined {
+    return this.props.paidAt;
+  }
+
   get isPaid(): boolean {
     return this.props.status === PreorderPaymentStatus.PAID;
   }

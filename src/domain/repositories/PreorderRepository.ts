@@ -2,6 +2,12 @@ import type {
   PreorderCampaign,
   PreorderCampaignStatus,
 } from "../entities/PreorderCampaign";
+import type { PreorderPayment } from "../entities/PreorderPayment";
+import type {
+  PreorderPaymentKind,
+  PreorderPaymentProvider,
+  PreorderPaymentStatus,
+} from "../entities/PreorderPayment";
 import type { PreorderReservation } from "../entities/PreorderReservation";
 import type { Money } from "../value-objects/Money";
 
@@ -40,6 +46,18 @@ export interface ReservePreorderInput {
   metadata?: Record<string, string | number | boolean | null>;
 }
 
+export interface RegisterPreorderPaymentInput {
+  reservationId: string;
+  kind: PreorderPaymentKind;
+  amount: Money;
+  status: PreorderPaymentStatus;
+  provider?: PreorderPaymentProvider | null;
+  providerPaymentId?: string | null;
+  metadata?: Record<string, string | number | boolean | null>;
+  paidAt?: Date | null;
+  createdAt: Date;
+}
+
 export interface PreorderRepository {
   createCampaign(input: CreatePreorderCampaignInput): Promise<PreorderCampaign>;
   updateCampaign(input: UpdatePreorderCampaignInput): Promise<PreorderCampaign>;
@@ -57,4 +75,7 @@ export interface PreorderRepository {
   ): Promise<PreorderReservation | null>;
 
   markArrived(id: string): Promise<PreorderCampaign | null>;
+
+  registerPayment(input: RegisterPreorderPaymentInput): Promise<PreorderPayment>;
+  listPaymentsByReservation(reservationId: string): Promise<PreorderPayment[]>;
 }

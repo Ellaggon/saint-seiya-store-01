@@ -49,6 +49,10 @@ export class PreorderReservation {
     return this.props.quantity;
   }
 
+  get unitPrice(): Money {
+    return this.props.unitPrice;
+  }
+
   get totalAmount(): Money {
     return this.props.totalAmount;
   }
@@ -67,6 +71,22 @@ export class PreorderReservation {
 
   get expiresAt(): Date | null | undefined {
     return this.props.expiresAt;
+  }
+
+  get confirmedAt(): Date | null | undefined {
+    return this.props.confirmedAt;
+  }
+
+  get canceledAt(): Date | null | undefined {
+    return this.props.canceledAt;
+  }
+
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+
+  get updatedAt(): Date {
+    return this.props.updatedAt;
   }
 
   static create(props: PreorderReservationProps): PreorderReservation {
@@ -102,14 +122,15 @@ export class PreorderReservation {
           nextPaidAmount.equals(this.props.depositRequired)
         ? PreorderReservationStatus.CONFIRMED
         : PreorderReservationStatus.PARTIALLY_PAID;
+    const isConfirmed =
+      nextStatus === PreorderReservationStatus.CONFIRMED ||
+      nextStatus === PreorderReservationStatus.PAID;
 
     return new PreorderReservation({
       ...this.props,
       paidAmount: nextPaidAmount,
       status: nextStatus,
-      confirmedAt:
-        this.props.confirmedAt ??
-        (nextPaidAmount.greaterThan(Money.zero()) ? confirmedAt : undefined),
+      confirmedAt: this.props.confirmedAt ?? (isConfirmed ? confirmedAt : undefined),
     });
   }
 

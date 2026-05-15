@@ -1,0 +1,184 @@
+---
+import MainLayout from "../../layouts/MainLayout.astro";
+import GlobalHeroWrapper from "../../components/layout/GlobalHeroWrapper.astro";
+import Section from "../../components/layout/Section.astro";
+import CatalogResults from "../../components/catalog/CatalogResults.astro";
+import CatalogToolbar from "../../components/catalog/CatalogToolbar.astro";
+import PreorderFilters from "../../components/preorders/PreorderFilters.astro";
+import type { PreorderListItemDTO } from "@/application/dto/preorder.dto";
+import { PreorderCampaignStatus } from "@/domain/entities/PreorderCampaign";
+import { createListPreordersUseCase } from "@/infrastructure/preorders/PreorderUseCaseFactory";
+
+const params = Astro.url.searchParams;
+
+const toPositiveInt = (value: string | null, fallback: number): number => {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : fallback;
+};
+
+const toOptionalNumber = (value: string | null): number | undefined => {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const currentFilters = {
+  collection: params.get("collection") || undefined,
+  character: params.get("character") || undefined,
+  availability: params.get("availability") || undefined,
+  sort: params.get("sort") || "created-desc",
+  page: toPositiveInt(params.get("page"), 1),
+  pageSize: toPositiveInt(params.get("pageSize"), 24),
+};
+
+const listPreorders = createListPreordersUseCase();
+const preorderResult = await listPreorders.execute({
+  status:
+    currentFilters.availability === "SOLD_OUT"
+      ? PreorderCampaignStatus.SOLD_OUT
+      : PreorderCampaignStatus.ACTIVE,
+  collection: currentFilters.collection,
+  character: currentFilters.character,
+  availability:
+    currentFilters.availability === "SOLD_OUT" ||
+    currentFilters.availability === "AVAILABLE"
+      ? currentFilters.availability
+      : undefined,
+  sort:
+    currentFilters.sort === "eta-asc" ||
+    currentFilters.sort === "price-asc" ||
+    currentFilters.sort === "price-desc"
+      ? currentFilters.sort
+      : "created-desc",
+  page: currentFilters.page,
+  pageSize: currentFilters.pageSize,
+  minPrice: toOptionalNumber(params.get("minPrice")),
+  maxPrice: toOptionalNumber(params.get("maxPrice")),
+});
+
+const placeholderImage =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Crect width='400' height='400' fill='%2309090b'/%3E%3Cpath d='M150 150h100v100h-100z' fill='%2327272a'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='12' fill='%2352525b' font-weight='bold' letter-spacing='0.2em' text-anchor='middle' dominant-baseline='middle'%3EIMAGE UNAVAILABLE%3C/text%3E%3C/svg%3E";
+
+const products = preorderResult.items.map((item: PreorderListItemDTO) => {
+  const firstCharacter = item.product.characters?.[0]?.name;
+  const isSoldOut = item.campaign.isSoldOut || item.campaign.availableUnits <= 0;
+
+  return {
+    id: item.product.id,
+    name: item.product.name,
+    character: firstCharacter || "UNKNOWN",
+    line: item.product.collection?.name || "UNKNOWN LINE",
+    price: item.product.price,
+    image: item.product.imageUrl || placeholderImage,
+    status: item.product.status,
+    preorder: {
+      etaLabel:
+        item.campaign.etaLabel ||
+        item.campaign.etaStart ||
+        item.campaign.releaseDate ||
+        "ETA PENDING",
+      availableUnits: item.campaign.availableUnits,
+      totalUnits: item.campaign.totalSlots,
+      depositAmount: item.pricing.depositRequired,
+      isOpen: item.campaign.status === PreorderCampaignStatus.ACTIVE && !isSoldOut,
+    },
+  };
+});
+
+const countBySlug = (
+  items: PreorderListItemDTO[],
+  selector: (item: PreorderListItemDTO) => { name: string; slug: string } | null | undefined,
+) => {
+  const map = new Map<string, { name: string; slug: string; count: number }>();
+  items.forEach((item) => {
+    const value = selector(item);
+    if (!value) return;
+    const existing = map.get(value.slug);
+    map.set(value.slug, {
+      ...value,
+      count: (existing?.count ?? 0) + 1,
+    });
+  });
+  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+};
+
+const collections = countBySlug(preorderResult.items, (item) => item.product.collection);
+const characters = countBySlug(
+  preorderResult.items,
+  (item) => item.product.characters?.[0],
+);
+
+const catalogResult = {
+  items: [],
+  pagination: {
+    page: preorderResult.page,
+    pageSize: preorderResult.pageSize,
+    total: preorderResult.total,
+    totalPages: preorderResult.totalPages,
+  },
+  sort: currentFilters.sort,
+};
+
+const getPageUrl = (page: number) => {
+  const url = new URL(Astro.url.pathname, Astro.url.origin);
+  params.forEach((val, key) => url.searchParams.set(key, val));
+  url.searchParams.set("page", String(page));
+  return `${url.pathname}?${url.searchParams.toString()}`;
+};
+---
+
+<MainLayout title="PREORDERS - THE SANCTUARY">
+  <GlobalHeroWrapper
+    title="PREORDERS"
+    subtitle="UPCOMING SAINT SEIYA RELEASES WITH RESERVED ALLOCATIONS."
+  />
+
+  <Section variant="black">
+    <div class="px-4" id="preorder-marketplace">
+      <div class="max-w-[1400px] mx-auto pt-12 pb-24">
+        <div class="border border-zinc-900 bg-zinc-950/40 px-5 py-5 mb-10">
+          <p class="text-zinc-400 text-[11px] font-bold uppercase tracking-[0.2em] max-w-3xl">
+            Reserve upcoming figures from active campaigns. Availability and deposits
+            come from preorder campaign data, not physical stock.
+          </p>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-12">
+          <div class="w-full lg:w-auto">
+            <PreorderFilters
+              currentFilters={currentFilters}
+              collections={collections}
+              characters={characters}
+            />
+          </div>
+
+          <main class="flex-1 min-w-0 flex flex-col">
+            <CatalogToolbar
+              resultCount={preorderResult.total}
+              currentSort={currentFilters.sort}
+              selectId="preorder-sort-select"
+              sortOptions={[
+                { value: "created-desc", label: "LATEST PREORDERS" },
+                { value: "eta-asc", label: "ETA ASCENDING" },
+                { value: "price-asc", label: "PRICE ASCENDING" },
+                { value: "price-desc", label: "PRICE DESCENDING" },
+              ]}
+            />
+
+            <CatalogResults
+              catalogResult={catalogResult}
+              products={products}
+              getPageUrl={getPageUrl}
+              emptyTitle="NO PREORDERS FOUND"
+              emptyDescription="ADJUST THE CAMPAIGN FILTERS"
+              resetHref="/preorders"
+            />
+          </main>
+        </div>
+      </div>
+    </div>
+  </Section>
+
+  <script src="../../scripts/preorderFilters.ts"></script>
+</MainLayout>

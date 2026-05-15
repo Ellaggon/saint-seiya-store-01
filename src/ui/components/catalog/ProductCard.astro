@@ -1,4 +1,10 @@
 ---
+import PreorderAvailabilityMeter from "../preorders/PreorderAvailabilityMeter.astro";
+import PreorderBadge from "../preorders/PreorderBadge.astro";
+import PreorderCTA from "../preorders/PreorderCTA.astro";
+import PreorderEta from "../preorders/PreorderEta.astro";
+import PreorderPriceSummary from "../preorders/PreorderPriceSummary.astro";
+
 interface Props {
   product: {
     id: string;
@@ -8,10 +14,19 @@ interface Props {
     price: number;
     image: string;
     status: string;
+    preorder?: {
+      etaLabel?: string | null;
+      availableUnits: number;
+      totalUnits: number;
+      depositAmount: number;
+      isOpen: boolean;
+    };
   };
 }
 
 const { product } = Astro.props;
+const preorder = product.preorder;
+const isPreorderSoldOut = preorder ? preorder.availableUnits <= 0 : false;
 ---
 
 <a
@@ -33,10 +48,14 @@ const { product } = Astro.props;
     <!-- Badges -->
     <div class="absolute top-3 left-3 flex flex-col gap-2 z-10">
       {
-        product.status === "PRE_ORDER" && (
-          <span class="bg-[#E60012] text-white text-[10px] font-black uppercase tracking-widest px-2 py-1">
-            PRE-ORDER
-          </span>
+        preorder ? (
+          <PreorderBadge isOpen={preorder.isOpen} isSoldOut={isPreorderSoldOut} />
+        ) : (
+          product.status === "PRE_ORDER" && (
+            <span class="bg-[#E60012] text-white text-[10px] font-black uppercase tracking-widest px-2 py-1">
+              PRE-ORDER
+            </span>
+          )
         )
       }
       {
@@ -87,5 +106,21 @@ const { product } = Astro.props;
         >${product.price.toFixed(2)}</span
       >
     </div>
+    {
+      preorder && (
+        <div class="mt-4 flex flex-col gap-3 border-t border-zinc-900 pt-4">
+          <PreorderEta etaLabel={preorder.etaLabel} />
+          <PreorderAvailabilityMeter
+            availableUnits={preorder.availableUnits}
+            totalUnits={preorder.totalUnits}
+          />
+          <PreorderPriceSummary depositAmount={preorder.depositAmount} />
+          <PreorderCTA
+            isOpen={preorder.isOpen}
+            isSoldOut={isPreorderSoldOut}
+          />
+        </div>
+      )
+    }
   </div>
 </a>

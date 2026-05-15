@@ -1,0 +1,20 @@
+---
+interface Props {
+  etaLabel?: string | null;
+}
+
+const { etaLabel } = Astro.props;
+---
+
+{
+  etaLabel && (
+    <div class="flex items-center justify-between gap-3 border border-zinc-900 bg-zinc-950 px-3 py-2">
+      <span class="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em]">
+        ETA
+      </span>
+      <span class="text-zinc-300 text-[10px] font-black uppercase tracking-widest text-right">
+        {etaLabel}
+      </span>
+    </div>
+  )
+}

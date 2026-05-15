@@ -1,0 +1,16 @@
+---
+interface Props {
+  depositAmount: number;
+}
+
+const { depositAmount } = Astro.props;
+---
+
+<div class="flex items-center justify-between gap-3">
+  <span class="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em]">
+    Deposit
+  </span>
+  <span class="text-amber-500 text-xs font-black uppercase tracking-widest">
+    ${depositAmount.toFixed(2)}
+  </span>
+</div>

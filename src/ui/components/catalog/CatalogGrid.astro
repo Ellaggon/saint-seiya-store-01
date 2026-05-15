@@ -2,7 +2,22 @@
 import ProductCard from "./ProductCard.astro";
 
 interface Props {
-  products: any[];
+  products: {
+    id: string;
+    name: string;
+    character: string;
+    line: string;
+    price: number;
+    image: string;
+    status: string;
+    preorder?: {
+      etaLabel?: string | null;
+      availableUnits: number;
+      totalUnits: number;
+      depositAmount: number;
+      isOpen: boolean;
+    };
+  }[];
 }
 
 const { products } = Astro.props;

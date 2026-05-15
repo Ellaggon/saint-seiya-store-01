@@ -1,15 +1,29 @@
 ---
 import DetailPage from "../../ui/pages/product/detail.astro";
+import { getProductById } from "@/endpoints/api/products/getProductById";
+import { createGetPreorderDetailUseCase } from "@/infrastructure/preorders/PreorderUseCaseFactory";
+import { ApplicationError } from "@/application/errors/ApplicationError";
 
 const id = Astro.params.id;
 let product = null;
+let preorder = null;
 
 if (id) {
-  const response = await fetch(new URL(`/api/products/${id}`, Astro.url.origin));
-  if (response.ok) {
-    product = await response.json();
+  product = await getProductById(id);
+
+  if (product) {
+    try {
+      preorder = await createGetPreorderDetailUseCase().execute({
+        productId: product.id,
+      });
+    } catch (error) {
+      const appError = ApplicationError.normalizeUnknownError(error);
+      if (appError.code !== "INVALID_PREORDER_STATE") {
+        throw appError;
+      }
+    }
   }
 }
 ---
 
-<DetailPage product={product} />
+<DetailPage product={product} preorder={preorder} />

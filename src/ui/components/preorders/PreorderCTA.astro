@@ -1,0 +1,29 @@
+---
+interface Props {
+  href?: string;
+  isOpen: boolean;
+  isSoldOut?: boolean;
+}
+
+const { href, isOpen, isSoldOut = false } = Astro.props;
+const disabled = !isOpen || isSoldOut;
+---
+
+{
+  disabled ? (
+    <span class="block border border-zinc-800 text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-3 text-center">
+      Unavailable
+    </span>
+  ) : href ? (
+    <a
+      href={href}
+      class="block border border-amber-500 text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-3 text-center hover:bg-amber-500 hover:text-black transition-all"
+    >
+      Reserve
+    </a>
+  ) : (
+    <span class="block border border-amber-500 text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-3 text-center">
+      Reserve
+    </span>
+  )
+}

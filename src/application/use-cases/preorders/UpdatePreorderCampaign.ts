@@ -24,6 +24,7 @@ export interface UpdatePreorderCampaignInput {
   terms?: string | null;
   arrivalNotes?: string | null;
   allowReservedSlotReduction?: boolean;
+  deletedAt?: Date | null;
 }
 
 export class UpdatePreorderCampaign {
@@ -67,7 +68,7 @@ export class UpdatePreorderCampaign {
           : current.arrivalNotes,
       createdAt: current.createdAt,
       updatedAt: current.updatedAt,
-      deletedAt: current.deletedAt,
+      deletedAt: input.deletedAt !== undefined ? input.deletedAt : current.deletedAt,
     });
 
     const saved = await this.preorderRepository.updateCampaign({ campaign: updated });

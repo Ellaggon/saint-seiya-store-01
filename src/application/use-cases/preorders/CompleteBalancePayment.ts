@@ -22,40 +22,44 @@ export class CompleteBalancePayment {
   constructor(private readonly preorderRepository: PreorderRepository) {}
 
   async execute(input: CompleteBalancePaymentInput): Promise<PreorderPaymentDTO> {
-    const reservation = await this.preorderRepository.findReservationById(
-      input.reservationId,
-    );
-    if (!reservation) {
-      throw ApplicationError.reservationNotFound(input.reservationId);
-    }
-
-    if (reservation.status !== PreorderReservationStatus.CONFIRMED) {
-      throw ApplicationError.invalidReservationState(
-        "Balance payment requires a confirmed preorder reservation",
+    try {
+      const reservation = await this.preorderRepository.findReservationById(
+        input.reservationId,
       );
-    }
+      if (!reservation) {
+        throw ApplicationError.reservationNotFound(input.reservationId);
+      }
 
-    const balanceDue = reservation.totalAmount.subtract(reservation.paidAmount);
-    if (input.amount > balanceDue.toNumber()) {
-      throw ApplicationError.paymentExceedsBalance();
-    }
-    if (input.amount !== balanceDue.toNumber()) {
-      throw ApplicationError.invalidReservationState(
-        "Balance payment amount must equal current balance due",
-      );
-    }
+      if (reservation.status !== PreorderReservationStatus.CONFIRMED) {
+        throw ApplicationError.invalidReservationState(
+          "Balance payment requires a confirmed preorder reservation",
+        );
+      }
 
-    const payment = await this.preorderRepository.registerPayment({
-      reservationId: input.reservationId,
-      kind: PreorderPaymentKind.BALANCE,
-      amount: balanceDue,
-      status: PreorderPaymentStatus.PAID,
-      provider: input.provider,
-      providerPaymentId: input.providerPaymentId,
-      paidAt: input.paidAt ?? input.now,
-      createdAt: input.now,
-    });
+      const balanceDue = reservation.totalAmount.subtract(reservation.paidAmount);
+      if (input.amount > balanceDue.toNumber()) {
+        throw ApplicationError.paymentExceedsBalance();
+      }
+      if (input.amount !== balanceDue.toNumber()) {
+        throw ApplicationError.invalidPaymentAmount(
+          "Balance payment amount must equal current balance due",
+        );
+      }
 
-    return PreorderMapper.paymentToDTO(payment);
+      const payment = await this.preorderRepository.registerPayment({
+        reservationId: input.reservationId,
+        kind: PreorderPaymentKind.BALANCE,
+        amount: balanceDue,
+        status: PreorderPaymentStatus.PAID,
+        provider: input.provider,
+        providerPaymentId: input.providerPaymentId,
+        paidAt: input.paidAt ?? input.now,
+        createdAt: input.now,
+      });
+
+      return PreorderMapper.paymentToDTO(payment);
+    } catch (error) {
+      throw ApplicationError.normalizeUnknownError(error);
+    }
   }
 }

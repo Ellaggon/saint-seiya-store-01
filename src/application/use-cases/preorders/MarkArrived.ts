@@ -21,6 +21,8 @@ export class MarkArrived {
   constructor(private readonly preorderRepository: PreorderRepository) {}
 
   async execute(input: MarkArrivedInput): Promise<MarkArrivedResultDTO> {
+    // awaitingBalance and readyToShip are DTO-only derived groups for MVP.
+    // The current Prisma schema persists reservation lifecycle statuses only.
     const campaign = await this.preorderRepository.markArrived(input.preorderId);
     if (!campaign) throw ApplicationError.invalidPreorderState("Preorder not found");
 

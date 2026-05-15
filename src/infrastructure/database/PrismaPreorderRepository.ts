@@ -21,6 +21,8 @@ import type {
   PreorderRepository,
   RegisterPreorderPaymentInput,
   ReservePreorderInput,
+  ReservePreorderWithPaymentDraftInput,
+  ReservePreorderWithPaymentDraftResult,
   UpdatePreorderCampaignInput,
 } from "@/domain/repositories/PreorderRepository";
 import { PreorderPricingService } from "@/domain/services/PreorderPricingService";
@@ -482,6 +484,112 @@ export class PrismaPreorderRepository implements PreorderRepository {
       });
 
       return toDomainReservation(reservation);
+    });
+  }
+
+  async reserveWithPaymentDraft(
+    input: ReservePreorderWithPaymentDraftInput,
+  ): Promise<ReservePreorderWithPaymentDraftResult> {
+    return prisma.$transaction(async (tx) => {
+      await lockCampaign(tx, input.campaignId);
+
+      const campaign = await tx.preorderCampaign.findUnique({
+        where: { id: input.campaignId },
+        include: campaignDetailInclude,
+      });
+
+      if (!campaign || campaign.deletedAt) {
+        throw new Error("Preorder campaign not found");
+      }
+
+      await expireStalePendingReservations(tx, input.campaignId, input.requestedAt);
+
+      const activeUserReservation = await tx.preorderReservation.findFirst({
+        where: {
+          campaignId: input.campaignId,
+          userId: input.userId,
+          ...activeReservationWhere,
+        },
+        select: { id: true },
+      });
+
+      if (activeUserReservation) {
+        throw new Error("User already has an active preorder reservation");
+      }
+
+      const activeReservations = await tx.preorderReservation.findMany({
+        where: {
+          campaignId: input.campaignId,
+          ...activeReservationWhere,
+        },
+        select: {
+          id: true,
+          campaignId: true,
+          userId: true,
+          quantity: true,
+          unitPrice: true,
+          totalAmount: true,
+          depositRequired: true,
+          status: true,
+          expiresAt: true,
+          confirmedAt: true,
+          canceledAt: true,
+          createdAt: true,
+          updatedAt: true,
+          payments: true,
+        },
+      });
+
+      const reservedUnits = calculateReservedUnits(activeReservations);
+      const domainCampaign = toDomainCampaign({
+        ...campaign,
+        reservations: activeReservations,
+      });
+
+      if (!domainCampaign.canReserve(input.quantity, 0, input.requestedAt)) {
+        throw new Error("Preorder campaign cannot accept this reservation");
+      }
+
+      if (reservedUnits + input.quantity > campaign.totalSlots) {
+        throw new Error("Preorder campaign does not have enough available slots");
+      }
+
+      const pricing = this.pricingService.calculate({
+        unitPrice: input.unitPrice,
+        quantity: input.quantity,
+        campaign: domainCampaign,
+        payInFull: input.payInFull,
+      });
+
+      const reservation = await tx.preorderReservation.create({
+        data: {
+          campaignId: input.campaignId,
+          userId: input.userId,
+          quantity: input.quantity,
+          unitPrice: moneyToDecimal(input.unitPrice),
+          totalAmount: moneyToDecimal(pricing.totalAmount),
+          depositRequired: moneyToDecimal(pricing.depositRequired),
+          status: PrismaReservationStatus.PENDING,
+          expiresAt: input.expiresAt ?? null,
+        },
+        include: reservationDetailInclude,
+      });
+
+      const payment = await tx.preorderPayment.create({
+        data: {
+          reservationId: reservation.id,
+          kind: paymentKindToPrisma[input.paymentKind],
+          amount: moneyToDecimal(input.paymentAmount),
+          status: paymentStatusToPrisma[PreorderPaymentStatus.PENDING],
+          metadata: input.metadata,
+          createdAt: input.paymentCreatedAt,
+        },
+      });
+
+      return {
+        reservation: toDomainReservation(reservation),
+        payment: toDomainPayment(payment),
+      };
     });
   }
 

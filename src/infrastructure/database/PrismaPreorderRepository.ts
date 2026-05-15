@@ -14,13 +14,17 @@ import type { PreorderReservation } from "@/domain/entities/PreorderReservation"
 import type {
   CreatePreorderCampaignInput,
   PreorderCampaignFilters,
+  PreorderCampaignWithProduct,
+  PreorderDetailLookup,
   PreorderPaginatedResult,
+  PreorderProductSummary,
   PreorderRepository,
   RegisterPreorderPaymentInput,
   ReservePreorderInput,
   UpdatePreorderCampaignInput,
 } from "@/domain/repositories/PreorderRepository";
 import { PreorderPricingService } from "@/domain/services/PreorderPricingService";
+import { Money } from "@/domain/value-objects/Money";
 
 import { prisma } from "./prisma";
 import {
@@ -78,6 +82,10 @@ const campaignDetailInclude = {
   },
 } satisfies Prisma.PreorderCampaignInclude;
 
+type CampaignDetailRecord = Prisma.PreorderCampaignGetPayload<{
+  include: typeof campaignDetailInclude;
+}>;
+
 const reservationDetailInclude = {
   payments: true,
 } satisfies Prisma.PreorderReservationInclude;
@@ -92,15 +100,59 @@ const toPositiveInt = (value: number | undefined, fallback: number): number => {
   return normalized > 0 ? normalized : fallback;
 };
 
+const productWhere = (
+  filters?: PreorderCampaignFilters,
+): Prisma.ProductWhereInput | undefined => {
+  const where: Prisma.ProductWhereInput = {};
+
+  if (filters?.category) where.category = { slug: filters.category };
+  if (filters?.collection) where.collection = { slug: filters.collection };
+  if (filters?.character) {
+    where.characters = {
+      some: { character: { slug: filters.character } },
+    };
+  }
+  if (filters?.minPrice || filters?.maxPrice) {
+    where.price = {
+      ...(filters.minPrice ? { gte: filters.minPrice.toNumber() } : {}),
+      ...(filters.maxPrice ? { lte: filters.maxPrice.toNumber() } : {}),
+    };
+  }
+
+  return Object.keys(where).length > 0 ? where : undefined;
+};
+
 const campaignWhere = (
   filters?: PreorderCampaignFilters,
-): Prisma.PreorderCampaignWhereInput => ({
-  ...(filters?.includeDeleted ? {} : { deletedAt: null }),
-  ...(filters?.productId ? { productId: filters.productId } : {}),
-  ...(filters?.status
-    ? { status: mapCampaignStatusToPrisma(filters.status) }
-    : {}),
-});
+): Prisma.PreorderCampaignWhereInput => {
+  const product = productWhere(filters);
+
+  return {
+    ...(filters?.includeDeleted ? {} : { deletedAt: null }),
+    ...(filters?.productId ? { productId: filters.productId } : {}),
+    status: mapFilterStatus(filters),
+    ...(product ? { product } : {}),
+    ...(filters?.etaFrom || filters?.etaTo
+      ? {
+          etaStart: {
+            ...(filters.etaFrom ? { gte: filters.etaFrom } : {}),
+            ...(filters.etaTo ? { lte: filters.etaTo } : {}),
+          },
+        }
+      : {}),
+  };
+};
+
+const mapFilterStatus = (
+  filters?: PreorderCampaignFilters,
+): PrismaCampaignStatus | undefined => {
+  if (filters?.status) return mapCampaignStatusToPrisma(filters.status);
+  if (filters?.availability === "SOLD_OUT") return PrismaCampaignStatus.SOLD_OUT;
+  if (filters?.availability === "AVAILABLE" || filters?.availability === "OPEN") {
+    return PrismaCampaignStatus.ACTIVE;
+  }
+  return undefined;
+};
 
 const mapCampaignStatusToPrisma = (
   status: PreorderCampaignStatus,
@@ -117,6 +169,54 @@ const mapCampaignStatusToPrisma = (
 
   return map[status];
 };
+
+const campaignOrderBy = (
+  sort: PreorderCampaignFilters["sort"],
+): Prisma.PreorderCampaignOrderByWithRelationInput[] => {
+  if (sort === "eta-asc") return [{ etaStart: "asc" }, { createdAt: "desc" }];
+  if (sort === "price-asc")
+    return [{ product: { price: "asc" } }, { createdAt: "desc" }];
+  if (sort === "price-desc")
+    return [{ product: { price: "desc" } }, { createdAt: "desc" }];
+  return [{ createdAt: "desc" }, { id: "asc" }];
+};
+
+const toProductSummary = (
+  product: CampaignDetailRecord["product"],
+): PreorderProductSummary => ({
+  id: product.id,
+  name: product.name,
+  slug: product.slug,
+  imageUrl: product.imageUrl,
+  price: Money.from(product.price.toNumber()),
+  status: product.status,
+  category: product.category
+    ? {
+        id: product.category.id,
+        name: product.category.name,
+        slug: product.category.slug,
+      }
+    : null,
+  collection: product.collection
+    ? {
+        id: product.collection.id,
+        name: product.collection.name,
+        slug: product.collection.slug,
+      }
+    : null,
+  characters: product.characters.map((entry) => ({
+    id: entry.character.id,
+    name: entry.character.name,
+    slug: entry.character.slug,
+  })),
+});
+
+const toCampaignWithProduct = (
+  record: CampaignDetailRecord,
+): PreorderCampaignWithProduct => ({
+  campaign: toDomainCampaign(record),
+  product: toProductSummary(record.product),
+});
 
 const lockCampaign = async (
   tx: TransactionClient,
@@ -200,7 +300,7 @@ export class PrismaPreorderRepository implements PreorderRepository {
     const campaigns = await prisma.preorderCampaign.findMany({
       where: { productId, deletedAt: null },
       include: campaignDetailInclude,
-      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      orderBy: campaignOrderBy("created-desc"),
     });
 
     return campaigns.map(toDomainCampaign);
@@ -221,13 +321,73 @@ export class PrismaPreorderRepository implements PreorderRepository {
     const campaigns = await prisma.preorderCampaign.findMany({
       where,
       include: campaignDetailInclude,
-      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      orderBy: campaignOrderBy(filters?.sort),
       skip: (safePage - 1) * pageSize,
       take: pageSize,
     });
 
     return {
       items: campaigns.map(toDomainCampaign),
+      page: safePage,
+      pageSize,
+      total,
+      totalPages,
+    };
+  }
+
+  async findCampaignDetail(
+    lookup: PreorderDetailLookup,
+  ): Promise<PreorderCampaignWithProduct | null> {
+    if (!lookup.id && !lookup.productSlug) {
+      return null;
+    }
+
+    const campaign = await prisma.preorderCampaign.findFirst({
+      where: {
+        deletedAt: null,
+        ...(lookup.id ? { id: lookup.id } : {}),
+        ...(lookup.productSlug ? { product: { slug: lookup.productSlug } } : {}),
+      },
+      include: campaignDetailInclude,
+      orderBy: campaignOrderBy("created-desc"),
+    });
+
+    return campaign ? toCampaignWithProduct(campaign) : null;
+  }
+
+  async listCampaignsWithProducts(
+    filters?: PreorderCampaignFilters,
+  ): Promise<PreorderPaginatedResult<PreorderCampaignWithProduct>> {
+    const result = await this.listCampaignRecords(filters);
+
+    return {
+      ...result,
+      items: result.items.map(toCampaignWithProduct),
+    };
+  }
+
+  private async listCampaignRecords(
+    filters?: PreorderCampaignFilters,
+  ): Promise<PreorderPaginatedResult<CampaignDetailRecord>> {
+    const page = toPositiveInt(filters?.page, 1);
+    const requestedPageSize = toPositiveInt(filters?.pageSize, DEFAULT_PAGE_SIZE);
+    const pageSize = Math.min(MAX_PAGE_SIZE, requestedPageSize);
+    const where = campaignWhere(filters);
+
+    const total = await prisma.preorderCampaign.count({ where });
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePage = Math.min(page, totalPages);
+
+    const campaigns = await prisma.preorderCampaign.findMany({
+      where,
+      include: campaignDetailInclude,
+      orderBy: campaignOrderBy(filters?.sort),
+      skip: (safePage - 1) * pageSize,
+      take: pageSize,
+    });
+
+    return {
+      items: campaigns,
       page: safePage,
       pageSize,
       total,
@@ -323,6 +483,27 @@ export class PrismaPreorderRepository implements PreorderRepository {
 
       return toDomainReservation(reservation);
     });
+  }
+
+  async findReservationById(id: string): Promise<PreorderReservation | null> {
+    const reservation = await prisma.preorderReservation.findUnique({
+      where: { id },
+      include: reservationDetailInclude,
+    });
+
+    return reservation ? toDomainReservation(reservation) : null;
+  }
+
+  async listReservationsByCampaign(
+    campaignId: string,
+  ): Promise<PreorderReservation[]> {
+    const reservations = await prisma.preorderReservation.findMany({
+      where: { campaignId },
+      include: reservationDetailInclude,
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+
+    return reservations.map(toDomainReservation);
   }
 
   async cancelReservation(

@@ -75,6 +75,17 @@ export interface RegisterPreorderPaymentInput {
   createdAt: Date;
 }
 
+export interface ReservePreorderWithPaymentDraftInput extends ReservePreorderInput {
+  paymentKind: PreorderPaymentKind;
+  paymentAmount: Money;
+  paymentCreatedAt: Date;
+}
+
+export interface ReservePreorderWithPaymentDraftResult {
+  reservation: PreorderReservation;
+  payment: PreorderPayment;
+}
+
 export interface PreorderProductSummary {
   id: string;
   name: string;
@@ -113,6 +124,9 @@ export interface PreorderRepository {
   ): Promise<PreorderPaginatedResult<PreorderCampaignWithProduct>>;
 
   reserve(input: ReservePreorderInput): Promise<PreorderReservation>;
+  reserveWithPaymentDraft(
+    input: ReservePreorderWithPaymentDraftInput,
+  ): Promise<ReservePreorderWithPaymentDraftResult>;
   findReservationById(id: string): Promise<PreorderReservation | null>;
   listReservationsByCampaign(campaignId: string): Promise<PreorderReservation[]>;
 

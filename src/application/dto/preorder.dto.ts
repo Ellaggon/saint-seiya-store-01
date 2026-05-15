@@ -20,10 +20,10 @@ export interface PaginatedResultDTO<T> {
 export interface PreorderProductSummaryDTO {
   id: string;
   name: string;
-  slug?: string;
-  imageUrl?: string | null;
-  price?: number;
-  status?: string;
+  slug: string;
+  imageUrl: string | null;
+  price: number;
+  status: string;
   category?: { id: string; name: string; slug: string } | null;
   collection?: { id: string; name: string; slug: string } | null;
   characters?: { id: string; name: string; slug: string }[];
@@ -85,7 +85,7 @@ export interface PreorderPaymentDTO {
 
 export interface PreorderListItemDTO {
   campaign: PreorderCampaignDTO;
-  product?: PreorderProductSummaryDTO;
+  product: PreorderProductSummaryDTO;
 }
 
 export interface PreorderPricingSummaryDTO {
@@ -100,7 +100,7 @@ export interface PreorderPricingSummaryDTO {
 
 export interface PreorderDetailDTO {
   campaign: PreorderCampaignDTO;
-  product?: PreorderProductSummaryDTO;
+  product: PreorderProductSummaryDTO;
   availability: {
     totalSlots: number;
     reservedUnits: number;

@@ -1,6 +1,10 @@
 export type ApplicationErrorCode =
+  | "VALIDATION_ERROR"
   | "PRODUCT_NOT_FOUND"
   | "INVALID_DEPOSIT"
+  | "INVALID_PAYMENT"
+  | "INVALID_PAYMENT_MODE"
+  | "INVALID_PAYMENT_AMOUNT"
   | "PREORDER_ALREADY_EXISTS"
   | "PREORDER_CLOSED"
   | "PREORDER_SOLD_OUT"
@@ -10,6 +14,7 @@ export type ApplicationErrorCode =
   | "RESERVATION_NOT_FOUND"
   | "INVALID_RESERVATION_STATE"
   | "PAYMENT_EXCEEDS_BALANCE"
+  | "DUPLICATE_PAYMENT"
   | "FORBIDDEN"
   | "INVALID_PREORDER_STATE";
 
@@ -24,6 +29,10 @@ export class ApplicationError extends Error {
     this.name = "ApplicationError";
   }
 
+  static validation(message: string): ApplicationError {
+    return new ApplicationError("VALIDATION_ERROR", message, 400);
+  }
+
   static productNotFound(productId: string): ApplicationError {
     return new ApplicationError("PRODUCT_NOT_FOUND", "Product not found", 404, {
       productId,
@@ -32,6 +41,23 @@ export class ApplicationError extends Error {
 
   static invalidDeposit(message: string): ApplicationError {
     return new ApplicationError("INVALID_DEPOSIT", message, 422);
+  }
+
+  static invalidPayment(message: string): ApplicationError {
+    return new ApplicationError("INVALID_PAYMENT", message, 422);
+  }
+
+  static invalidPaymentMode(paymentMode: string): ApplicationError {
+    return new ApplicationError(
+      "INVALID_PAYMENT_MODE",
+      "Invalid preorder payment mode",
+      422,
+      { paymentMode },
+    );
+  }
+
+  static invalidPaymentAmount(message: string): ApplicationError {
+    return new ApplicationError("INVALID_PAYMENT_AMOUNT", message, 422);
   }
 
   static preorderAlreadyExists(productId: string): ApplicationError {
@@ -93,11 +119,67 @@ export class ApplicationError extends Error {
     );
   }
 
+  static duplicatePayment(): ApplicationError {
+    return new ApplicationError(
+      "DUPLICATE_PAYMENT",
+      "Payment is already registered",
+      409,
+    );
+  }
+
   static forbidden(): ApplicationError {
     return new ApplicationError("FORBIDDEN", "Operation is not allowed", 403);
   }
 
   static invalidPreorderState(message: string): ApplicationError {
     return new ApplicationError("INVALID_PREORDER_STATE", message, 409);
+  }
+
+  static normalizeUnknownError(error: unknown): ApplicationError {
+    if (error instanceof ApplicationError) return error;
+
+    const message = error instanceof Error ? error.message : "Unexpected error";
+    const normalized = message.toLowerCase();
+
+    if (normalized.includes("already has an active preorder reservation")) {
+      return new ApplicationError("DUPLICATE_RESERVATION", message, 409);
+    }
+    if (normalized.includes("sold out") || normalized.includes("available slots")) {
+      return new ApplicationError("PREORDER_SOLD_OUT", message, 409);
+    }
+    if (normalized.includes("cannot accept this reservation")) {
+      return new ApplicationError("LIMIT_EXCEEDED", message, 409);
+    }
+    if (normalized.includes("provider payment is already linked")) {
+      return ApplicationError.duplicatePayment();
+    }
+    if (normalized.includes("payment amount cannot exceed")) {
+      return ApplicationError.paymentExceedsBalance();
+    }
+    if (
+      normalized.includes("payment amount must be greater than zero") ||
+      normalized.includes("preorder payment amount")
+    ) {
+      return ApplicationError.invalidPaymentAmount(message);
+    }
+    if (
+      normalized.includes("full payment is not allowed") ||
+      normalized.includes("deposit") ||
+      normalized.includes("preorder quantity")
+    ) {
+      return ApplicationError.invalidPayment(message);
+    }
+    if (
+      normalized.includes("inactive preorder reservation") ||
+      normalized.includes("paid or fulfilled") ||
+      normalized.includes("paid preorder reservation")
+    ) {
+      return ApplicationError.invalidReservationState(message);
+    }
+    if (normalized.includes("preorder campaign not found")) {
+      return ApplicationError.invalidPreorderState(message);
+    }
+
+    return ApplicationError.invalidPreorderState(message);
   }
 }

@@ -37,6 +37,7 @@ export interface PreorderCampaignDTO {
   reservedUnits: number;
   availableUnits: number;
   isSoldOut: boolean;
+  isOpen: boolean;
   depositType: PreorderDepositType;
   depositValue: number;
   allowFullPayment: boolean;
@@ -86,6 +87,7 @@ export interface PreorderPaymentDTO {
 export interface PreorderListItemDTO {
   campaign: PreorderCampaignDTO;
   product: PreorderProductSummaryDTO;
+  pricing: PreorderPricingSummaryDTO;
 }
 
 export interface PreorderPricingSummaryDTO {

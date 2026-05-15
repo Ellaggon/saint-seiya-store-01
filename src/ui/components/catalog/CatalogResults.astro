@@ -13,9 +13,19 @@ interface Props {
     price: number;
     image: string;
     status: string;
+    preorder?: {
+      etaLabel?: string | null;
+      availableUnits: number;
+      totalUnits: number;
+      depositAmount: number;
+      isOpen: boolean;
+    };
   }[];
   getPageUrl: (page: number) => string;
   includeCountMarker?: boolean;
+  emptyTitle?: string;
+  emptyDescription?: string;
+  resetHref?: string;
 }
 
 const {
@@ -23,6 +33,9 @@ const {
   products,
   getPageUrl,
   includeCountMarker = false,
+  emptyTitle = "NO COLLECTIBLES FOUND",
+  emptyDescription = "STRETCH YOUR SEARCH PARAMETERS",
+  resetHref = "/catalog",
 } = Astro.props;
 ---
 
@@ -40,13 +53,13 @@ const {
       <div class="flex flex-col items-center justify-center py-32 border border-zinc-900 bg-zinc-950/50">
         <span class="text-zinc-800 text-6xl mb-8 font-black">∅</span>
         <h2 class="text-amber-500 font-black text-xs tracking-[0.5em] uppercase">
-          NO COLLECTIBLES FOUND
+          {emptyTitle}
         </h2>
         <p class="text-zinc-600 text-[10px] mt-4 tracking-widest uppercase">
-          STRETCH YOUR SEARCH PARAMETERS
+          {emptyDescription}
         </p>
         <a
-          href="/catalog"
+          href={resetHref}
           data-filter-link
           class="mt-8 text-amber-500 text-[9px] font-black uppercase tracking-[0.2em] border border-amber-500/30 px-6 py-3 hover:bg-amber-500 hover:text-black transition-all"
         >

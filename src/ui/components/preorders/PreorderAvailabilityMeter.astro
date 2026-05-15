@@ -1,0 +1,22 @@
+---
+interface Props {
+  availableUnits: number;
+  totalUnits: number;
+}
+
+const { availableUnits, totalUnits } = Astro.props;
+const safeTotal = Math.max(totalUnits, 1);
+const safeAvailable = Math.max(0, Math.min(availableUnits, safeTotal));
+const reservedUnits = safeTotal - safeAvailable;
+const pct = Math.min(100, Math.max(0, (reservedUnits / safeTotal) * 100));
+---
+
+<div class="space-y-2">
+  <div class="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.2em]">
+    <span class="text-zinc-500">Slots</span>
+    <span class="text-zinc-300">{safeAvailable}/{safeTotal}</span>
+  </div>
+  <div class="h-1.5 w-full bg-zinc-900 border border-zinc-800">
+    <div class="h-full bg-[#E60012]" style={`width: ${pct}%`}></div>
+  </div>
+</div>

@@ -21,6 +21,7 @@ export class PreorderMapper {
       reservedUnits: campaign.reservedUnits,
       availableUnits: campaign.availableUnits,
       isSoldOut: campaign.isSoldOut,
+      isOpen: campaign.isOpen(new Date()),
       depositType: campaign.depositType,
       depositValue: campaign.depositValue,
       allowFullPayment: campaign.allowFullPayment,

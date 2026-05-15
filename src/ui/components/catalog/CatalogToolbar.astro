@@ -2,8 +2,20 @@
 interface Props {
   resultCount: number;
   currentSort: string;
+  selectId?: string;
+  sortOptions?: { value: string; label: string }[];
 }
-const { resultCount, currentSort } = Astro.props;
+const {
+  resultCount,
+  currentSort,
+  selectId = "catalog-sort-select",
+  sortOptions = [
+    { value: "created-desc", label: "LATEST RELEASE" },
+    { value: "price-asc", label: "PRICE ASCENDING" },
+    { value: "price-desc", label: "PRICE DESCENDING" },
+    { value: "name-asc", label: "CHARACTER NAME" },
+  ],
+} = Astro.props;
 ---
 
 <div
@@ -24,21 +36,16 @@ const { resultCount, currentSort } = Astro.props;
     >
     <div class="relative w-full sm:w-auto">
       <select
-        id="catalog-sort-select"
+        id={selectId}
         class="w-full sm:w-auto bg-black border border-zinc-800 text-white text-[11px] font-black uppercase tracking-widest px-4 py-3 hover:border-amber-500 transition-colors focus:outline-none focus:border-amber-500 appearance-none cursor-pointer pr-10"
       >
-        <option value="created-desc" selected={currentSort === "created-desc"}>
-          LATEST RELEASE
-        </option>
-        <option value="price-asc" selected={currentSort === "price-asc"}>
-          PRICE ASCENDING
-        </option>
-        <option value="price-desc" selected={currentSort === "price-desc"}>
-          PRICE DESCENDING
-        </option>
-        <option value="name-asc" selected={currentSort === "name-asc"}>
-          CHARACTER NAME
-        </option>
+        {
+          sortOptions.map((option) => (
+            <option value={option.value} selected={currentSort === option.value}>
+              {option.label}
+            </option>
+          ))
+        }
       </select>
       <div
         class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-500"

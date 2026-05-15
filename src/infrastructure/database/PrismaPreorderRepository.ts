@@ -4,6 +4,7 @@ import {
   PreorderReservationStatus as PrismaReservationStatus,
 } from "@prisma/client";
 
+import { PreorderRepositoryError } from "@/domain/errors/PreorderRepositoryError";
 import { PreorderCampaignStatus } from "@/domain/entities/PreorderCampaign";
 import {
   PreorderPaymentStatus,
@@ -149,10 +150,6 @@ const mapFilterStatus = (
   filters?: PreorderCampaignFilters,
 ): PrismaCampaignStatus | undefined => {
   if (filters?.status) return mapCampaignStatusToPrisma(filters.status);
-  if (filters?.availability === "SOLD_OUT") return PrismaCampaignStatus.SOLD_OUT;
-  if (filters?.availability === "AVAILABLE" || filters?.availability === "OPEN") {
-    return PrismaCampaignStatus.ACTIVE;
-  }
   return undefined;
 };
 
@@ -231,6 +228,17 @@ const lockCampaign = async (
   `;
 };
 
+const lockProduct = async (
+  tx: TransactionClient,
+  productId: string,
+): Promise<void> => {
+  await tx.$queryRaw<{ id: string }[]>`
+    SELECT id FROM "Product"
+    WHERE id = ${productId}
+    FOR UPDATE
+  `;
+};
+
 const lockReservation = async (
   tx: TransactionClient,
   reservationId: string,
@@ -261,30 +269,116 @@ const expireStalePendingReservations = async (
   });
 };
 
+const activeCampaignStatuses = [
+  PrismaCampaignStatus.ACTIVE,
+  PrismaCampaignStatus.PAUSED,
+  PrismaCampaignStatus.SOLD_OUT,
+] satisfies PrismaCampaignStatus[];
+
+const isActiveOperationalStatus = (
+  status: PreorderCampaignStatus,
+): boolean =>
+  [
+    PreorderCampaignStatus.ACTIVE,
+    PreorderCampaignStatus.PAUSED,
+    PreorderCampaignStatus.SOLD_OUT,
+  ].includes(status);
+
+const assertNoActiveCampaignForProduct = async (
+  tx: TransactionClient,
+  productId: string,
+  excludedCampaignId?: string,
+): Promise<void> => {
+  const existing = await tx.preorderCampaign.findFirst({
+    where: {
+      productId,
+      deletedAt: null,
+      status: { in: activeCampaignStatuses },
+      ...(excludedCampaignId ? { id: { not: excludedCampaignId } } : {}),
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    throw new PreorderRepositoryError(
+      "DUPLICATE_ACTIVE_CAMPAIGN",
+      "Product already has an active preorder campaign",
+    );
+  }
+};
+
+const campaignMatchesAvailability = (
+  campaign: CampaignDetailRecord,
+  availability: PreorderCampaignFilters["availability"],
+  now: Date,
+): boolean => {
+  if (!availability) return true;
+
+  const domainCampaign = toDomainCampaign(campaign);
+  const isPublic =
+    !domainCampaign.deletedAt &&
+    (domainCampaign.status === PreorderCampaignStatus.ACTIVE ||
+      domainCampaign.status === PreorderCampaignStatus.SOLD_OUT);
+  const inWindow =
+    (!domainCampaign.opensAt || now >= domainCampaign.opensAt) &&
+    (!domainCampaign.closesAt || now <= domainCampaign.closesAt);
+
+  if (availability === "SOLD_OUT") {
+    return isPublic && (domainCampaign.isSoldOut || domainCampaign.availableUnits <= 0);
+  }
+
+  return (
+    isPublic &&
+    domainCampaign.status === PreorderCampaignStatus.ACTIVE &&
+    inWindow &&
+    domainCampaign.availableUnits > 0
+  );
+};
+
 export class PrismaPreorderRepository implements PreorderRepository {
   private readonly pricingService = new PreorderPricingService();
 
   async createCampaign(
     input: CreatePreorderCampaignInput,
   ): Promise<PreorderCampaign> {
-    const campaign = await prisma.preorderCampaign.create({
-      data: toPersistenceCampaignInput(input.campaign),
-      include: campaignDetailInclude,
-    });
+    return prisma.$transaction(async (tx) => {
+      await lockProduct(tx, input.campaign.productId);
 
-    return toDomainCampaign(campaign);
+      if (isActiveOperationalStatus(input.campaign.status)) {
+        await assertNoActiveCampaignForProduct(tx, input.campaign.productId);
+      }
+
+      const campaign = await tx.preorderCampaign.create({
+        data: toPersistenceCampaignInput(input.campaign),
+        include: campaignDetailInclude,
+      });
+
+      return toDomainCampaign(campaign);
+    });
   }
 
   async updateCampaign(
     input: UpdatePreorderCampaignInput,
   ): Promise<PreorderCampaign> {
-    const campaign = await prisma.preorderCampaign.update({
-      where: { id: input.campaign.id },
-      data: toPersistenceCampaignUpdateInput(input.campaign),
-      include: campaignDetailInclude,
-    });
+    return prisma.$transaction(async (tx) => {
+      await lockProduct(tx, input.campaign.productId);
 
-    return toDomainCampaign(campaign);
+      if (isActiveOperationalStatus(input.campaign.status)) {
+        await assertNoActiveCampaignForProduct(
+          tx,
+          input.campaign.productId,
+          input.campaign.id,
+        );
+      }
+
+      const campaign = await tx.preorderCampaign.update({
+        where: { id: input.campaign.id },
+        data: toPersistenceCampaignUpdateInput(input.campaign),
+        include: campaignDetailInclude,
+      });
+
+      return toDomainCampaign(campaign);
+    });
   }
 
   async findCampaignById(id: string): Promise<PreorderCampaign | null> {
@@ -316,17 +410,26 @@ export class PrismaPreorderRepository implements PreorderRepository {
     const pageSize = Math.min(MAX_PAGE_SIZE, requestedPageSize);
     const where = campaignWhere(filters);
 
-    const total = await prisma.preorderCampaign.count({ where });
+    const availabilityFilteredCampaigns = filters?.availability
+      ? await this.findCampaignRecordsForList(where, filters)
+      : undefined;
+    const total = availabilityFilteredCampaigns
+      ? availabilityFilteredCampaigns.length
+      : await prisma.preorderCampaign.count({ where });
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, totalPages);
-
-    const campaigns = await prisma.preorderCampaign.findMany({
-      where,
-      include: campaignDetailInclude,
-      orderBy: campaignOrderBy(filters?.sort),
-      skip: (safePage - 1) * pageSize,
-      take: pageSize,
-    });
+    const campaigns = availabilityFilteredCampaigns
+      ? availabilityFilteredCampaigns.slice(
+          (safePage - 1) * pageSize,
+          safePage * pageSize,
+        )
+      : await prisma.preorderCampaign.findMany({
+          where,
+          include: campaignDetailInclude,
+          orderBy: campaignOrderBy(filters?.sort),
+          skip: (safePage - 1) * pageSize,
+          take: pageSize,
+        });
 
     return {
       items: campaigns.map(toDomainCampaign),
@@ -340,7 +443,7 @@ export class PrismaPreorderRepository implements PreorderRepository {
   async findCampaignDetail(
     lookup: PreorderDetailLookup,
   ): Promise<PreorderCampaignWithProduct | null> {
-    if (!lookup.id && !lookup.productSlug) {
+    if (!lookup.id && !lookup.productId && !lookup.productSlug) {
       return null;
     }
 
@@ -348,6 +451,7 @@ export class PrismaPreorderRepository implements PreorderRepository {
       where: {
         deletedAt: null,
         ...(lookup.id ? { id: lookup.id } : {}),
+        ...(lookup.productId ? { productId: lookup.productId } : {}),
         ...(lookup.productSlug ? { product: { slug: lookup.productSlug } } : {}),
       },
       include: campaignDetailInclude,
@@ -376,17 +480,26 @@ export class PrismaPreorderRepository implements PreorderRepository {
     const pageSize = Math.min(MAX_PAGE_SIZE, requestedPageSize);
     const where = campaignWhere(filters);
 
-    const total = await prisma.preorderCampaign.count({ where });
+    const availabilityFilteredCampaigns = filters?.availability
+      ? await this.findCampaignRecordsForList(where, filters)
+      : undefined;
+    const total = availabilityFilteredCampaigns
+      ? availabilityFilteredCampaigns.length
+      : await prisma.preorderCampaign.count({ where });
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, totalPages);
-
-    const campaigns = await prisma.preorderCampaign.findMany({
-      where,
-      include: campaignDetailInclude,
-      orderBy: campaignOrderBy(filters?.sort),
-      skip: (safePage - 1) * pageSize,
-      take: pageSize,
-    });
+    const campaigns = availabilityFilteredCampaigns
+      ? availabilityFilteredCampaigns.slice(
+          (safePage - 1) * pageSize,
+          safePage * pageSize,
+        )
+      : await prisma.preorderCampaign.findMany({
+          where,
+          include: campaignDetailInclude,
+          orderBy: campaignOrderBy(filters?.sort),
+          skip: (safePage - 1) * pageSize,
+          take: pageSize,
+        });
 
     return {
       items: campaigns,
@@ -395,6 +508,24 @@ export class PrismaPreorderRepository implements PreorderRepository {
       total,
       totalPages,
     };
+  }
+
+  private async findCampaignRecordsForList(
+    where: Prisma.PreorderCampaignWhereInput,
+    filters?: PreorderCampaignFilters,
+  ): Promise<CampaignDetailRecord[]> {
+    const campaigns = await prisma.preorderCampaign.findMany({
+      where,
+      include: campaignDetailInclude,
+      orderBy: campaignOrderBy(filters?.sort),
+    });
+
+    if (!filters?.availability) return campaigns;
+
+    const now = new Date();
+    return campaigns.filter((campaign) =>
+      campaignMatchesAvailability(campaign, filters.availability, now),
+    );
   }
 
   async reserve(input: ReservePreorderInput): Promise<PreorderReservation> {
@@ -407,7 +538,10 @@ export class PrismaPreorderRepository implements PreorderRepository {
       });
 
       if (!campaign || campaign.deletedAt) {
-        throw new Error("Preorder campaign not found");
+        throw new PreorderRepositoryError(
+          "CAMPAIGN_NOT_FOUND",
+          "Preorder campaign not found",
+        );
       }
 
       await expireStalePendingReservations(tx, input.campaignId, input.requestedAt);
@@ -422,7 +556,10 @@ export class PrismaPreorderRepository implements PreorderRepository {
       });
 
       if (activeUserReservation) {
-        throw new Error("User already has an active preorder reservation");
+        throw new PreorderRepositoryError(
+          "DUPLICATE_RESERVATION",
+          "User already has an active preorder reservation",
+        );
       }
 
       const activeReservations = await tx.preorderReservation.findMany({
@@ -455,11 +592,17 @@ export class PrismaPreorderRepository implements PreorderRepository {
       });
 
       if (!domainCampaign.canReserve(input.quantity, 0, input.requestedAt)) {
-        throw new Error("Preorder campaign cannot accept this reservation");
+        throw new PreorderRepositoryError(
+          "CAMPAIGN_NOT_RESERVABLE",
+          "Preorder campaign cannot accept this reservation",
+        );
       }
 
       if (reservedUnits + input.quantity > campaign.totalSlots) {
-        throw new Error("Preorder campaign does not have enough available slots");
+        throw new PreorderRepositoryError(
+          "SOLD_OUT",
+          "Preorder campaign does not have enough available slots",
+        );
       }
 
       const pricing = this.pricingService.calculate({
@@ -499,7 +642,10 @@ export class PrismaPreorderRepository implements PreorderRepository {
       });
 
       if (!campaign || campaign.deletedAt) {
-        throw new Error("Preorder campaign not found");
+        throw new PreorderRepositoryError(
+          "CAMPAIGN_NOT_FOUND",
+          "Preorder campaign not found",
+        );
       }
 
       await expireStalePendingReservations(tx, input.campaignId, input.requestedAt);
@@ -514,7 +660,10 @@ export class PrismaPreorderRepository implements PreorderRepository {
       });
 
       if (activeUserReservation) {
-        throw new Error("User already has an active preorder reservation");
+        throw new PreorderRepositoryError(
+          "DUPLICATE_RESERVATION",
+          "User already has an active preorder reservation",
+        );
       }
 
       const activeReservations = await tx.preorderReservation.findMany({
@@ -547,11 +696,17 @@ export class PrismaPreorderRepository implements PreorderRepository {
       });
 
       if (!domainCampaign.canReserve(input.quantity, 0, input.requestedAt)) {
-        throw new Error("Preorder campaign cannot accept this reservation");
+        throw new PreorderRepositoryError(
+          "CAMPAIGN_NOT_RESERVABLE",
+          "Preorder campaign cannot accept this reservation",
+        );
       }
 
       if (reservedUnits + input.quantity > campaign.totalSlots) {
-        throw new Error("Preorder campaign does not have enough available slots");
+        throw new PreorderRepositoryError(
+          "SOLD_OUT",
+          "Preorder campaign does not have enough available slots",
+        );
       }
 
       const pricing = this.pricingService.calculate({
@@ -684,7 +839,10 @@ export class PrismaPreorderRepository implements PreorderRepository {
       });
 
       if (!reservation) {
-        throw new Error("Preorder reservation not found");
+        throw new PreorderRepositoryError(
+          "RESERVATION_NOT_FOUND",
+          "Preorder reservation not found",
+        );
       }
 
       if (input.provider && input.providerPaymentId) {
@@ -699,7 +857,10 @@ export class PrismaPreorderRepository implements PreorderRepository {
 
         if (existingPayment) {
           if (existingPayment.reservationId !== input.reservationId) {
-            throw new Error("Provider payment is already linked to another preorder reservation");
+            throw new PreorderRepositoryError(
+              "DUPLICATE_PAYMENT",
+              "Provider payment is already linked to another preorder reservation",
+            );
           }
 
           return toDomainPayment(existingPayment);
@@ -707,13 +868,35 @@ export class PrismaPreorderRepository implements PreorderRepository {
       }
 
       const domainReservation = toDomainReservation(reservation);
-      const nextReservation =
-        input.status === PreorderPaymentStatus.PAID
-          ? domainReservation.confirmPayment(
-              input.amount,
-              input.paidAt ?? input.createdAt,
-            )
-          : null;
+      let nextReservation: PreorderReservation | null = null;
+      if (input.status === PreorderPaymentStatus.PAID) {
+        try {
+          nextReservation = domainReservation.confirmPayment(
+            input.amount,
+            input.paidAt ?? input.createdAt,
+          );
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Invalid preorder payment";
+          const normalized = message.toLowerCase();
+
+          if (normalized.includes("exceed")) {
+            throw new PreorderRepositoryError(
+              "PAYMENT_EXCEEDS_BALANCE",
+              message,
+            );
+          }
+
+          if (normalized.includes("inactive")) {
+            throw new PreorderRepositoryError(
+              "INVALID_RESERVATION_STATE",
+              message,
+            );
+          }
+
+          throw new PreorderRepositoryError("INVALID_PAYMENT", message);
+        }
+      }
 
       const payment = await tx.preorderPayment.create({
         data: {

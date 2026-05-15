@@ -1,0 +1,16 @@
+---
+interface Props {
+  isOpen: boolean;
+  isSoldOut?: boolean;
+}
+
+const { isOpen, isSoldOut = false } = Astro.props;
+const label = isSoldOut ? "SOLD OUT" : isOpen ? "PRE-ORDER" : "CLOSED";
+const tone = isSoldOut || !isOpen
+  ? "bg-zinc-900 text-zinc-400 border border-zinc-700"
+  : "bg-[#E60012] text-white";
+---
+
+<span class={`text-[10px] font-black uppercase tracking-widest px-2 py-1 ${tone}`}>
+  {label}
+</span>

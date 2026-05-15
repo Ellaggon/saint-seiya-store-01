@@ -186,6 +186,7 @@ model PreorderReservation {
   @@index([status])
   @@index([expiresAt])
   @@index([campaignId, userId])
+  @@index([campaignId, userId, status])
 }
 
 model PreorderPayment {
@@ -204,7 +205,7 @@ model PreorderPayment {
 
   @@index([reservationId])
   @@index([status])
-  @@index([provider, providerPaymentId])
+  @@unique([provider, providerPaymentId])
 }
 
 model Order {

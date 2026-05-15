@@ -340,7 +340,7 @@ export class PrismaPreorderRepository implements PreorderRepository {
   async findCampaignDetail(
     lookup: PreorderDetailLookup,
   ): Promise<PreorderCampaignWithProduct | null> {
-    if (!lookup.id && !lookup.productSlug) {
+    if (!lookup.id && !lookup.productId && !lookup.productSlug) {
       return null;
     }
 
@@ -348,6 +348,7 @@ export class PrismaPreorderRepository implements PreorderRepository {
       where: {
         deletedAt: null,
         ...(lookup.id ? { id: lookup.id } : {}),
+        ...(lookup.productId ? { productId: lookup.productId } : {}),
         ...(lookup.productSlug ? { product: { slug: lookup.productSlug } } : {}),
       },
       include: campaignDetailInclude,

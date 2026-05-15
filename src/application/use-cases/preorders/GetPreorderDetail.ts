@@ -6,6 +6,7 @@ import type { PreorderDetailDTO } from "@/application/dto/preorder.dto";
 
 export interface GetPreorderDetailInput {
   id?: string;
+  productId?: string;
   productSlug?: string;
   quantity?: number;
   payInFull?: boolean;
@@ -19,6 +20,7 @@ export class GetPreorderDetail {
   async execute(input: GetPreorderDetailInput): Promise<PreorderDetailDTO> {
     const detail = await this.preorderRepository.findCampaignDetail({
       id: input.id,
+      productId: input.productId,
       productSlug: input.productSlug,
     });
 

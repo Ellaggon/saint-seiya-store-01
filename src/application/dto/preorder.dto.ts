@@ -86,6 +86,7 @@ export interface PreorderPaymentDTO {
 export interface PreorderListItemDTO {
   campaign: PreorderCampaignDTO;
   product: PreorderProductSummaryDTO;
+  pricing: PreorderPricingSummaryDTO;
 }
 
 export interface PreorderPricingSummaryDTO {

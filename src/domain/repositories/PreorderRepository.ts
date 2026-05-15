@@ -105,6 +105,7 @@ export interface PreorderCampaignWithProduct {
 
 export interface PreorderDetailLookup {
   id?: string;
+  productId?: string;
   productSlug?: string;
 }
 

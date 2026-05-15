@@ -7,6 +7,7 @@ import type {
   PreorderSort,
 } from "@/domain/repositories/PreorderRepository";
 import { Money } from "@/domain/value-objects/Money";
+import { PreorderPricingService } from "@/domain/services/PreorderPricingService";
 import { PreorderMapper } from "@/application/dto/preorder.mapper";
 import type {
   PaginatedResultDTO,
@@ -29,6 +30,8 @@ export interface ListPreordersInput {
 }
 
 export class ListPreorders {
+  private readonly pricingService = new PreorderPricingService();
+
   constructor(private readonly preorderRepository: PreorderRepository) {}
 
   async execute(
@@ -53,20 +56,38 @@ export class ListPreorders {
 
     return {
       ...result,
-      items: result.items.map((item) => ({
-        campaign: PreorderMapper.campaignToDTO(item.campaign),
-        product: {
-          id: item.product.id,
-          name: item.product.name,
-          slug: item.product.slug,
-          imageUrl: item.product.imageUrl,
-          price: item.product.price.toNumber(),
-          status: item.product.status,
-          category: item.product.category,
-          collection: item.product.collection,
-          characters: item.product.characters,
-        },
-      })),
+      items: result.items.map((item) => {
+        const pricing = this.pricingService.calculate({
+          unitPrice: item.product.price,
+          quantity: 1,
+          campaign: item.campaign,
+          payInFull: false,
+        });
+
+        return {
+          campaign: PreorderMapper.campaignToDTO(item.campaign),
+          product: {
+            id: item.product.id,
+            name: item.product.name,
+            slug: item.product.slug,
+            imageUrl: item.product.imageUrl,
+            price: item.product.price.toNumber(),
+            status: item.product.status,
+            category: item.product.category,
+            collection: item.product.collection,
+            characters: item.product.characters,
+          },
+          pricing: {
+            unitPrice: pricing.unitPrice.toNumber(),
+            quantity: pricing.quantity,
+            totalAmount: pricing.totalAmount.toNumber(),
+            depositRequired: pricing.depositRequired.toNumber(),
+            amountDueNow: pricing.amountDueNow.toNumber(),
+            balanceDue: pricing.balanceDue.toNumber(),
+            allowFullPayment: item.campaign.allowFullPayment,
+          },
+        };
+      }),
     };
   }
 }

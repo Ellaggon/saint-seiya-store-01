@@ -32,9 +32,7 @@ const { product, preorder = null } = Astro.props;
 const preorderIsSoldOut = preorder
   ? preorder.availability.availableUnits <= 0 || preorder.availability.isSoldOut
   : false;
-const preorderIsOpen = preorder
-  ? preorder.campaign.status === "ACTIVE" && !preorderIsSoldOut
-  : false;
+const preorderIsOpen = preorder ? preorder.campaign.isOpen : false;
 
 const statusLabelMap: Record<string, string> = {
   DRAFT: "DRAFT",

@@ -18,6 +18,11 @@ export type ApplicationErrorCode =
   | "FORBIDDEN"
   | "INVALID_PREORDER_STATE";
 
+interface CodedError {
+  code: string;
+  message: string;
+}
+
 export class ApplicationError extends Error {
   constructor(
     public readonly code: ApplicationErrorCode,
@@ -138,6 +143,39 @@ export class ApplicationError extends Error {
   static normalizeUnknownError(error: unknown): ApplicationError {
     if (error instanceof ApplicationError) return error;
 
+    if (isCodedError(error)) {
+      if (error.code === "CAMPAIGN_NOT_FOUND") {
+        return ApplicationError.invalidPreorderState(error.message);
+      }
+      if (error.code === "DUPLICATE_ACTIVE_CAMPAIGN") {
+        return new ApplicationError("PREORDER_ALREADY_EXISTS", error.message, 409);
+      }
+      if (error.code === "DUPLICATE_RESERVATION") {
+        return new ApplicationError("DUPLICATE_RESERVATION", error.message, 409);
+      }
+      if (error.code === "CAMPAIGN_NOT_RESERVABLE") {
+        return new ApplicationError("LIMIT_EXCEEDED", error.message, 409);
+      }
+      if (error.code === "SOLD_OUT") {
+        return new ApplicationError("PREORDER_SOLD_OUT", error.message, 409);
+      }
+      if (error.code === "RESERVATION_NOT_FOUND") {
+        return ApplicationError.reservationNotFound("unknown");
+      }
+      if (error.code === "DUPLICATE_PAYMENT") {
+        return ApplicationError.duplicatePayment();
+      }
+      if (error.code === "PAYMENT_EXCEEDS_BALANCE") {
+        return ApplicationError.paymentExceedsBalance();
+      }
+      if (error.code === "INVALID_PAYMENT") {
+        return ApplicationError.invalidPayment(error.message);
+      }
+      if (error.code === "INVALID_RESERVATION_STATE") {
+        return ApplicationError.invalidReservationState(error.message);
+      }
+    }
+
     const message = error instanceof Error ? error.message : "Unexpected error";
     const normalized = message.toLowerCase();
 
@@ -183,3 +221,11 @@ export class ApplicationError extends Error {
     return ApplicationError.invalidPreorderState(message);
   }
 }
+
+const isCodedError = (error: unknown): error is CodedError =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  "message" in error &&
+  typeof (error as CodedError).code === "string" &&
+  typeof (error as CodedError).message === "string";

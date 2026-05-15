@@ -3,6 +3,7 @@ import DetailPage from "../../ui/pages/product/detail.astro";
 import { getProductById } from "@/endpoints/api/products/getProductById";
 import { createGetPreorderDetailUseCase } from "@/infrastructure/preorders/PreorderUseCaseFactory";
 import { ApplicationError } from "@/application/errors/ApplicationError";
+import { PreorderCampaignStatus } from "@/domain/entities/PreorderCampaign";
 
 const id = Astro.params.id;
 let product = null;
@@ -13,9 +14,14 @@ if (id) {
 
   if (product) {
     try {
-      preorder = await createGetPreorderDetailUseCase().execute({
+      const detail = await createGetPreorderDetailUseCase().execute({
         productId: product.id,
       });
+      preorder =
+        detail.campaign.status === PreorderCampaignStatus.ACTIVE ||
+        detail.campaign.status === PreorderCampaignStatus.SOLD_OUT
+          ? detail
+          : null;
     } catch (error) {
       const appError = ApplicationError.normalizeUnknownError(error);
       if (appError.code !== "INVALID_PREORDER_STATE") {

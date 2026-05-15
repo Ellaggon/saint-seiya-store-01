@@ -37,6 +37,7 @@ export interface PreorderCampaignDTO {
   reservedUnits: number;
   availableUnits: number;
   isSoldOut: boolean;
+  isOpen: boolean;
   depositType: PreorderDepositType;
   depositValue: number;
   allowFullPayment: boolean;

@@ -62,7 +62,6 @@ const placeholderImage =
 
 const products = preorderResult.items.map((item: PreorderListItemDTO) => {
   const firstCharacter = item.product.characters?.[0]?.name;
-  const isSoldOut = item.campaign.isSoldOut || item.campaign.availableUnits <= 0;
 
   return {
     id: item.product.id,
@@ -81,7 +80,7 @@ const products = preorderResult.items.map((item: PreorderListItemDTO) => {
       availableUnits: item.campaign.availableUnits,
       totalUnits: item.campaign.totalSlots,
       depositAmount: item.pricing.depositRequired,
-      isOpen: item.campaign.status === PreorderCampaignStatus.ACTIVE && !isSoldOut,
+      isOpen: item.campaign.isOpen,
     },
   };
 });

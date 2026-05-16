@@ -2,6 +2,7 @@ import {
   PreorderCampaignStatus,
   PreorderDepositType,
 } from "@/domain/entities/PreorderCampaign";
+import { PreorderPaymentKind } from "@/domain/entities/PreorderPayment";
 import type {
   PreorderAvailabilityFilter,
   PreorderSort,
@@ -27,6 +28,7 @@ const availabilityFilters: PreorderAvailabilityFilter[] = [
 
 const campaignStatuses = Object.values(PreorderCampaignStatus);
 const depositTypes = Object.values(PreorderDepositType);
+const paymentKinds = Object.values(PreorderPaymentKind);
 
 export const isJsonObject = (value: unknown): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -126,6 +128,16 @@ export const parseDepositType = (value: unknown): PreorderDepositType => {
     throw ApplicationError.validation("Invalid preorder deposit type");
   }
   return text as PreorderDepositType;
+};
+
+export const parsePreorderPaymentKind = (
+  value: unknown,
+): PreorderPaymentKind => {
+  const text = optionalString(value);
+  if (!text || !paymentKinds.includes(text as PreorderPaymentKind)) {
+    throw ApplicationError.validation("Invalid preorder payment kind");
+  }
+  return text as PreorderPaymentKind;
 };
 
 export const parsePreorderSort = (

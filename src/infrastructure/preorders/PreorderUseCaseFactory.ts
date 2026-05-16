@@ -1,8 +1,11 @@
 import {
+  CancelReservation,
   CreatePreorderCampaign,
   GetPreorderDetail,
+  ListPreorderReservations,
   ListPreorders,
   MarkArrived,
+  RegisterManualPreorderPayment,
   ReservePreorder,
   UpdatePreorderCampaign,
 } from "@/application/use-cases/preorders";
@@ -31,3 +34,14 @@ export const createUpdatePreorderCampaignUseCase = (): UpdatePreorderCampaign =>
 
 export const createMarkArrivedUseCase = (): MarkArrived =>
   new MarkArrived(createPreorderRepository());
+
+export const createCancelReservationUseCase = (): CancelReservation =>
+  new CancelReservation(createPreorderRepository());
+
+export const createListPreorderReservationsUseCase =
+  (): ListPreorderReservations =>
+    new ListPreorderReservations(createPreorderRepository());
+
+export const createRegisterManualPreorderPaymentUseCase =
+  (): RegisterManualPreorderPayment =>
+    new RegisterManualPreorderPayment(createPreorderRepository());

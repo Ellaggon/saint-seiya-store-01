@@ -6,3 +6,5 @@ export * from "./MarkArrived";
 export * from "./CompleteBalancePayment";
 export * from "./ListPreorders";
 export * from "./GetPreorderDetail";
+export * from "./ListPreorderReservations";
+export * from "./RegisterManualPreorderPayment";

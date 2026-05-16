@@ -1,0 +1,195 @@
+---
+import type { ProductDTO } from "@/application/dto/catalog.dto";
+import type { PreorderDetailDTO } from "@/application/dto/preorder.dto";
+import { formatPrice } from "@/lib/utils";
+
+interface Props {
+  products: ProductDTO[];
+  preorder?: PreorderDetailDTO | null;
+  error?: string | null;
+}
+
+const { products, preorder = null, error = null } = Astro.props;
+const campaign = preorder?.campaign;
+const isEditing = Boolean(campaign);
+const hasReservations = (campaign?.reservedUnits ?? 0) > 0;
+
+const dateValue = (value?: string | null): string =>
+  value ? value.slice(0, 10) : "";
+---
+
+{error && (
+  <div class="border border-red-500/30 bg-red-500/5 text-red-400 px-5 py-4 text-xs font-bold uppercase tracking-widest mb-8">
+    {error}
+  </div>
+)}
+
+<form
+  action="/admin/preorders/actions"
+  method="POST"
+  onsubmit="this.querySelector('button[type=submit]').disabled = true;"
+  class="space-y-8 bg-zinc-950 p-8 border border-zinc-900 shadow-2xl"
+>
+  <input type="hidden" name="_action" value={isEditing ? "update" : "create"} />
+  {campaign && <input type="hidden" name="id" value={campaign.id} />}
+  {isEditing && <input type="hidden" name="productId" value={campaign?.productId} />}
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div class="space-y-2 md:col-span-2">
+      <label for="productId" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Producto</label>
+      <select
+        id="productId"
+        name="productId"
+        required
+        disabled={isEditing}
+        class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors appearance-none disabled:text-zinc-500"
+      >
+        <option value="" disabled selected={!isEditing}>Seleccionar producto...</option>
+        {
+          products.map((product) => (
+            <option value={product.id} selected={product.id === campaign?.productId}>
+              {product.name} - {formatPrice(product.price)}
+            </option>
+          ))
+        }
+      </select>
+      <p class="text-zinc-600 text-[10px] uppercase tracking-widest">
+        El precio de preventa usa el precio actual del producto. Precio separado por campaña queda fuera del modelo actual.
+      </p>
+    </div>
+
+    {isEditing && (
+      <div class="space-y-2">
+        <label for="status" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Estado</label>
+        <select id="status" name="status" class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors appearance-none">
+          {["DRAFT", "ACTIVE", "PAUSED", "SOLD_OUT", "ARRIVED", "CLOSED", "CANCELED"].map((status) => (
+            <option value={status} selected={status === campaign?.status}>{status}</option>
+          ))}
+        </select>
+      </div>
+    )}
+
+    <div class="space-y-2">
+      <label for="totalSlots" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Cupos totales</label>
+      <input
+        type="number"
+        id="totalSlots"
+        name="totalSlots"
+        min={Math.max(1, campaign?.reservedUnits ?? 1)}
+        value={campaign?.totalSlots ?? ""}
+        required
+        class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
+      />
+      {hasReservations && (
+        <p class="text-zinc-600 text-[10px] uppercase tracking-widest">
+          No puede bajar de {campaign?.reservedUnits} unidades reservadas.
+        </p>
+      )}
+    </div>
+
+    <div class="space-y-2">
+      <label for="depositType" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Tipo depósito</label>
+      <select
+        id="depositType"
+        name="depositType"
+        disabled={hasReservations}
+        class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors appearance-none disabled:text-zinc-500"
+      >
+        {["PERCENT", "FIXED", "FULL"].map((type) => (
+          <option value={type} selected={type === campaign?.depositType}>{type}</option>
+        ))}
+      </select>
+      {hasReservations && <input type="hidden" name="depositType" value={campaign?.depositType} />}
+    </div>
+
+    <div class="space-y-2">
+      <label for="depositValue" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Valor depósito</label>
+      <input
+        type="number"
+        id="depositValue"
+        name="depositValue"
+        min="0"
+        step="0.01"
+        value={campaign?.depositValue ?? ""}
+        required
+        readonly={hasReservations}
+        class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors read-only:text-zinc-500"
+      />
+      {hasReservations && (
+        <p class="text-zinc-600 text-[10px] uppercase tracking-widest">
+          Bloqueado porque ya existen reservas.
+        </p>
+      )}
+    </div>
+
+    <div class="space-y-2">
+      <label class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Pago completo</label>
+      <label class="flex items-center gap-3 bg-black border border-zinc-800 px-4 py-3 text-white text-xs font-bold uppercase tracking-widest">
+        <input type="checkbox" name="allowFullPayment" checked={campaign?.allowFullPayment ?? true} class="accent-amber-500" />
+        Permitir pago completo
+      </label>
+    </div>
+
+    <div class="space-y-2">
+      <label class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Límite por cliente</label>
+      <input
+        type="number"
+        disabled
+        placeholder="No persistido"
+        class="w-full bg-black border border-zinc-800 px-4 py-3 text-zinc-600 text-sm"
+      />
+      <p class="text-zinc-600 text-[10px] uppercase tracking-widest">
+        El dominio lo contempla, pero Prisma todavía no lo persiste.
+      </p>
+    </div>
+
+    <div class="space-y-2">
+      <label for="opensAt" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Apertura</label>
+      <input type="date" id="opensAt" name="opensAt" value={dateValue(campaign?.opensAt)} class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors" />
+    </div>
+
+    <div class="space-y-2">
+      <label for="closesAt" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Cierre</label>
+      <input type="date" id="closesAt" name="closesAt" value={dateValue(campaign?.closesAt)} class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors" />
+    </div>
+
+    <div class="space-y-2">
+      <label for="releaseDate" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Release date</label>
+      <input type="date" id="releaseDate" name="releaseDate" value={dateValue(campaign?.releaseDate)} class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors" />
+    </div>
+
+    <div class="space-y-2">
+      <label for="etaStart" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">ETA inicio</label>
+      <input type="date" id="etaStart" name="etaStart" value={dateValue(campaign?.etaStart)} class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors" />
+    </div>
+
+    <div class="space-y-2">
+      <label for="etaEnd" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">ETA fin</label>
+      <input type="date" id="etaEnd" name="etaEnd" value={dateValue(campaign?.etaEnd)} class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors" />
+    </div>
+
+    <div class="space-y-2">
+      <label for="etaLabel" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">ETA label</label>
+      <input type="text" id="etaLabel" name="etaLabel" value={campaign?.etaLabel ?? ""} class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors" />
+    </div>
+  </div>
+
+  <div class="space-y-2">
+    <label for="terms" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Términos</label>
+    <textarea id="terms" name="terms" rows="4" class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors">{campaign?.terms ?? ""}</textarea>
+  </div>
+
+  <div class="space-y-2">
+    <label for="arrivalNotes" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Notas de llegada</label>
+    <textarea id="arrivalNotes" name="arrivalNotes" rows="3" class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors">{campaign?.arrivalNotes ?? ""}</textarea>
+  </div>
+
+  <div class="flex flex-col sm:flex-row gap-4 pt-4 border-t border-zinc-900">
+    <button type="submit" class="bg-white text-black text-[11px] font-black uppercase tracking-widest px-8 py-4 hover:bg-amber-500 transition-colors duration-300">
+      {isEditing ? "Guardar Preventa" : "Crear Preventa"}
+    </button>
+    <a href="/admin/preorders" class="inline-flex items-center justify-center border border-zinc-800 text-zinc-400 text-[11px] font-black uppercase tracking-widest px-8 py-4 hover:text-white hover:border-zinc-600 transition-colors">
+      Cancelar
+    </a>
+  </div>
+</form>

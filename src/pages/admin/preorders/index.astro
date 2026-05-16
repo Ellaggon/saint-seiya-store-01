@@ -1,0 +1,81 @@
+---
+import MainLayout from "@/ui/layouts/MainLayout.astro";
+import AdminPreorderTable from "@/ui/components/admin/preorders/AdminPreorderTable.astro";
+import { listAdminPreorders } from "@/ui/pages/admin/preorders/adminPreorderApi";
+
+const user = Astro.locals.user;
+if (!user || user.role !== "ADMIN") {
+  return Astro.redirect("/login");
+}
+
+const error = Astro.url.searchParams.get("error");
+const filters = new URLSearchParams();
+["status", "availability", "sort", "page", "pageSize"].forEach((key) => {
+  const value = Astro.url.searchParams.get(key);
+  if (value) filters.set(key, value);
+});
+
+let result;
+let loadError = error;
+try {
+  result = await listAdminPreorders(
+    Astro.url.origin,
+    Astro.request.headers.get("cookie"),
+    filters.toString() ? `?${filters.toString()}` : "",
+  );
+} catch (requestError) {
+  loadError = requestError instanceof Error ? requestError.message : "No se pudo cargar preventas";
+  result = { items: [], page: 1, pageSize: 24, total: 0, totalPages: 1 };
+}
+
+const currentStatus = Astro.url.searchParams.get("status") ?? "";
+const currentAvailability = Astro.url.searchParams.get("availability") ?? "";
+const currentSort = Astro.url.searchParams.get("sort") ?? "created-desc";
+---
+
+<MainLayout title="Admin - Preventas">
+  <div class="max-w-[1280px] mx-auto px-6 py-12">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+      <div class="space-y-2">
+        <p class="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]">Panel de Control</p>
+        <h1 class="text-4xl font-black text-white uppercase tracking-tighter">Preventas</h1>
+        <div class="w-12 h-1 bg-amber-500"></div>
+      </div>
+      <a href="/admin/preorders/new" class="inline-flex items-center justify-center bg-white text-black text-[11px] font-black uppercase tracking-widest px-8 py-4 hover:bg-amber-500 transition-colors duration-300">
+        Crear Preventa
+      </a>
+    </div>
+
+    {loadError && (
+      <div class="border border-red-500/30 bg-red-500/5 text-red-400 px-5 py-4 text-xs font-bold uppercase tracking-widest mb-8">
+        {loadError}
+      </div>
+    )}
+
+    <form method="GET" class="bg-zinc-950 border border-zinc-900 p-5 mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+      <select name="status" class="bg-black border border-zinc-800 px-4 py-3 text-white text-xs font-bold uppercase tracking-widest">
+        <option value="" selected={currentStatus === ""}>Todos los estados</option>
+        {["DRAFT", "ACTIVE", "PAUSED", "SOLD_OUT", "ARRIVED", "CLOSED", "CANCELED"].map((status) => (
+          <option value={status} selected={currentStatus === status}>{status}</option>
+        ))}
+      </select>
+      <select name="availability" class="bg-black border border-zinc-800 px-4 py-3 text-white text-xs font-bold uppercase tracking-widest">
+        <option value="" selected={currentAvailability === ""}>Disponibilidad</option>
+        <option value="AVAILABLE" selected={currentAvailability === "AVAILABLE"}>Disponibles</option>
+        <option value="SOLD_OUT" selected={currentAvailability === "SOLD_OUT"}>Agotadas</option>
+        <option value="OPEN" selected={currentAvailability === "OPEN"}>Abiertas</option>
+      </select>
+      <select name="sort" class="bg-black border border-zinc-800 px-4 py-3 text-white text-xs font-bold uppercase tracking-widest">
+        <option value="created-desc" selected={currentSort === "created-desc"}>Recientes</option>
+        <option value="eta-asc" selected={currentSort === "eta-asc"}>Próximas llegadas</option>
+        <option value="price-asc" selected={currentSort === "price-asc"}>Precio asc</option>
+        <option value="price-desc" selected={currentSort === "price-desc"}>Precio desc</option>
+      </select>
+      <button type="submit" class="bg-zinc-900 text-white text-[11px] font-black uppercase tracking-widest px-6 py-3 hover:bg-amber-500 hover:text-black transition-colors">
+        Filtrar
+      </button>
+    </form>
+
+    <AdminPreorderTable items={result.items} />
+  </div>
+</MainLayout>

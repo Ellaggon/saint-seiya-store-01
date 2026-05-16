@@ -1,0 +1,20 @@
+---
+interface Props {
+  status: string;
+  isSoldOut?: boolean;
+}
+
+const { status, isSoldOut = false } = Astro.props;
+const tone =
+  status === "ACTIVE"
+    ? "text-green-500 border-green-500/30 bg-green-500/5"
+    : status === "SOLD_OUT" || isSoldOut
+      ? "text-red-500 border-red-500/30 bg-red-500/5"
+      : status === "ARRIVED"
+        ? "text-amber-500 border-amber-500/30 bg-amber-500/5"
+        : "text-zinc-500 border-zinc-800 bg-zinc-900";
+---
+
+<span class={`text-[9px] font-black uppercase px-2 py-1 tracking-widest border ${tone}`}>
+  {isSoldOut && status === "ACTIVE" ? "SOLD OUT" : status}
+</span>

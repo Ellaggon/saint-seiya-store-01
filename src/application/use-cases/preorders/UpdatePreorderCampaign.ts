@@ -44,6 +44,18 @@ export class UpdatePreorderCampaign {
       );
     }
 
+    if (
+      current.reservedUnits > 0 &&
+      ((input.depositType !== undefined &&
+        input.depositType !== current.depositType) ||
+        (input.depositValue !== undefined &&
+          input.depositValue !== current.depositValue))
+    ) {
+      throw ApplicationError.invalidPreorderState(
+        "Deposit rules cannot be changed after reservations exist",
+      );
+    }
+
     const updated = PreorderCampaign.create({
       id: current.id,
       productId: current.productId,

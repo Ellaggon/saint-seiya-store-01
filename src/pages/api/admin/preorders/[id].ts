@@ -1,7 +1,10 @@
 import type { APIRoute } from "astro";
 
 import { PreorderCampaignStatus } from "@/domain/entities/PreorderCampaign";
-import { createUpdatePreorderCampaignUseCase } from "@/infrastructure/preorders/PreorderUseCaseFactory";
+import {
+  createGetPreorderDetailUseCase,
+  createUpdatePreorderCampaignUseCase,
+} from "@/infrastructure/preorders/PreorderUseCaseFactory";
 import { ApplicationError } from "@/endpoints/api/shared/api-errors";
 import { failure, success } from "@/endpoints/api/shared/api-response";
 import { requireAdmin } from "@/endpoints/api/shared/auth";
@@ -14,6 +17,20 @@ import {
   parseJsonBody,
   parsePreorderStatus,
 } from "@/endpoints/api/shared/query";
+
+export const GET: APIRoute = async ({ params, locals }) => {
+  try {
+    requireAdmin(locals);
+    const id = params.id;
+    if (!id) throw ApplicationError.validation("Preorder id is required");
+
+    const useCase = createGetPreorderDetailUseCase();
+    const data = await useCase.execute({ id });
+    return success(data);
+  } catch (error) {
+    return failure(error);
+  }
+};
 
 export const PUT: APIRoute = async ({ params, request, locals }) => {
   try {

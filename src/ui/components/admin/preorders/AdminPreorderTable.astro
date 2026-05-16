@@ -1,0 +1,95 @@
+---
+import type { PreorderListItemDTO } from "@/application/dto/preorder.dto";
+import { formatPrice } from "@/lib/utils";
+import AdminPreorderStatusBadge from "./AdminPreorderStatusBadge.astro";
+
+interface Props {
+  items: PreorderListItemDTO[];
+}
+
+const { items } = Astro.props;
+---
+
+<div class="bg-zinc-950 border border-zinc-900 overflow-x-auto">
+  <table class="w-full min-w-[980px] text-left border-collapse">
+    <thead class="bg-black border-b border-zinc-900">
+      <tr>
+        <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Producto</th>
+        <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Status</th>
+        <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Reservas</th>
+        <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">ETA</th>
+        <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Precio</th>
+        <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Depósito</th>
+        <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest text-right">Acciones</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-zinc-900">
+      {
+        items.length === 0 ? (
+          <tr>
+            <td colspan="7" class="px-6 py-12 text-center text-zinc-500 text-xs uppercase tracking-widest italic">
+              No hay preventas registradas.
+            </td>
+          </tr>
+        ) : (
+          items.map((item) => (
+            <tr class="hover:bg-zinc-900/50 transition-colors">
+              <td class="px-6 py-5">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 bg-black border border-zinc-800 p-1 flex-shrink-0">
+                    {item.product.imageUrl && (
+                      <img src={item.product.imageUrl} alt={item.product.name} class="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <div>
+                    <p class="text-white font-bold text-sm uppercase tracking-tight">{item.product.name}</p>
+                    <p class="text-zinc-600 text-[10px] tracking-widest">ID: {item.campaign.id}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-5">
+                <AdminPreorderStatusBadge status={item.campaign.status} isSoldOut={item.campaign.isSoldOut} />
+              </td>
+              <td class="px-6 py-5">
+                <span class="text-white font-black text-sm">{item.campaign.reservedUnits}/{item.campaign.totalSlots}</span>
+                <p class="text-zinc-600 text-[10px] uppercase tracking-widest">{item.campaign.availableUnits} disponibles</p>
+              </td>
+              <td class="px-6 py-5">
+                <span class="text-zinc-300 text-xs font-bold uppercase">
+                  {item.campaign.etaLabel || item.campaign.etaStart || item.campaign.releaseDate || "Sin ETA"}
+                </span>
+              </td>
+              <td class="px-6 py-5">
+                <span class="text-white font-black text-sm">{formatPrice(item.pricing.totalAmount)}</span>
+              </td>
+              <td class="px-6 py-5">
+                <span class="text-amber-500 font-black text-sm">{formatPrice(item.pricing.depositRequired)}</span>
+              </td>
+              <td class="px-6 py-5 text-right">
+                <div class="flex justify-end items-center gap-3">
+                  <a href={`/admin/preorders/${item.campaign.id}`} class="text-[10px] font-black text-white hover:text-amber-500 uppercase transition-colors">Editar</a>
+                  <a href={`/admin/preorders/${item.campaign.id}/reservations`} class="text-[10px] font-black text-white hover:text-amber-500 uppercase transition-colors">Reservas</a>
+                  <form action="/admin/preorders/actions" method="POST" onsubmit="return confirm('¿Marcar llegada de esta preventa?')">
+                    <input type="hidden" name="_action" value="arrive" />
+                    <input type="hidden" name="id" value={item.campaign.id} />
+                    <button type="submit" class="text-[10px] font-black text-amber-500 hover:text-white uppercase transition-colors">Arrived</button>
+                  </form>
+                  <form action="/admin/preorders/actions" method="POST" onsubmit="return confirm('¿Cerrar esta preventa?')">
+                    <input type="hidden" name="_action" value="close" />
+                    <input type="hidden" name="id" value={item.campaign.id} />
+                    <button type="submit" class="text-[10px] font-black text-zinc-500 hover:text-white uppercase transition-colors">Close</button>
+                  </form>
+                  <form action="/admin/preorders/actions" method="POST" onsubmit="return confirm('¿Archivar esta preventa?')">
+                    <input type="hidden" name="_action" value="archive" />
+                    <input type="hidden" name="id" value={item.campaign.id} />
+                    <button type="submit" class="text-[10px] font-black text-zinc-600 hover:text-red-500 uppercase transition-colors">Archive</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          ))
+        )
+      }
+    </tbody>
+  </table>
+</div>

@@ -1,5 +1,7 @@
 import type { APIRoute } from "astro";
 
+import { requireAdmin } from "@/endpoints/api/shared/auth";
+
 type JsonBody = Record<string, string | number | boolean | null>;
 
 const text = (formData: FormData, key: string): string =>
@@ -67,7 +69,13 @@ const campaignBody = (formData: FormData): JsonBody => ({
   arrivalNotes: optionalText(formData, "arrivalNotes"),
 });
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  if (!locals.user) {
+    return redirectTo(request, "/login");
+  }
+
+  requireAdmin(locals);
+
   const formData = await request.formData();
   const action = text(formData, "_action");
   const id = text(formData, "id");
@@ -145,6 +153,7 @@ export const POST: APIRoute = async ({ request }) => {
         body: JSON.stringify({
           kind: text(formData, "kind"),
           amount: numberValue(formData, "amount"),
+          idempotencyKey: text(formData, "paymentKey"),
           paidAt: optionalText(formData, "paidAt"),
         }),
       },

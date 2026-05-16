@@ -6,6 +6,7 @@ import { failure, success } from "@/endpoints/api/shared/api-response";
 import { requireAdmin } from "@/endpoints/api/shared/auth";
 import {
   optionalDate,
+  optionalString,
   parseJsonBody,
   parsePreorderPaymentKind,
   requiredNonNegativeNumber,
@@ -25,6 +26,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
       reservationId,
       kind: parsePreorderPaymentKind(body.kind),
       amount: requiredNonNegativeNumber(body, "amount"),
+      idempotencyKey: optionalString(body.idempotencyKey),
       paidAt: optionalDate(body.paidAt),
       now: new Date(),
     });

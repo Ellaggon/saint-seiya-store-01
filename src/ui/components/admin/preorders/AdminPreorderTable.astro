@@ -69,17 +69,29 @@ const { items } = Astro.props;
                 <div class="flex justify-end items-center gap-3">
                   <a href={`/admin/preorders/${item.campaign.id}`} class="text-[10px] font-black text-white hover:text-amber-500 uppercase transition-colors">Editar</a>
                   <a href={`/admin/preorders/${item.campaign.id}/reservations`} class="text-[10px] font-black text-white hover:text-amber-500 uppercase transition-colors">Reservas</a>
-                  <form action="/admin/preorders/actions" method="POST" onsubmit="return confirm('¿Marcar llegada de esta preventa?')">
+                  <form
+                    action="/admin/preorders/actions"
+                    method="POST"
+                    onsubmit="if (!confirm('¿Marcar llegada de esta preventa?')) return false; this.querySelector('button[type=submit]').disabled = true;"
+                  >
                     <input type="hidden" name="_action" value="arrive" />
                     <input type="hidden" name="id" value={item.campaign.id} />
                     <button type="submit" class="text-[10px] font-black text-amber-500 hover:text-white uppercase transition-colors">Arrived</button>
                   </form>
-                  <form action="/admin/preorders/actions" method="POST" onsubmit="return confirm('¿Cerrar esta preventa?')">
+                  <form
+                    action="/admin/preorders/actions"
+                    method="POST"
+                    onsubmit="if (!confirm('¿Cerrar esta preventa?')) return false; this.querySelector('button[type=submit]').disabled = true;"
+                  >
                     <input type="hidden" name="_action" value="close" />
                     <input type="hidden" name="id" value={item.campaign.id} />
                     <button type="submit" class="text-[10px] font-black text-zinc-500 hover:text-white uppercase transition-colors">Close</button>
                   </form>
-                  <form action="/admin/preorders/actions" method="POST" onsubmit="return confirm('¿Archivar esta preventa?')">
+                  <form
+                    action="/admin/preorders/actions"
+                    method="POST"
+                    onsubmit="if (!confirm('¿Archivar esta preventa?')) return false; this.querySelector('button[type=submit]').disabled = true;"
+                  >
                     <input type="hidden" name="_action" value="archive" />
                     <input type="hidden" name="id" value={item.campaign.id} />
                     <button type="submit" class="text-[10px] font-black text-zinc-600 hover:text-red-500 uppercase transition-colors">Archive</button>

@@ -13,6 +13,7 @@ export interface RegisterManualPreorderPaymentInput {
   reservationId: string;
   kind: PreorderPaymentKind;
   amount: number;
+  idempotencyKey?: string | null;
   paidAt?: Date | null;
   now: Date;
 }
@@ -49,6 +50,7 @@ export class RegisterManualPreorderPayment {
         amount,
         status: PreorderPaymentStatus.PAID,
         provider: PreorderPaymentProvider.MANUAL,
+        providerPaymentId: input.idempotencyKey ?? null,
         paidAt: input.paidAt ?? input.now,
         createdAt: input.now,
       });

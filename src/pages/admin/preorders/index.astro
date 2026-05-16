@@ -31,6 +31,14 @@ try {
 const currentStatus = Astro.url.searchParams.get("status") ?? "";
 const currentAvailability = Astro.url.searchParams.get("availability") ?? "";
 const currentSort = Astro.url.searchParams.get("sort") ?? "created-desc";
+const currentPageSize = Astro.url.searchParams.get("pageSize") ?? String(result.pageSize);
+
+const pageHref = (page: number): string => {
+  const next = new URLSearchParams(Astro.url.searchParams);
+  next.set("page", String(page));
+  next.set("pageSize", String(result.pageSize));
+  return `/admin/preorders?${next.toString()}`;
+};
 ---
 
 <MainLayout title="Admin - Preventas">
@@ -52,7 +60,7 @@ const currentSort = Astro.url.searchParams.get("sort") ?? "created-desc";
       </div>
     )}
 
-    <form method="GET" class="bg-zinc-950 border border-zinc-900 p-5 mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+    <form method="GET" class="bg-zinc-950 border border-zinc-900 p-5 mb-8 grid grid-cols-1 md:grid-cols-5 gap-4">
       <select name="status" class="bg-black border border-zinc-800 px-4 py-3 text-white text-xs font-bold uppercase tracking-widest">
         <option value="" selected={currentStatus === ""}>Todos los estados</option>
         {["DRAFT", "ACTIVE", "PAUSED", "SOLD_OUT", "ARRIVED", "CLOSED", "CANCELED"].map((status) => (
@@ -71,11 +79,49 @@ const currentSort = Astro.url.searchParams.get("sort") ?? "created-desc";
         <option value="price-asc" selected={currentSort === "price-asc"}>Precio asc</option>
         <option value="price-desc" selected={currentSort === "price-desc"}>Precio desc</option>
       </select>
+      <select name="pageSize" class="bg-black border border-zinc-800 px-4 py-3 text-white text-xs font-bold uppercase tracking-widest">
+        {[12, 24, 48].map((size) => (
+          <option value={String(size)} selected={currentPageSize === String(size)}>
+            {size} por página
+          </option>
+        ))}
+      </select>
+      <input type="hidden" name="page" value="1" />
       <button type="submit" class="bg-zinc-900 text-white text-[11px] font-black uppercase tracking-widest px-6 py-3 hover:bg-amber-500 hover:text-black transition-colors">
         Filtrar
       </button>
     </form>
 
     <AdminPreorderTable items={result.items} />
+
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-8 border border-zinc-900 bg-zinc-950 px-5 py-4">
+      <p class="text-zinc-500 text-[10px] font-black uppercase tracking-widest">
+        Página {result.page} de {result.totalPages} · {result.total} campañas
+      </p>
+      <div class="flex items-center gap-3">
+        {
+          result.page > 1 ? (
+            <a href={pageHref(result.page - 1)} class="border border-zinc-800 text-zinc-300 text-[10px] font-black uppercase tracking-widest px-4 py-3 hover:border-amber-500 hover:text-white transition-colors">
+              Anterior
+            </a>
+          ) : (
+            <span class="border border-zinc-900 text-zinc-700 text-[10px] font-black uppercase tracking-widest px-4 py-3">
+              Anterior
+            </span>
+          )
+        }
+        {
+          result.page < result.totalPages ? (
+            <a href={pageHref(result.page + 1)} class="border border-zinc-800 text-zinc-300 text-[10px] font-black uppercase tracking-widest px-4 py-3 hover:border-amber-500 hover:text-white transition-colors">
+              Siguiente
+            </a>
+          ) : (
+            <span class="border border-zinc-900 text-zinc-700 text-[10px] font-black uppercase tracking-widest px-4 py-3">
+              Siguiente
+            </span>
+          )
+        }
+      </div>
+    </div>
   </div>
 </MainLayout>

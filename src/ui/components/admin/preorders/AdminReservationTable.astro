@@ -8,6 +8,9 @@ interface Props {
 }
 
 const { preorderId, reservations } = Astro.props;
+
+const paymentKeyFor = (reservation: PreorderReservationDTO): string =>
+  `manual-${reservation.id}-${reservation.updatedAt}-${reservation.balanceDue}`;
 ---
 
 <div class="bg-zinc-950 border border-zinc-900 overflow-x-auto">
@@ -53,10 +56,16 @@ const { preorderId, reservations } = Astro.props;
               </td>
               <td class="px-6 py-5 text-right">
                 <div class="flex justify-end items-center gap-3">
-                  <form action="/admin/preorders/actions" method="POST" class="flex items-center gap-2">
+                  <form
+                    action="/admin/preorders/actions"
+                    method="POST"
+                    class="flex items-center gap-2"
+                    onsubmit="this.querySelector('button[type=submit]').disabled = true;"
+                  >
                     <input type="hidden" name="_action" value="manualPayment" />
                     <input type="hidden" name="id" value={preorderId} />
                     <input type="hidden" name="reservationId" value={reservation.id} />
+                    <input type="hidden" name="paymentKey" value={paymentKeyFor(reservation)} />
                     <select name="kind" class="bg-black border border-zinc-800 px-2 py-2 text-zinc-300 text-[10px] font-bold uppercase">
                       <option value="DEPOSIT">Deposit</option>
                       <option value="BALANCE">Balance</option>
@@ -74,7 +83,11 @@ const { preorderId, reservations } = Astro.props;
                       Pago
                     </button>
                   </form>
-                  <form action="/admin/preorders/actions" method="POST" onsubmit="return confirm('¿Cancelar esta reserva?')">
+                  <form
+                    action="/admin/preorders/actions"
+                    method="POST"
+                    onsubmit="if (!confirm('¿Cancelar esta reserva?')) return false; this.querySelector('button[type=submit]').disabled = true;"
+                  >
                     <input type="hidden" name="_action" value="cancelReservation" />
                     <input type="hidden" name="id" value={preorderId} />
                     <input type="hidden" name="reservationId" value={reservation.id} />

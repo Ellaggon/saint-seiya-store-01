@@ -40,14 +40,15 @@ export interface CharacterDTO {
 
 export interface CreateProductRequestDTO {
   name: string;
+  slug?: string;
   description: string;
   price: number;
   categoryId: string;
   collectionId: string;
   height: number;
-  material: string;
+  material?: string;
   imageUrl: string;
-  stock: number;
+  stock?: number;
   status: ProductStatus;
 }
 

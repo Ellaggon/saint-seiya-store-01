@@ -1,4 +1,5 @@
 import type { Product } from "../entities/Product";
+import type { ProductStatus } from "../entities/Product";
 
 export interface ProductFilters {
   category?: string;
@@ -57,6 +58,45 @@ export interface CategoryData {
   deletedAt?: Date | null;
 }
 
+export interface AdminProductCategoryData {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+export interface AdminProductData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  categoryId: string;
+  collectionId: string;
+  height: number;
+  material?: string | null;
+  imageUrl: string;
+  stock: number;
+  status: ProductStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt?: Date | null;
+  category?: AdminProductCategoryData | null;
+}
+
+export interface AdminProductInput {
+  name: string;
+  slug?: string;
+  description: string;
+  price: number;
+  categoryId: string;
+  collectionId: string;
+  height: number;
+  material?: string | null;
+  imageUrl: string;
+  stock?: number;
+  status: ProductStatus;
+}
+
 export interface ProductRepository {
   findById(id: string): Promise<Product | null>;
   findAll(): Promise<Product[]>;
@@ -64,6 +104,12 @@ export interface ProductRepository {
   findByCollection(collectionId: string): Promise<Product[]>;
   listPublishedProducts(filters?: ProductFilters): Promise<Product[]>;
   getCatalogFilters(filters?: ProductFilters): Promise<CatalogMetadata>;
+  listAdminProducts(): Promise<AdminProductData[]>;
+  findAdminProductById(id: string): Promise<AdminProductData | null>;
+  createAdminProduct(input: AdminProductInput): Promise<AdminProductData>;
+  updateAdminProduct(
+    input: AdminProductInput & { id: string },
+  ): Promise<AdminProductData>;
   save(product: Product): Promise<void>;
   delete(id: string): Promise<void>;
 

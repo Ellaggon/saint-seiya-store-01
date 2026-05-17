@@ -1,5 +1,7 @@
 ---
 import ProductForm from "@/ui/pages/admin/ProductForm.astro";
+import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
+import { GetAdminProductUseCase } from "@/application/use-cases/admin/products/GetAdminProductUseCase";
 
 // Protect route
 const user = Astro.locals.user;
@@ -9,11 +11,9 @@ if (!user || user.role !== "ADMIN") {
 
 const { id } = Astro.params;
 
-// Fetch data from endpoints
-const productResponse = await fetch(
-  new URL(`/api/products/${id}`, Astro.url.origin),
-);
-const product = await productResponse.json();
+const productRepository = new PrismaProductRepository();
+const getProduct = new GetAdminProductUseCase(productRepository);
+const product = id ? await getProduct.execute(id) : null;
 
 if (!product || product.deletedAt) {
   return Astro.redirect("/admin/products");

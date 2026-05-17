@@ -1,6 +1,7 @@
 ---
-import { prisma } from "@/infrastructure/database/prisma";
 import ProductList from "@/ui/pages/admin/ProductList.astro";
+import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
+import { ListAdminProductsUseCase } from "@/application/use-cases/admin/products/ListAdminProductsUseCase";
 
 // Protect route (middleware should handle this, but for safety inside the template too)
 const user = Astro.locals.user;
@@ -8,18 +9,9 @@ if (!user || user.role !== "ADMIN") {
   return Astro.redirect("/login");
 }
 
-// Fetch products that are not soft-deleted
-const products = await prisma.product.findMany({
-  where: {
-    deletedAt: null,
-  },
-  include: {
-    category: true,
-  },
-  orderBy: {
-    createdAt: "desc",
-  },
-});
+const productRepository = new PrismaProductRepository();
+const listProducts = new ListAdminProductsUseCase(productRepository);
+const products = await listProducts.execute();
 ---
 
 <ProductList products={products} />

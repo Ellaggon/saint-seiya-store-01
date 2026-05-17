@@ -1,8 +1,79 @@
 import { prisma } from "./prisma";
+import type { ProductStatus as PrismaProductStatus } from "@prisma/client";
 import { Product, ProductStatus } from "../../domain/entities/Product";
-import type { ProductRepository } from "../../domain/repositories/ProductRepository";
+import type {
+  AdminProductData,
+  AdminProductInput,
+  ProductRepository,
+} from "../../domain/repositories/ProductRepository";
+
+const productStatusToPrisma: Record<ProductStatus, PrismaProductStatus> = {
+  [ProductStatus.DRAFT]: "DRAFT",
+  [ProductStatus.PUBLISHED]: "PUBLISHED",
+  [ProductStatus.PRE_ORDER]: "PRE_ORDER",
+  [ProductStatus.OUT_OF_STOCK]: "OUT_OF_STOCK",
+  [ProductStatus.ARCHIVED]: "ARCHIVED",
+};
 
 export class PrismaProductRepository implements ProductRepository {
+  private toSlug(value: string): string {
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+  }
+
+  private async buildUniqueSlug(baseValue: string): Promise<string> {
+    const baseSlug = this.toSlug(baseValue);
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (await prisma.product.findUnique({ where: { slug } })) {
+      counter++;
+      slug = `${baseSlug}-${counter}`;
+    }
+
+    return slug;
+  }
+
+  private toAdminProductData(product: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string;
+    price: unknown;
+    categoryId: string;
+    collectionId: string;
+    height: unknown;
+    material: string | null;
+    imageUrl: string;
+    stock: number;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+    category?: { id: string; name: string; slug: string } | null;
+  }): AdminProductData {
+    return {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      price: Number(product.price),
+      categoryId: product.categoryId,
+      collectionId: product.collectionId,
+      height: Number(product.height),
+      material: product.material,
+      imageUrl: product.imageUrl,
+      stock: product.stock,
+      status: product.status as ProductStatus,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+      deletedAt: product.deletedAt,
+      category: product.category ?? null,
+    };
+  }
+
   async save(product: Product): Promise<void> {
     await prisma.product.upsert({
       where: { id: product.id },
@@ -306,6 +377,104 @@ export class PrismaProductRepository implements ProductRepository {
         _count: { products: c._count?.products ?? 0 },
       })),
     };
+  }
+
+  async listAdminProducts(): Promise<AdminProductData[]> {
+    const products = await prisma.product.findMany({
+      where: { deletedAt: null },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return products.map((product) => this.toAdminProductData(product));
+  }
+
+  async findAdminProductById(id: string): Promise<AdminProductData | null> {
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+    });
+
+    return product ? this.toAdminProductData(product) : null;
+  }
+
+  async createAdminProduct(input: AdminProductInput): Promise<AdminProductData> {
+    const slug = await this.buildUniqueSlug(input.slug || input.name);
+
+    const product = await prisma.product.create({
+      data: {
+        name: input.name,
+        slug,
+        description: input.description,
+        price: input.price,
+        categoryId: input.categoryId,
+        collectionId: input.collectionId,
+        height: input.height,
+        material: input.material ?? undefined,
+        imageUrl: input.imageUrl,
+        stock: input.stock,
+        status: productStatusToPrisma[input.status],
+      },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+    });
+
+    return this.toAdminProductData(product);
+  }
+
+  async updateAdminProduct(
+    input: AdminProductInput & { id: string },
+  ): Promise<AdminProductData> {
+    const product = await prisma.product.update({
+      where: { id: input.id },
+      data: {
+        name: input.name,
+        slug: input.slug || this.toSlug(input.name),
+        description: input.description,
+        price: input.price,
+        categoryId: input.categoryId,
+        collectionId: input.collectionId,
+        height: input.height,
+        material: input.material,
+        imageUrl: input.imageUrl,
+        stock: input.stock ?? 0,
+        status: productStatusToPrisma[input.status],
+      },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+    });
+
+    return this.toAdminProductData(product);
   }
 
   async delete(id: string): Promise<void> {

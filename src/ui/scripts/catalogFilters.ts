@@ -1,21 +1,17 @@
 /**
  * Catalog Filters Client-Side Enhancement
- * Implements AJAX filtering with URL synchronization and loading states.
+ * Adds partial HTML navigation on top of the SSR catalog.
  */
+
+const isAbortError = (error: unknown): boolean =>
+  error instanceof DOMException && error.name === "AbortError";
 
 class CatalogFilters {
   private gridContainer: HTMLElement | null = null;
   private paginationContainer: HTMLElement | null = null;
   private toolbarCount: HTMLElement | null = null;
-  private sidebarContainer: HTMLElement | null = null;
   private sortSelect: HTMLSelectElement | null = null;
   private currentUrl: string = window.location.href;
-
-  // Cache partial HTML responses by querystring
-  private partialCache = new Map<string, string>();
-  private metadataCache: any = null;
-  
-  // Abort controller for cancelling pending requests
   private abortController: AbortController | null = null;
 
   constructor() {
@@ -28,17 +24,12 @@ class CatalogFilters {
       "catalog-pagination-container",
     );
     this.toolbarCount = document.getElementById("catalog-result-count");
-    this.sidebarContainer = document.querySelector("aside");
     this.sortSelect = document.getElementById(
       "catalog-sort-select",
     ) as HTMLSelectElement | null;
 
     if (!this.gridContainer) return;
 
-    // Fetch metadata once on page load
-    this.fetchMetadataOnLoad();
-
-    // Listen to all link clicks in document (delegation)
     document.addEventListener("click", (e) => {
       const target = e.target;
       if (!(target instanceof Element)) return;
@@ -55,7 +46,6 @@ class CatalogFilters {
       }
     });
 
-    // Handle back/forward navigation
     window.addEventListener("popstate", () => {
       this.applyFilters(new URL(window.location.href), false);
     });
@@ -68,64 +58,27 @@ class CatalogFilters {
     });
   }
 
-  private async fetchMetadataOnLoad() {
-    console.time("client_catalog_metadata");
-    try {
-      const res = await fetch("/api/catalog/metadata");
-      if (res.ok) {
-        this.metadataCache = await res.json();
-      }
-    } catch (e) {
-      console.error("Failed to load metadata:", e);
-    }
-    console.timeEnd("client_catalog_metadata");
-  }
-
-  private async fetchPartialHtml(url: URL, signal?: AbortSignal) {
-    console.time("client_catalog_partial");
+  private async fetchPartialHtml(
+    url: URL,
+    signal?: AbortSignal,
+  ): Promise<string> {
     const apiUrl = new URL("/catalog/partials/products", window.location.origin);
     url.searchParams.forEach((val, key) =>
       apiUrl.searchParams.append(key, val),
     );
-    
-    try {
-      const res = await fetch(apiUrl, { signal });
-      if (!res.ok) throw new Error("Fetch failed");
-      const html = await res.text();
-      console.timeEnd("client_catalog_partial");
-      return html;
-    } catch (e) {
-      console.timeEnd("client_catalog_partial");
-      throw e;
-    }
+
+    const response = await fetch(apiUrl, { signal });
+    if (!response.ok) throw new Error("Failed to load catalog partial");
+    return response.text();
   }
 
   private async applyFilters(url: URL, updateHistory = true) {
     if (url.href === this.currentUrl && updateHistory) return;
 
-    const startTotal = performance.now();
-    console.log(`[Client Filters] Start applyFilters for: ${url.search}`);
-
-    // Cache lookup before network fetch
-    const key = url.search || "default";
-    if (this.partialCache.has(key)) {
-      console.log(`[Client Filters] Cache Hit for key: ${key}`);
-      const cachedHtml = this.partialCache.get(key)!;
-      this.updateUIFromPartial(cachedHtml, url, updateHistory);
-      console.log(`[Client Filters] Total Latency (Cached): ${(performance.now() - startTotal).toFixed(2)}ms`);
-      return;
-    }
-
-    // Cancel any pending requests
-    if (this.abortController) {
-      this.abortController.abort();
-    }
+    this.abortController?.abort();
     this.abortController = new AbortController();
 
-    // Show skeleton if it takes time
-    let showSkeleton = false;
     const skeletonTimer = setTimeout(() => {
-      showSkeleton = true;
       this.showLoading();
     }, 120);
 
@@ -134,27 +87,20 @@ class CatalogFilters {
         url,
         this.abortController.signal,
       );
-      
-      this.partialCache.set(key, partialHtml);
 
       clearTimeout(skeletonTimer);
       this.updateUIFromPartial(partialHtml, url, updateHistory);
-      console.log(`[Client Filters] Total Latency (Network): ${(performance.now() - startTotal).toFixed(2)}ms`);
-
-    } catch (error: any) {
-      if (error.name === "AbortError") {
-        console.log(`[Client Filters] Request aborted.`);
+    } catch (error: unknown) {
+      if (isAbortError(error)) {
         return;
       }
       
       clearTimeout(skeletonTimer);
-      console.error("Filter Error:", error);
       this.renderError();
     }
   }
 
   private updateUIFromPartial(partialHtml: string, url: URL, updateHistory: boolean) {
-    console.time("client_ui_render_total");
     const parser = new DOMParser();
     const doc = parser.parseFromString(partialHtml, "text/html");
     const nextGrid = doc.getElementById("catalog-grid-container");
@@ -173,10 +119,7 @@ class CatalogFilters {
       this.toolbarCount.textContent = nextCount.textContent || "0";
     }
 
-    // Only update sidebar bounds if metadata is cached
-    if (this.metadataCache) {
-      this.updateSidebarCounts(this.metadataCache, url);
-    }
+    this.updateFilterActiveStates(url);
     this.updateCategoryActive(url);
 
     if (updateHistory) {
@@ -192,8 +135,6 @@ class CatalogFilters {
     if (window.innerWidth < 1024) {
       this.gridContainer?.scrollIntoView({ behavior: "smooth" });
     }
-    
-    console.timeEnd("client_ui_render_total");
   }
 
   private showLoading() {
@@ -207,14 +148,25 @@ class CatalogFilters {
 
   private renderError() {
     if (!this.gridContainer) return;
-    this.gridContainer.innerHTML = `
-      <div class="flex flex-col items-center justify-center py-32 border border-red-900/30 bg-zinc-950/50 animate-in fade-in duration-500">
-        <h2 class="text-red-500 font-black text-xs tracking-[0.5em] uppercase">FAILED TO LOAD COLLECTIBLES</h2>
-        <button onclick="window.location.reload()" class="mt-8 text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em] border border-zinc-900 px-6 py-3 hover:border-amber-500 hover:text-amber-500 transition-all">
-          RETRY CONNECTION
-        </button>
-      </div>
-    `;
+
+    const wrapper = document.createElement("div");
+    wrapper.className =
+      "flex flex-col items-center justify-center py-32 border border-red-900/30 bg-zinc-950/50 animate-in fade-in duration-500";
+
+    const title = document.createElement("h2");
+    title.className =
+      "text-red-500 font-black text-xs tracking-[0.5em] uppercase";
+    title.textContent = "FAILED TO LOAD COLLECTIBLES";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className =
+      "mt-8 text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em] border border-zinc-900 px-6 py-3 hover:border-amber-500 hover:text-amber-500 transition-all";
+    button.textContent = "RETRY CONNECTION";
+    button.addEventListener("click", () => window.location.reload());
+
+    wrapper.append(title, button);
+    this.gridContainer.replaceChildren(wrapper);
   }
 
   private updateCategoryActive(url: URL) {
@@ -235,38 +187,20 @@ class CatalogFilters {
     });
   }
 
-  private updateSidebarCounts(metadata: any, url: URL) {
-    if (!metadata) return;
-
+  private updateFilterActiveStates(url: URL) {
     const filterLinks = document.querySelectorAll("a[data-filter-link]");
     filterLinks.forEach((link) => {
-      const l = link as HTMLAnchorElement;
-      const href = new URL(l.href);
+      if (!(link instanceof HTMLAnchorElement)) return;
+      if (link.hasAttribute("data-page-link")) return;
 
-      let count = 0;
-      let isActive = false;
+      const href = new URL(link.href);
+      const isActive = ["collection", "character", "category", "status"].some(
+        (key) =>
+          href.searchParams.has(key) &&
+          href.searchParams.get(key) === url.searchParams.get(key),
+      );
 
-      if (href.searchParams.has("collection")) {
-        const slug = href.searchParams.get("collection");
-        const item = metadata.collections.find((c: any) => c.slug === slug);
-        if (item) count = item.count;
-        isActive = url.searchParams.get("collection") === slug;
-      } else if (href.searchParams.has("character")) {
-        const slug = href.searchParams.get("character");
-        const item = metadata.characters.find((c: any) => c.slug === slug);
-        if (item) count = item.count;
-        isActive = url.searchParams.get("character") === slug;
-      } else if (href.searchParams.has("category")) {
-        const slug = href.searchParams.get("category");
-        const item = metadata.categories.find((c: any) => c.slug === slug);
-        if (item) count = item.count;
-        isActive = url.searchParams.get("category") === slug;
-      }
-
-      const countSpan = l.querySelector("span span");
-      if (countSpan) countSpan.textContent = `(${count})`;
-
-      const container = l.querySelector(".group\\/item") || l;
+      const container = link.querySelector(".group\\/item") || link;
       if (isActive) {
         container.classList.add("border-amber-500");
         container.classList.remove("border-zinc-900", "hover:border-zinc-700");

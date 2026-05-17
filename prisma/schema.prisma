@@ -75,6 +75,7 @@ model Product {
   collectionId      String
   height            Decimal            @db.Decimal(6, 2)
   material          String?
+  // Physical/catalog stock. Do not use this field as preorder capacity.
   stock             Int                @default(0)
   imageUrl          String
   status            ProductStatus      @default(DRAFT)
@@ -88,6 +89,7 @@ model Product {
   category          Category           @relation(fields: [categoryId], references: [id])
   collection        Collection         @relation(fields: [collectionId], references: [id])
   characters        ProductCharacter[]
+  // LEGACY: inventory reservation relation. Preorder flows must use preorderCampaigns.
   reservations      Reservation[]
 
   @@index([slug])
@@ -119,6 +121,10 @@ model Inventory {
   @@index([location])
 }
 
+// LEGACY:
+// Inventory reservation system that predates preorder/pre-sale flows.
+// Do not use this model for preorders; use PreorderReservation instead.
+// Keep only for legacy compatibility until a validated removal/migration plan exists.
 model Reservation {
   id        String            @id @default(uuid())
   userId    String
@@ -249,6 +255,8 @@ enum UserStatus {
 enum ProductStatus {
   DRAFT
   PUBLISHED
+  // Visual/commercial badge only. Operational preorder availability comes from
+  // PreorderCampaign + PreorderReservation, never from Product.status.
   PRE_ORDER
   OUT_OF_STOCK
   ARCHIVED
@@ -262,6 +270,8 @@ enum OrderStatus {
   CANCELED
 }
 
+// LEGACY: statuses for the old inventory reservation model.
+// Preorder reservation lifecycle uses PreorderReservationStatus.
 enum ReservationStatus {
   PENDING
   CONFIRMED

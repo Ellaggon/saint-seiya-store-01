@@ -9,3 +9,11 @@
 Operational preorder availability belongs to the preorder subdomain: `PreorderCampaign`, `PreorderReservation`, and derived backend DTOs. UI, pages, and components must not infer preorder capacity from `Product.stock` or from `Product.status`.
 
 Legacy models may coexist temporarily for compatibility, but they must not receive new preorder features.
+
+## API Response Boundaries
+
+New JSON APIs must return `{ data }` for success and `{ error: { code, message } }` for failures through the shared API response helpers.
+
+Legacy catalog/product JSON endpoints may temporarily return raw payloads because existing SSR/admin consumers still depend on those shapes. Their errors should still use the shared normalized error shape.
+
+HTML partial routes, including catalog partial rendering, are not JSON APIs and must not be wrapped in `{ data }`.

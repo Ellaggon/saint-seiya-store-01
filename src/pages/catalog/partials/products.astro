@@ -2,6 +2,7 @@
 import CatalogResults from "@/ui/components/catalog/CatalogResults.astro";
 import { CatalogQueryService } from "@/application/services/CatalogQueryService";
 import { GetCatalogProductsUseCase } from "@/application/use-cases/catalog/GetCatalogProductsUseCase";
+import { PrismaCatalogQueryRepository } from "@/infrastructure/database/PrismaCatalogQueryRepository";
 import { parsePageParams } from "@/shared/listing/pagination";
 import { buildPageUrl } from "@/shared/listing/queryParams";
 import { toCatalogProductCardProps } from "@/ui/components/catalog/productCardViewModel";
@@ -18,7 +19,7 @@ const currentFilters = {
   pageSize: pageParams.pageSize,
 };
 
-const queryService = new CatalogQueryService();
+const queryService = new CatalogQueryService(new PrismaCatalogQueryRepository());
 const useCase = new GetCatalogProductsUseCase(queryService);
 const catalogResult = await useCase.execute(currentFilters);
 

@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getFilters } from "@/endpoints/api/catalog/getFilters";
+import { legacyFailure, legacySuccess } from "@/endpoints/api/shared/api-response";
 
 export const GET: APIRoute = async ({ url }) => {
   try {
@@ -13,17 +14,14 @@ export const GET: APIRoute = async ({ url }) => {
 
     const data = await getFilters(filters);
 
-    return new Response(JSON.stringify(data), {
-      status: 200,
+    // Legacy response shape: raw catalog filter metadata.
+    // Keep this unwrapped until all consumers are migrated to { data }.
+    return legacySuccess(data, {
       headers: {
-        "Content-Type": "application/json",
         "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
       },
     });
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+  } catch (error: unknown) {
+    return legacyFailure(error);
   }
 };

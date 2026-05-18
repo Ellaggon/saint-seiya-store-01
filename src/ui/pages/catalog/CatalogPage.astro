@@ -9,12 +9,13 @@ import CatalogResults from "../../components/catalog/CatalogResults.astro";
 
 import { CatalogQueryService } from "../../../application/services/CatalogQueryService";
 import { GetCatalogPageDataUseCase } from "../../../application/use-cases/catalog/GetCatalogPageDataUseCase";
+import { PrismaCatalogQueryRepository } from "../../../infrastructure/database/PrismaCatalogQueryRepository";
 import { parsePageParams } from "@/shared/listing/pagination";
 import { buildPageUrl } from "@/shared/listing/queryParams";
 import { toCatalogProductCardProps } from "../../components/catalog/productCardViewModel";
 
 // Instantiate Service and Use Case
-const queryService = new CatalogQueryService();
+const queryService = new CatalogQueryService(new PrismaCatalogQueryRepository());
 const getCatalogPageData = new GetCatalogPageDataUseCase(queryService);
 
 // Read search params for filtering

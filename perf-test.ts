@@ -1,9 +1,10 @@
 import * as fs from 'fs';
 import { CatalogQueryService } from "./src/application/services/CatalogQueryService";
+import { PrismaCatalogQueryRepository } from "./src/infrastructure/database/PrismaCatalogQueryRepository";
 
 async function runTest() {
   console.log("---- STARTING PERF TEST ----");
-  const service = new CatalogQueryService();
+  const service = new CatalogQueryService(new PrismaCatalogQueryRepository());
   
   // By-pass cache trick if necessary, but we just restarted this script, so caches are empty!
   

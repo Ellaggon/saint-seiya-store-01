@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getProducts } from "@/endpoints/api/products/getProducts";
+import { legacyFailure, legacySuccess } from "@/endpoints/api/shared/api-response";
 
 export const GET: APIRoute = async ({ url }) => {
   try {
@@ -13,17 +14,14 @@ export const GET: APIRoute = async ({ url }) => {
 
     const products = await getProducts(filters);
 
-    return new Response(JSON.stringify(products), {
-      status: 200,
+    // Legacy response shape: raw ProductDTO[].
+    // Admin preorder product picker currently consumes this shape directly.
+    return legacySuccess(products, {
       headers: {
-        "Content-Type": "application/json",
         "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
       },
     });
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+  } catch (error: unknown) {
+    return legacyFailure(error);
   }
 };

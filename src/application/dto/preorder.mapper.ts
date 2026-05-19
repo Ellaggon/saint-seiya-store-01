@@ -7,6 +7,7 @@ import type {
   PreorderPaymentDTO,
   PreorderReservationDTO,
 } from "./preorder.dto";
+import { calculateReservationBalance } from "@/application/services/PreorderPaymentPolicy";
 
 const toIso = (value: Date | null | undefined): string | null =>
   value ? value.toISOString() : null;
@@ -50,9 +51,7 @@ export class PreorderMapper {
       totalAmount: reservation.totalAmount.toNumber(),
       depositRequired: reservation.depositRequired.toNumber(),
       paidAmount: reservation.paidAmount.toNumber(),
-      balanceDue: reservation.totalAmount
-        .subtract(reservation.paidAmount)
-        .toNumber(),
+      balanceDue: calculateReservationBalance(reservation).toNumber(),
       status: reservation.status,
       expiresAt: toIso(reservation.expiresAt),
       confirmedAt: toIso(reservation.confirmedAt),

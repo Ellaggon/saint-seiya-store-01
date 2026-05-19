@@ -8,6 +8,12 @@ import { Money } from "@/domain/value-objects/Money";
 import { ApplicationError } from "@/application/errors/ApplicationError";
 import { PreorderMapper } from "@/application/dto/preorder.mapper";
 import type { PreorderPaymentDTO } from "@/application/dto/preorder.dto";
+import {
+  assertPaymentWithinBalance,
+  assertPositivePaymentAmount,
+  assertReservationAcceptsPayment,
+  calculateReservationBalance,
+} from "@/application/services/PreorderPaymentPolicy";
 
 export interface RegisterManualPreorderPaymentInput {
   reservationId: string;
@@ -33,16 +39,12 @@ export class RegisterManualPreorderPayment {
       }
 
       const amount = Money.from(input.amount);
-      if (amount.equals(Money.zero())) {
-        throw ApplicationError.invalidPaymentAmount(
-          "Manual payment amount must be greater than zero",
-        );
-      }
-
-      const balanceDue = reservation.totalAmount.subtract(reservation.paidAmount);
-      if (amount.greaterThan(balanceDue)) {
-        throw ApplicationError.paymentExceedsBalance();
-      }
+      assertReservationAcceptsPayment(reservation);
+      assertPositivePaymentAmount(
+        amount,
+        "Manual payment amount must be greater than zero",
+      );
+      assertPaymentWithinBalance(amount, calculateReservationBalance(reservation));
 
       const payment = await this.preorderRepository.registerPayment({
         reservationId: input.reservationId,

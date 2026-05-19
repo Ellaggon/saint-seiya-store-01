@@ -12,6 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "smoke:catalog": "tsx scripts/smoke/catalog-smoke.ts",
+    "smoke:preorder-payments": "tsx scripts/smoke/preorder-payment-policy-smoke.ts",
     "prepare": "husky install"
   },
   "dependencies": {

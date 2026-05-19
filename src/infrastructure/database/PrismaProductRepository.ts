@@ -315,46 +315,44 @@ export class PrismaProductRepository implements ProductRepository {
       return facetWhere;
     };
 
-    const [categories, collections, characters] = await Promise.all([
-      prisma.category.findMany({
-        where: { deletedAt: null },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          imageUrl: true,
-          _count: {
-            select: { products: { where: getWhereForFacet("category") } },
+    const categories = await prisma.category.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        imageUrl: true,
+        _count: {
+          select: { products: { where: getWhereForFacet("category") } },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+    const collections = await prisma.collection.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        _count: {
+          select: { products: { where: getWhereForFacet("collection") } },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+    const characters = await prisma.character.findMany({
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        _count: {
+          select: {
+            products: { where: { product: getWhereForFacet("character") } },
           },
         },
-        orderBy: { name: "asc" },
-      }),
-      prisma.collection.findMany({
-        where: { deletedAt: null },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          _count: {
-            select: { products: { where: getWhereForFacet("collection") } },
-          },
-        },
-        orderBy: { name: "asc" },
-      }),
-      prisma.character.findMany({
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          _count: {
-            select: {
-              products: { where: { product: getWhereForFacet("character") } },
-            },
-          },
-        },
-        orderBy: { name: "asc" },
-      }),
-    ]);
+      },
+      orderBy: { name: "asc" },
+    });
 
     return {
       categories: (categories as any).map((c: any) => ({

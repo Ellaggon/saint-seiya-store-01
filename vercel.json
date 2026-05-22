@@ -4,5 +4,11 @@
   "installCommand": "npm install",
   "framework": "astro",
   "regions": ["gru1"],
-  "cleanUrls": true
+  "cleanUrls": true,
+  "crons": [
+    {
+      "path": "/api/internal/preorders/expire-pending",
+      "schedule": "0 4 * * *"
+    }
+  ]
 }

@@ -5,7 +5,12 @@
  * Transitions smoothly to the marketplace on selection.
  */
 interface Props {
-  categories: any[];
+  categories: {
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl?: string | null;
+  }[];
   currentCategory?: string;
   getCategoryUrl: (slug?: string) => string;
 }
@@ -118,7 +123,7 @@ const { categories, currentCategory, getCategoryUrl } = Astro.props;
     let rafId: number;
     const strength = parseInt(bg.dataset.parallaxStrength || '20');
     
-    card.addEventListener('mousemove', (e: any) => {
+    card.addEventListener('mousemove', (e: MouseEvent) => {
       const rect = card.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width - 0.5;
       const y = (e.clientY - rect.top) / rect.height - 0.5;

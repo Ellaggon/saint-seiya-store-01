@@ -46,8 +46,9 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
     }
 
     return redirect("/admin/collections");
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unexpected error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
     });
   }

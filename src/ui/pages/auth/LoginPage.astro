@@ -81,6 +81,11 @@ const { returnTo = "/" } = Astro.props;
       </form>
 
       <div class="text-center pt-4">
+        <a
+          href="/forgot-password"
+          class="inline-block text-zinc-600 hover:text-amber-500 transition-colors text-[10px] uppercase tracking-widest font-bold border-b border-zinc-800 hover:border-amber-500 pb-0.5 mb-4"
+          >Olvidé mi contraseña</a
+        >
         <p
           class="text-zinc-600 text-[10px] uppercase tracking-widest font-bold"
         >
@@ -140,14 +145,15 @@ const { returnTo = "/" } = Astro.props;
 
       // Success - Redirection
       window.location.href = returnTo;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Login error:", error);
+      const message = error instanceof Error ? error.message : null;
       if (errorDisplay) {
         errorDisplay.classList.remove("hidden");
         errorDisplay.textContent =
-          error.message === "Invalid login credentials"
+          message === "Invalid login credentials"
             ? "Credenciales inválidas. Verifica tu constraseña."
-            : error.message || "Error al iniciar sesión";
+            : message || "Error al iniciar sesión";
       }
 
       // Reset button states

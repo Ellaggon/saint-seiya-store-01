@@ -1,6 +1,7 @@
 import {
   CancelReservation,
   CreatePreorderCampaign,
+  ExpirePendingReservations,
   GetPreorderDetail,
   ListPreorderReservations,
   ListPreorders,
@@ -45,3 +46,7 @@ export const createListPreorderReservationsUseCase =
 export const createRegisterManualPreorderPaymentUseCase =
   (): RegisterManualPreorderPayment =>
     new RegisterManualPreorderPayment(createPreorderRepository());
+
+export const createExpirePendingReservationsUseCase =
+  (): ExpirePendingReservations =>
+    new ExpirePendingReservations(createPreorderRepository());

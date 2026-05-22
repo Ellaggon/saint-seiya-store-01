@@ -172,11 +172,12 @@ const { returnTo = "/" } = Astro.props;
         successDisplay?.classList.remove("hidden");
         registerForm.classList.add("hidden");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Registration error:", error);
+      const message = error instanceof Error ? error.message : null;
       if (errorDisplay) {
         errorDisplay.classList.remove("hidden");
-        errorDisplay.textContent = error.message || "Error en el registro";
+        errorDisplay.textContent = message || "Error en el registro";
       }
 
       if (submitButton) submitButton.disabled = false;

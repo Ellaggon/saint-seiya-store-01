@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
 import { SaveCollectionUseCase } from "@/application/use-cases/admin/collections/SaveCollectionUseCase";
 import { ArchiveCollectionUseCase } from "@/application/use-cases/admin/collections/ArchiveCollectionUseCase";
+import { DeleteCollectionUseCase } from "@/application/use-cases/admin/collections/DeleteCollectionUseCase";
 import { randomUUID } from "node:crypto";
 
 export const POST: APIRoute = async ({ request, redirect, locals }) => {
@@ -39,10 +40,26 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
           `/admin/success?type=collection&value=${id}&label=${encodeURIComponent(name)}`
         );
       }
-    } else if (_action === "archive" || _action === "delete") {
+    } else if (_action === "archive" || _action === "deactivate") {
       const archiveUseCase = new ArchiveCollectionUseCase(repo);
       const targetId = formData.get("id") as string;
       await archiveUseCase.execute(targetId);
+    } else if (_action === "activate") {
+      const targetId = formData.get("id") as string;
+      const collection = await repo.findCollectionById(targetId);
+      if (!collection) {
+        throw new Error("Collection not found");
+      }
+
+      const saveUseCase = new SaveCollectionUseCase(repo);
+      await saveUseCase.execute({
+        ...collection,
+        deletedAt: null,
+      });
+    } else if (_action === "delete") {
+      const deleteUseCase = new DeleteCollectionUseCase(repo);
+      const targetId = formData.get("id") as string;
+      await deleteUseCase.execute(targetId);
     }
 
     return redirect("/admin/collections");

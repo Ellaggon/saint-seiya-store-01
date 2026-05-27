@@ -6,6 +6,17 @@ interface Props {
 }
 
 const { categories } = Astro.props;
+
+const actionLabel = (deletedAt?: Date | string | null): string =>
+  deletedAt ? "Activar" : "Desactivar";
+
+const actionValue = (deletedAt?: Date | string | null): string =>
+  deletedAt ? "activate" : "deactivate";
+
+const actionConfirm = (deletedAt?: Date | string | null): string =>
+  deletedAt
+    ? "¿Activar esta categoría?"
+    : "¿Desactivar esta categoría? No se eliminará, solo dejará de estar activa.";
 ---
 
 <MainLayout title="Admin - Gestión de Categorías">
@@ -89,7 +100,7 @@ const { categories } = Astro.props;
                           : "text-zinc-500 border-zinc-800 bg-zinc-900"
                       }`}
                     >
-                      {!cat.deletedAt ? "ACTIVO" : "ARCHIVADO"}
+                      {!cat.deletedAt ? "ACTIVO" : "DESACTIVADO"}
                     </span>
                   </td>
                   <td class="px-6 py-5 text-right">
@@ -100,29 +111,44 @@ const { categories } = Astro.props;
                       >
                         Editar
                       </a>
-                      {!cat.deletedAt && (
-                        <>
-                          <span class="text-zinc-800">|</span>
-                          <form
-                            action="/api/admin/categories/actions"
-                            method="POST"
-                            onsubmit="return confirm('¿Archivar esta categoría?')"
-                          >
-                            <input type="hidden" name="id" value={cat.id} />
-                            <input
-                              type="hidden"
-                              name="_action"
-                              value="archive"
-                            />
-                            <button
-                              type="submit"
-                              class="text-[10px] font-black text-zinc-600 hover:text-red-500 uppercase transition-colors"
-                            >
-                              Archivar
-                            </button>
-                          </form>
-                        </>
-                      )}
+                      <span class="text-zinc-800">|</span>
+                      <form
+                        action="/api/admin/categories/actions"
+                        method="POST"
+                        onsubmit={`return confirm('${actionConfirm(cat.deletedAt)}')`}
+                      >
+                        <input type="hidden" name="id" value={cat.id} />
+                        <input
+                          type="hidden"
+                          name="_action"
+                          value={actionValue(cat.deletedAt)}
+                        />
+                        <button
+                          type="submit"
+                          class={`text-[10px] font-black uppercase transition-colors ${
+                            cat.deletedAt
+                              ? "text-green-500 hover:text-white"
+                              : "text-zinc-600 hover:text-amber-500"
+                          }`}
+                        >
+                          {actionLabel(cat.deletedAt)}
+                        </button>
+                      </form>
+                      <span class="text-zinc-800">|</span>
+                      <form
+                        action="/api/admin/categories/actions"
+                        method="POST"
+                        onsubmit="return confirm('¿Eliminar definitivamente esta categoría? Esta acción no se puede deshacer y fallará si tiene productos asociados.')"
+                      >
+                        <input type="hidden" name="id" value={cat.id} />
+                        <input type="hidden" name="_action" value="delete" />
+                        <button
+                          type="submit"
+                          class="text-[10px] font-black text-red-500 hover:text-red-300 uppercase transition-colors"
+                        >
+                          Eliminar
+                        </button>
+                      </form>
                     </div>
                   </td>
                 </tr>

@@ -5,6 +5,15 @@ interface Props {
 }
 
 const { status, isSoldOut = false } = Astro.props;
+const labels: Record<string, string> = {
+  DRAFT: "Borrador",
+  ACTIVE: "Activa",
+  PAUSED: "Pausada",
+  SOLD_OUT: "Agotada",
+  ARRIVED: "Llegó",
+  CLOSED: "Cerrada",
+  CANCELED: "Cancelada",
+};
 const tone =
   status === "ACTIVE"
     ? "text-green-500 border-green-500/30 bg-green-500/5"
@@ -16,5 +25,5 @@ const tone =
 ---
 
 <span class={`text-[9px] font-black uppercase px-2 py-1 tracking-widest border ${tone}`}>
-  {isSoldOut && status === "ACTIVE" ? "SOLD OUT" : status}
+  {isSoldOut && status === "ACTIVE" ? "Agotada" : labels[status] ?? status}
 </span>

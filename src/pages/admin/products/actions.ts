@@ -27,6 +27,15 @@ const optionalString = (formData: FormData, key: string): string | undefined => 
     : undefined;
 };
 
+const safeReturnTo = (formData: FormData): string => {
+  const value = optionalString(formData, "returnTo");
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/admin/products";
+  }
+
+  return value;
+};
+
 const requiredNumber = (formData: FormData, key: string): number => {
   const value = Number(requiredString(formData, key));
   if (!Number.isFinite(value)) {
@@ -67,7 +76,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
         status: parseProductStatus(formData),
       });
 
-      return redirect("/admin/products");
+      return redirect(safeReturnTo(formData));
     }
 
     if (action === "update") {

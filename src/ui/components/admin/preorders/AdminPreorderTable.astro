@@ -15,9 +15,9 @@ const { items } = Astro.props;
     <thead class="bg-black border-b border-zinc-900">
       <tr>
         <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Producto</th>
-        <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Status</th>
+        <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Estado</th>
         <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Reservas</th>
-        <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">ETA</th>
+        <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Llegada</th>
         <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Precio</th>
         <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">Depósito</th>
         <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest text-right">Acciones</th>
@@ -56,7 +56,7 @@ const { items } = Astro.props;
               </td>
               <td class="px-6 py-5">
                 <span class="text-zinc-300 text-xs font-bold uppercase">
-                  {item.campaign.etaLabel || item.campaign.etaStart || item.campaign.releaseDate || "Sin ETA"}
+                  {item.campaign.etaLabel || item.campaign.etaStart || item.campaign.releaseDate || "Sin llegada"}
                 </span>
               </td>
               <td class="px-6 py-5">
@@ -76,7 +76,7 @@ const { items } = Astro.props;
                   >
                     <input type="hidden" name="_action" value="arrive" />
                     <input type="hidden" name="id" value={item.campaign.id} />
-                    <button type="submit" class="text-[10px] font-black text-amber-500 hover:text-white uppercase transition-colors">Arrived</button>
+                    <button type="submit" class="text-[10px] font-black text-amber-500 hover:text-white uppercase transition-colors">Marcar llegada</button>
                   </form>
                   <form
                     action="/admin/preorders/actions"
@@ -85,7 +85,7 @@ const { items } = Astro.props;
                   >
                     <input type="hidden" name="_action" value="close" />
                     <input type="hidden" name="id" value={item.campaign.id} />
-                    <button type="submit" class="text-[10px] font-black text-zinc-500 hover:text-white uppercase transition-colors">Close</button>
+                    <button type="submit" class="text-[10px] font-black text-zinc-500 hover:text-white uppercase transition-colors">Cerrar</button>
                   </form>
                   <form
                     action="/admin/preorders/actions"
@@ -94,7 +94,7 @@ const { items } = Astro.props;
                   >
                     <input type="hidden" name="_action" value="archive" />
                     <input type="hidden" name="id" value={item.campaign.id} />
-                    <button type="submit" class="text-[10px] font-black text-zinc-600 hover:text-red-500 uppercase transition-colors">Archive</button>
+                    <button type="submit" class="text-[10px] font-black text-zinc-600 hover:text-red-500 uppercase transition-colors">Archivar</button>
                   </form>
                 </div>
               </td>

@@ -32,6 +32,15 @@ const currentStatus = Astro.url.searchParams.get("status") ?? "";
 const currentAvailability = Astro.url.searchParams.get("availability") ?? "";
 const currentSort = Astro.url.searchParams.get("sort") ?? "created-desc";
 const currentPageSize = Astro.url.searchParams.get("pageSize") ?? String(result.pageSize);
+const statusOptions = [
+  { value: "DRAFT", label: "Borrador" },
+  { value: "ACTIVE", label: "Activas" },
+  { value: "PAUSED", label: "Pausadas" },
+  { value: "SOLD_OUT", label: "Agotadas" },
+  { value: "ARRIVED", label: "Llegaron a tienda" },
+  { value: "CLOSED", label: "Cerradas" },
+  { value: "CANCELED", label: "Canceladas" },
+];
 
 const pageHref = (page: number): string => {
   const next = new URLSearchParams(Astro.url.searchParams);
@@ -63,8 +72,8 @@ const pageHref = (page: number): string => {
     <form method="GET" class="bg-zinc-950 border border-zinc-900 p-5 mb-8 grid grid-cols-1 md:grid-cols-5 gap-4">
       <select name="status" class="bg-black border border-zinc-800 px-4 py-3 text-white text-xs font-bold uppercase tracking-widest">
         <option value="" selected={currentStatus === ""}>Todos los estados</option>
-        {["DRAFT", "ACTIVE", "PAUSED", "SOLD_OUT", "ARRIVED", "CLOSED", "CANCELED"].map((status) => (
-          <option value={status} selected={currentStatus === status}>{status}</option>
+        {statusOptions.map((status) => (
+          <option value={status.value} selected={currentStatus === status.value}>{status.label}</option>
         ))}
       </select>
       <select name="availability" class="bg-black border border-zinc-800 px-4 py-3 text-white text-xs font-bold uppercase tracking-widest">

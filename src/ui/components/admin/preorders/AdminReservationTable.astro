@@ -8,6 +8,15 @@ interface Props {
 }
 
 const { preorderId, reservations } = Astro.props;
+const statusLabels: Record<string, string> = {
+  PENDING: "Pendiente",
+  CONFIRMED: "Confirmada",
+  PARTIALLY_PAID: "Pago parcial",
+  PAID: "Pagada",
+  CANCELED: "Cancelada",
+  EXPIRED: "Expirada",
+  FULFILLED: "Entregada",
+};
 
 const paymentKeyFor = (reservation: PreorderReservationDTO): string =>
   `manual-${reservation.id}-${reservation.updatedAt}-${reservation.balanceDue}`;
@@ -48,7 +57,7 @@ const paymentKeyFor = (reservation: PreorderReservationDTO): string =>
               <td class="px-6 py-5 text-white font-black text-sm">{formatPrice(reservation.balanceDue)}</td>
               <td class="px-6 py-5">
                 <span class="text-[9px] font-black uppercase px-2 py-1 tracking-widest border border-zinc-800 bg-zinc-900 text-zinc-400">
-                  {reservation.status}
+                  {statusLabels[reservation.status] ?? reservation.status}
                 </span>
               </td>
               <td class="px-6 py-5 text-zinc-600 text-[10px] font-bold">
@@ -67,9 +76,9 @@ const paymentKeyFor = (reservation: PreorderReservationDTO): string =>
                     <input type="hidden" name="reservationId" value={reservation.id} />
                     <input type="hidden" name="paymentKey" value={paymentKeyFor(reservation)} />
                     <select name="kind" class="bg-black border border-zinc-800 px-2 py-2 text-zinc-300 text-[10px] font-bold uppercase">
-                      <option value="DEPOSIT">Deposit</option>
-                      <option value="BALANCE">Balance</option>
-                      <option value="FULL">Full</option>
+                      <option value="DEPOSIT">Abono</option>
+                      <option value="BALANCE">Saldo</option>
+                      <option value="FULL">Pago total</option>
                     </select>
                     <input
                       type="number"

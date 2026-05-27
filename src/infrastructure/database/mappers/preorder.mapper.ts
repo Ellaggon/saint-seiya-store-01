@@ -1,11 +1,12 @@
 import {
   Prisma,
-  PreorderCampaignStatus as PrismaCampaignStatus,
-  PreorderDepositType as PrismaDepositType,
-  PreorderPaymentKind as PrismaPaymentKind,
-  PreorderPaymentProvider as PrismaPaymentProvider,
-  PreorderPaymentStatus as PrismaPaymentStatus,
-  PreorderReservationStatus as PrismaReservationStatus,
+  type Prisma as PrismaType,
+  type PreorderCampaignStatus as PrismaCampaignStatusType,
+  type PreorderDepositType as PrismaDepositTypeType,
+  type PreorderPaymentKind as PrismaPaymentKindType,
+  type PreorderPaymentProvider as PrismaPaymentProviderType,
+  type PreorderPaymentStatus as PrismaPaymentStatusType,
+  type PreorderReservationStatus as PrismaReservationStatusType,
   type PreorderCampaign as PrismaCampaignModel,
   type PreorderPayment as PrismaPaymentModel,
   type PreorderReservation as PrismaReservationModel,
@@ -28,6 +29,60 @@ import {
 } from "@/domain/entities/PreorderReservation";
 import { Money } from "@/domain/value-objects/Money";
 
+export const PRISMA_CAMPAIGN_STATUS = {
+  DRAFT: "DRAFT",
+  ACTIVE: "ACTIVE",
+  PAUSED: "PAUSED",
+  SOLD_OUT: "SOLD_OUT",
+  ARRIVED: "ARRIVED",
+  CLOSED: "CLOSED",
+  CANCELED: "CANCELED",
+} as const satisfies Record<PrismaCampaignStatusType, PrismaCampaignStatusType>;
+
+const PRISMA_DEPOSIT_TYPE = {
+  PERCENT: "PERCENT",
+  FIXED: "FIXED",
+  FULL: "FULL",
+} as const satisfies Record<PrismaDepositTypeType, PrismaDepositTypeType>;
+
+export const PRISMA_RESERVATION_STATUS = {
+  PENDING: "PENDING",
+  CONFIRMED: "CONFIRMED",
+  PARTIALLY_PAID: "PARTIALLY_PAID",
+  PAID: "PAID",
+  CANCELED: "CANCELED",
+  EXPIRED: "EXPIRED",
+  FULFILLED: "FULFILLED",
+} as const satisfies Record<
+  PrismaReservationStatusType,
+  PrismaReservationStatusType
+>;
+
+const PRISMA_PAYMENT_KIND = {
+  DEPOSIT: "DEPOSIT",
+  FULL: "FULL",
+  BALANCE: "BALANCE",
+} as const satisfies Record<PrismaPaymentKindType, PrismaPaymentKindType>;
+
+const PRISMA_PAYMENT_STATUS = {
+  PENDING: "PENDING",
+  PAID: "PAID",
+  FAILED: "FAILED",
+  CANCELED: "CANCELED",
+  REFUNDED: "REFUNDED",
+} as const satisfies Record<PrismaPaymentStatusType, PrismaPaymentStatusType>;
+
+const PRISMA_PAYMENT_PROVIDER = {
+  MANUAL: "MANUAL",
+  STRIPE: "STRIPE",
+  MERCADOPAGO: "MERCADOPAGO",
+  WEBPAY: "WEBPAY",
+  PAYPAL: "PAYPAL",
+} as const satisfies Record<
+  PrismaPaymentProviderType,
+  PrismaPaymentProviderType
+>;
+
 export type PrismaPaymentRecord = PrismaPaymentModel;
 
 export type PrismaReservationRecord = PrismaReservationModel & {
@@ -38,146 +93,146 @@ export type PrismaCampaignRecord = PrismaCampaignModel & {
   reservations?: PrismaReservationRecord[];
 };
 
-export const ACTIVE_RESERVATION_STATUSES: PrismaReservationStatus[] = [
-  PrismaReservationStatus.PENDING,
-  PrismaReservationStatus.CONFIRMED,
-  PrismaReservationStatus.PARTIALLY_PAID,
-  PrismaReservationStatus.PAID,
+export const ACTIVE_RESERVATION_STATUSES: PrismaReservationStatusType[] = [
+  PRISMA_RESERVATION_STATUS.PENDING,
+  PRISMA_RESERVATION_STATUS.CONFIRMED,
+  PRISMA_RESERVATION_STATUS.PARTIALLY_PAID,
+  PRISMA_RESERVATION_STATUS.PAID,
 ];
 
 const campaignStatusToDomain: Record<
-  PrismaCampaignStatus,
+  PrismaCampaignStatusType,
   PreorderCampaignStatus
 > = {
-  [PrismaCampaignStatus.DRAFT]: PreorderCampaignStatus.DRAFT,
-  [PrismaCampaignStatus.ACTIVE]: PreorderCampaignStatus.ACTIVE,
-  [PrismaCampaignStatus.PAUSED]: PreorderCampaignStatus.PAUSED,
-  [PrismaCampaignStatus.SOLD_OUT]: PreorderCampaignStatus.SOLD_OUT,
-  [PrismaCampaignStatus.ARRIVED]: PreorderCampaignStatus.ARRIVED,
-  [PrismaCampaignStatus.CLOSED]: PreorderCampaignStatus.CLOSED,
-  [PrismaCampaignStatus.CANCELED]: PreorderCampaignStatus.CANCELED,
+  [PRISMA_CAMPAIGN_STATUS.DRAFT]: PreorderCampaignStatus.DRAFT,
+  [PRISMA_CAMPAIGN_STATUS.ACTIVE]: PreorderCampaignStatus.ACTIVE,
+  [PRISMA_CAMPAIGN_STATUS.PAUSED]: PreorderCampaignStatus.PAUSED,
+  [PRISMA_CAMPAIGN_STATUS.SOLD_OUT]: PreorderCampaignStatus.SOLD_OUT,
+  [PRISMA_CAMPAIGN_STATUS.ARRIVED]: PreorderCampaignStatus.ARRIVED,
+  [PRISMA_CAMPAIGN_STATUS.CLOSED]: PreorderCampaignStatus.CLOSED,
+  [PRISMA_CAMPAIGN_STATUS.CANCELED]: PreorderCampaignStatus.CANCELED,
 };
 
 const campaignStatusToPrisma: Record<
   PreorderCampaignStatus,
-  PrismaCampaignStatus
+  PrismaCampaignStatusType
 > = {
-  [PreorderCampaignStatus.DRAFT]: PrismaCampaignStatus.DRAFT,
-  [PreorderCampaignStatus.ACTIVE]: PrismaCampaignStatus.ACTIVE,
-  [PreorderCampaignStatus.PAUSED]: PrismaCampaignStatus.PAUSED,
-  [PreorderCampaignStatus.SOLD_OUT]: PrismaCampaignStatus.SOLD_OUT,
-  [PreorderCampaignStatus.ARRIVED]: PrismaCampaignStatus.ARRIVED,
-  [PreorderCampaignStatus.CLOSED]: PrismaCampaignStatus.CLOSED,
-  [PreorderCampaignStatus.CANCELED]: PrismaCampaignStatus.CANCELED,
+  [PreorderCampaignStatus.DRAFT]: PRISMA_CAMPAIGN_STATUS.DRAFT,
+  [PreorderCampaignStatus.ACTIVE]: PRISMA_CAMPAIGN_STATUS.ACTIVE,
+  [PreorderCampaignStatus.PAUSED]: PRISMA_CAMPAIGN_STATUS.PAUSED,
+  [PreorderCampaignStatus.SOLD_OUT]: PRISMA_CAMPAIGN_STATUS.SOLD_OUT,
+  [PreorderCampaignStatus.ARRIVED]: PRISMA_CAMPAIGN_STATUS.ARRIVED,
+  [PreorderCampaignStatus.CLOSED]: PRISMA_CAMPAIGN_STATUS.CLOSED,
+  [PreorderCampaignStatus.CANCELED]: PRISMA_CAMPAIGN_STATUS.CANCELED,
 };
 
-const depositTypeToDomain: Record<PrismaDepositType, PreorderDepositType> = {
-  [PrismaDepositType.PERCENT]: PreorderDepositType.PERCENT,
-  [PrismaDepositType.FIXED]: PreorderDepositType.FIXED,
-  [PrismaDepositType.FULL]: PreorderDepositType.FULL,
+const depositTypeToDomain: Record<PrismaDepositTypeType, PreorderDepositType> = {
+  [PRISMA_DEPOSIT_TYPE.PERCENT]: PreorderDepositType.PERCENT,
+  [PRISMA_DEPOSIT_TYPE.FIXED]: PreorderDepositType.FIXED,
+  [PRISMA_DEPOSIT_TYPE.FULL]: PreorderDepositType.FULL,
 };
 
-const depositTypeToPrisma: Record<PreorderDepositType, PrismaDepositType> = {
-  [PreorderDepositType.PERCENT]: PrismaDepositType.PERCENT,
-  [PreorderDepositType.FIXED]: PrismaDepositType.FIXED,
-  [PreorderDepositType.FULL]: PrismaDepositType.FULL,
+const depositTypeToPrisma: Record<PreorderDepositType, PrismaDepositTypeType> = {
+  [PreorderDepositType.PERCENT]: PRISMA_DEPOSIT_TYPE.PERCENT,
+  [PreorderDepositType.FIXED]: PRISMA_DEPOSIT_TYPE.FIXED,
+  [PreorderDepositType.FULL]: PRISMA_DEPOSIT_TYPE.FULL,
 };
 
 const reservationStatusToDomain: Record<
-  PrismaReservationStatus,
+  PrismaReservationStatusType,
   PreorderReservationStatus
 > = {
-  [PrismaReservationStatus.PENDING]: PreorderReservationStatus.PENDING,
-  [PrismaReservationStatus.CONFIRMED]: PreorderReservationStatus.CONFIRMED,
-  [PrismaReservationStatus.PARTIALLY_PAID]:
+  [PRISMA_RESERVATION_STATUS.PENDING]: PreorderReservationStatus.PENDING,
+  [PRISMA_RESERVATION_STATUS.CONFIRMED]: PreorderReservationStatus.CONFIRMED,
+  [PRISMA_RESERVATION_STATUS.PARTIALLY_PAID]:
     PreorderReservationStatus.PARTIALLY_PAID,
-  [PrismaReservationStatus.PAID]: PreorderReservationStatus.PAID,
-  [PrismaReservationStatus.CANCELED]: PreorderReservationStatus.CANCELED,
-  [PrismaReservationStatus.EXPIRED]: PreorderReservationStatus.EXPIRED,
-  [PrismaReservationStatus.FULFILLED]: PreorderReservationStatus.FULFILLED,
+  [PRISMA_RESERVATION_STATUS.PAID]: PreorderReservationStatus.PAID,
+  [PRISMA_RESERVATION_STATUS.CANCELED]: PreorderReservationStatus.CANCELED,
+  [PRISMA_RESERVATION_STATUS.EXPIRED]: PreorderReservationStatus.EXPIRED,
+  [PRISMA_RESERVATION_STATUS.FULFILLED]: PreorderReservationStatus.FULFILLED,
 };
 
 export const reservationStatusToPrisma: Record<
   PreorderReservationStatus,
-  PrismaReservationStatus
+  PrismaReservationStatusType
 > = {
-  [PreorderReservationStatus.PENDING]: PrismaReservationStatus.PENDING,
-  [PreorderReservationStatus.CONFIRMED]: PrismaReservationStatus.CONFIRMED,
+  [PreorderReservationStatus.PENDING]: PRISMA_RESERVATION_STATUS.PENDING,
+  [PreorderReservationStatus.CONFIRMED]: PRISMA_RESERVATION_STATUS.CONFIRMED,
   [PreorderReservationStatus.PARTIALLY_PAID]:
-    PrismaReservationStatus.PARTIALLY_PAID,
-  [PreorderReservationStatus.PAID]: PrismaReservationStatus.PAID,
-  [PreorderReservationStatus.CANCELED]: PrismaReservationStatus.CANCELED,
-  [PreorderReservationStatus.EXPIRED]: PrismaReservationStatus.EXPIRED,
-  [PreorderReservationStatus.FULFILLED]: PrismaReservationStatus.FULFILLED,
+    PRISMA_RESERVATION_STATUS.PARTIALLY_PAID,
+  [PreorderReservationStatus.PAID]: PRISMA_RESERVATION_STATUS.PAID,
+  [PreorderReservationStatus.CANCELED]: PRISMA_RESERVATION_STATUS.CANCELED,
+  [PreorderReservationStatus.EXPIRED]: PRISMA_RESERVATION_STATUS.EXPIRED,
+  [PreorderReservationStatus.FULFILLED]: PRISMA_RESERVATION_STATUS.FULFILLED,
 };
 
-const paymentKindToDomain: Record<PrismaPaymentKind, PreorderPaymentKind> = {
-  [PrismaPaymentKind.DEPOSIT]: PreorderPaymentKind.DEPOSIT,
-  [PrismaPaymentKind.FULL]: PreorderPaymentKind.FULL,
-  [PrismaPaymentKind.BALANCE]: PreorderPaymentKind.BALANCE,
+const paymentKindToDomain: Record<PrismaPaymentKindType, PreorderPaymentKind> = {
+  [PRISMA_PAYMENT_KIND.DEPOSIT]: PreorderPaymentKind.DEPOSIT,
+  [PRISMA_PAYMENT_KIND.FULL]: PreorderPaymentKind.FULL,
+  [PRISMA_PAYMENT_KIND.BALANCE]: PreorderPaymentKind.BALANCE,
 };
 
 export const paymentKindToPrisma: Record<
   PreorderPaymentKind,
-  PrismaPaymentKind
+  PrismaPaymentKindType
 > = {
-  [PreorderPaymentKind.DEPOSIT]: PrismaPaymentKind.DEPOSIT,
-  [PreorderPaymentKind.FULL]: PrismaPaymentKind.FULL,
-  [PreorderPaymentKind.BALANCE]: PrismaPaymentKind.BALANCE,
+  [PreorderPaymentKind.DEPOSIT]: PRISMA_PAYMENT_KIND.DEPOSIT,
+  [PreorderPaymentKind.FULL]: PRISMA_PAYMENT_KIND.FULL,
+  [PreorderPaymentKind.BALANCE]: PRISMA_PAYMENT_KIND.BALANCE,
 };
 
 const paymentStatusToDomain: Record<
-  PrismaPaymentStatus,
+  PrismaPaymentStatusType,
   PreorderPaymentStatus
 > = {
-  [PrismaPaymentStatus.PENDING]: PreorderPaymentStatus.PENDING,
-  [PrismaPaymentStatus.PAID]: PreorderPaymentStatus.PAID,
-  [PrismaPaymentStatus.FAILED]: PreorderPaymentStatus.FAILED,
-  [PrismaPaymentStatus.CANCELED]: PreorderPaymentStatus.CANCELED,
-  [PrismaPaymentStatus.REFUNDED]: PreorderPaymentStatus.REFUNDED,
+  [PRISMA_PAYMENT_STATUS.PENDING]: PreorderPaymentStatus.PENDING,
+  [PRISMA_PAYMENT_STATUS.PAID]: PreorderPaymentStatus.PAID,
+  [PRISMA_PAYMENT_STATUS.FAILED]: PreorderPaymentStatus.FAILED,
+  [PRISMA_PAYMENT_STATUS.CANCELED]: PreorderPaymentStatus.CANCELED,
+  [PRISMA_PAYMENT_STATUS.REFUNDED]: PreorderPaymentStatus.REFUNDED,
 };
 
 export const paymentStatusToPrisma: Record<
   PreorderPaymentStatus,
-  PrismaPaymentStatus
+  PrismaPaymentStatusType
 > = {
-  [PreorderPaymentStatus.PENDING]: PrismaPaymentStatus.PENDING,
-  [PreorderPaymentStatus.PAID]: PrismaPaymentStatus.PAID,
-  [PreorderPaymentStatus.FAILED]: PrismaPaymentStatus.FAILED,
-  [PreorderPaymentStatus.CANCELED]: PrismaPaymentStatus.CANCELED,
-  [PreorderPaymentStatus.REFUNDED]: PrismaPaymentStatus.REFUNDED,
+  [PreorderPaymentStatus.PENDING]: PRISMA_PAYMENT_STATUS.PENDING,
+  [PreorderPaymentStatus.PAID]: PRISMA_PAYMENT_STATUS.PAID,
+  [PreorderPaymentStatus.FAILED]: PRISMA_PAYMENT_STATUS.FAILED,
+  [PreorderPaymentStatus.CANCELED]: PRISMA_PAYMENT_STATUS.CANCELED,
+  [PreorderPaymentStatus.REFUNDED]: PRISMA_PAYMENT_STATUS.REFUNDED,
 };
 
 const paymentProviderToDomain: Record<
-  PrismaPaymentProvider,
+  PrismaPaymentProviderType,
   PreorderPaymentProvider
 > = {
-  [PrismaPaymentProvider.MANUAL]: PreorderPaymentProvider.MANUAL,
-  [PrismaPaymentProvider.STRIPE]: PreorderPaymentProvider.STRIPE,
-  [PrismaPaymentProvider.MERCADOPAGO]: PreorderPaymentProvider.MERCADOPAGO,
-  [PrismaPaymentProvider.WEBPAY]: PreorderPaymentProvider.WEBPAY,
-  [PrismaPaymentProvider.PAYPAL]: PreorderPaymentProvider.PAYPAL,
+  [PRISMA_PAYMENT_PROVIDER.MANUAL]: PreorderPaymentProvider.MANUAL,
+  [PRISMA_PAYMENT_PROVIDER.STRIPE]: PreorderPaymentProvider.STRIPE,
+  [PRISMA_PAYMENT_PROVIDER.MERCADOPAGO]: PreorderPaymentProvider.MERCADOPAGO,
+  [PRISMA_PAYMENT_PROVIDER.WEBPAY]: PreorderPaymentProvider.WEBPAY,
+  [PRISMA_PAYMENT_PROVIDER.PAYPAL]: PreorderPaymentProvider.PAYPAL,
 };
 
 export const paymentProviderToPrisma: Record<
   PreorderPaymentProvider,
-  PrismaPaymentProvider
+  PrismaPaymentProviderType
 > = {
-  [PreorderPaymentProvider.MANUAL]: PrismaPaymentProvider.MANUAL,
-  [PreorderPaymentProvider.STRIPE]: PrismaPaymentProvider.STRIPE,
-  [PreorderPaymentProvider.MERCADOPAGO]: PrismaPaymentProvider.MERCADOPAGO,
-  [PreorderPaymentProvider.WEBPAY]: PrismaPaymentProvider.WEBPAY,
-  [PreorderPaymentProvider.PAYPAL]: PrismaPaymentProvider.PAYPAL,
+  [PreorderPaymentProvider.MANUAL]: PRISMA_PAYMENT_PROVIDER.MANUAL,
+  [PreorderPaymentProvider.STRIPE]: PRISMA_PAYMENT_PROVIDER.STRIPE,
+  [PreorderPaymentProvider.MERCADOPAGO]: PRISMA_PAYMENT_PROVIDER.MERCADOPAGO,
+  [PreorderPaymentProvider.WEBPAY]: PRISMA_PAYMENT_PROVIDER.WEBPAY,
+  [PreorderPaymentProvider.PAYPAL]: PRISMA_PAYMENT_PROVIDER.PAYPAL,
 };
 
-export const decimalToMoney = (value: Prisma.Decimal): Money =>
+export const decimalToMoney = (value: PrismaType.Decimal): Money =>
   Money.from(value.toNumber());
 
-export const moneyToDecimal = (value: Money): Prisma.Decimal =>
+export const moneyToDecimal = (value: Money): PrismaType.Decimal =>
   new Prisma.Decimal(value.toNumber());
 
 export const isActiveReservationStatus = (
-  status: PrismaReservationStatus,
+  status: PrismaReservationStatusType,
 ): boolean => ACTIVE_RESERVATION_STATUSES.includes(status);
 
 export const calculateReservedUnits = (
@@ -254,7 +309,7 @@ export const toDomainCampaign = (
 
 export const toPersistenceCampaignInput = (
   campaign: PreorderCampaign,
-): Prisma.PreorderCampaignUncheckedCreateInput => ({
+): PrismaType.PreorderCampaignUncheckedCreateInput => ({
   id: campaign.id,
   productId: campaign.productId,
   status: campaignStatusToPrisma[campaign.status],
@@ -276,7 +331,7 @@ export const toPersistenceCampaignInput = (
 
 export const toPersistenceCampaignUpdateInput = (
   campaign: PreorderCampaign,
-): Prisma.PreorderCampaignUncheckedUpdateInput => ({
+): PrismaType.PreorderCampaignUncheckedUpdateInput => ({
   productId: campaign.productId,
   status: campaignStatusToPrisma[campaign.status],
   totalSlots: campaign.totalSlots,

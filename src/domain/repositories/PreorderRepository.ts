@@ -86,6 +86,16 @@ export interface ReservePreorderWithPaymentDraftResult {
   payment: PreorderPayment;
 }
 
+export interface ExpirePendingPreorderReservationsInput {
+  now: Date;
+  campaignId?: string;
+  batchSize?: number;
+}
+
+export interface ExpirePendingPreorderReservationsResult {
+  expiredCount: number;
+}
+
 export interface PreorderProductSummary {
   id: string;
   name: string;
@@ -140,4 +150,7 @@ export interface PreorderRepository {
 
   registerPayment(input: RegisterPreorderPaymentInput): Promise<PreorderPayment>;
   listPaymentsByReservation(reservationId: string): Promise<PreorderPayment[]>;
+  expirePendingReservations(
+    input: ExpirePendingPreorderReservationsInput,
+  ): Promise<ExpirePendingPreorderReservationsResult>;
 }

@@ -17,6 +17,7 @@ const collectionsResponse = await fetch(
   new URL("/api/collections", Astro.url.origin),
 );
 const collections = await collectionsResponse.json();
+const returnTo = Astro.url.searchParams.get("returnTo") || "/admin/products";
 ---
 
-<ProductForm categories={categories} collections={collections} />
+<ProductForm categories={categories} collections={collections} returnTo={returnTo} />

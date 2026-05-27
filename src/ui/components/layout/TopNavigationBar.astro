@@ -7,7 +7,7 @@
  */
 const navItems = [
   { label: "CATÁLOGO", href: "/catalog" },
-  { label: "COLECCIONES", href: "/collections" },
+  { label: "PREVENTAS", href: "/preorders" },
   { label: "NUEVOS", href: "/new" },
   { label: "EXCLUSIVOS", href: "/exclusive" },
 ];
@@ -230,21 +230,15 @@ const navItems = [
   </div>
 </aside>
 
-<script lang="ts">
-  console.log("SCRIPT CARGADO");
-  document.addEventListener("DOMContentLoaded", () => {
-    console.log("DOM LISTO");
+	<script lang="ts">
+	  document.addEventListener("DOMContentLoaded", () => {
+	    const nav = document.getElementById("master-nav");
+	    const trigger = document.getElementById("mobile-menu-trigger");
+	    const close = document.getElementById("mobile-menu-close");
+	    const panel = document.getElementById("mobile-panel");
+	    const overlay = document.getElementById("mobile-overlay");
 
-    const nav = document.getElementById("master-nav");
-    const trigger = document.getElementById("mobile-menu-trigger");
-    const close = document.getElementById("mobile-menu-close");
-    const panel = document.getElementById("mobile-panel");
-    const overlay = document.getElementById("mobile-overlay");
-    console.log("Trigger:", trigger);
-    console.log("Panel:", panel);
-    // console.log("Overlay:", overlay);
-
-    // Scroll behavior
+	    // Scroll behavior
     window.addEventListener("scroll", () => {
       if (window.scrollY > 50) {
         nav?.classList.add("border-amber-500");

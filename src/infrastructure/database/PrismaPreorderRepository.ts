@@ -1,7 +1,6 @@
 import {
-  Prisma,
-  PreorderCampaignStatus as PrismaCampaignStatus,
-  PreorderReservationStatus as PrismaReservationStatus,
+  type Prisma,
+  type PreorderCampaignStatus as PrismaCampaignStatusType,
 } from "@prisma/client";
 
 import { PreorderRepositoryError } from "@/domain/errors/PreorderRepositoryError";
@@ -17,6 +16,8 @@ import type {
   PreorderCampaignFilters,
   PreorderCampaignWithProduct,
   PreorderDetailLookup,
+  ExpirePendingPreorderReservationsInput,
+  ExpirePendingPreorderReservationsResult,
   PreorderPaginatedResult,
   PreorderProductSummary,
   PreorderRepository,
@@ -37,6 +38,8 @@ import {
   paymentKindToPrisma,
   paymentProviderToPrisma,
   paymentStatusToPrisma,
+  PRISMA_CAMPAIGN_STATUS,
+  PRISMA_RESERVATION_STATUS,
   reservationStatusToPrisma,
   toDomainCampaign,
   toDomainPayment,
@@ -95,6 +98,8 @@ const reservationDetailInclude = {
 
 const DEFAULT_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 100;
+const DEFAULT_EXPIRATION_BATCH_SIZE = 500;
+const MAX_EXPIRATION_BATCH_SIZE = 1_000;
 
 const toPositiveInt = (value: number | undefined, fallback: number): number => {
   if (value === undefined) return fallback;
@@ -148,22 +153,22 @@ const campaignWhere = (
 
 const mapFilterStatus = (
   filters?: PreorderCampaignFilters,
-): PrismaCampaignStatus | undefined => {
+): PrismaCampaignStatusType | undefined => {
   if (filters?.status) return mapCampaignStatusToPrisma(filters.status);
   return undefined;
 };
 
 const mapCampaignStatusToPrisma = (
   status: PreorderCampaignStatus,
-): PrismaCampaignStatus => {
-  const map: Record<PreorderCampaignStatus, PrismaCampaignStatus> = {
-    [PreorderCampaignStatus.DRAFT]: PrismaCampaignStatus.DRAFT,
-    [PreorderCampaignStatus.ACTIVE]: PrismaCampaignStatus.ACTIVE,
-    [PreorderCampaignStatus.PAUSED]: PrismaCampaignStatus.PAUSED,
-    [PreorderCampaignStatus.SOLD_OUT]: PrismaCampaignStatus.SOLD_OUT,
-    [PreorderCampaignStatus.ARRIVED]: PrismaCampaignStatus.ARRIVED,
-    [PreorderCampaignStatus.CLOSED]: PrismaCampaignStatus.CLOSED,
-    [PreorderCampaignStatus.CANCELED]: PrismaCampaignStatus.CANCELED,
+): PrismaCampaignStatusType => {
+  const map: Record<PreorderCampaignStatus, PrismaCampaignStatusType> = {
+    [PreorderCampaignStatus.DRAFT]: PRISMA_CAMPAIGN_STATUS.DRAFT,
+    [PreorderCampaignStatus.ACTIVE]: PRISMA_CAMPAIGN_STATUS.ACTIVE,
+    [PreorderCampaignStatus.PAUSED]: PRISMA_CAMPAIGN_STATUS.PAUSED,
+    [PreorderCampaignStatus.SOLD_OUT]: PRISMA_CAMPAIGN_STATUS.SOLD_OUT,
+    [PreorderCampaignStatus.ARRIVED]: PRISMA_CAMPAIGN_STATUS.ARRIVED,
+    [PreorderCampaignStatus.CLOSED]: PRISMA_CAMPAIGN_STATUS.CLOSED,
+    [PreorderCampaignStatus.CANCELED]: PRISMA_CAMPAIGN_STATUS.CANCELED,
   };
 
   return map[status];
@@ -258,22 +263,27 @@ const expireStalePendingReservations = async (
   await tx.preorderReservation.updateMany({
     where: {
       campaignId,
-      status: PrismaReservationStatus.PENDING,
+      status: PRISMA_RESERVATION_STATUS.PENDING,
       expiresAt: {
         lt: now,
       },
     },
     data: {
-      status: PrismaReservationStatus.EXPIRED,
+      status: PRISMA_RESERVATION_STATUS.EXPIRED,
     },
   });
 };
 
+const expirationBatchSize = (batchSize: number | undefined): number => {
+  const requested = toPositiveInt(batchSize, DEFAULT_EXPIRATION_BATCH_SIZE);
+  return Math.min(MAX_EXPIRATION_BATCH_SIZE, requested);
+};
+
 const activeCampaignStatuses = [
-  PrismaCampaignStatus.ACTIVE,
-  PrismaCampaignStatus.PAUSED,
-  PrismaCampaignStatus.SOLD_OUT,
-] satisfies PrismaCampaignStatus[];
+  PRISMA_CAMPAIGN_STATUS.ACTIVE,
+  PRISMA_CAMPAIGN_STATUS.PAUSED,
+  PRISMA_CAMPAIGN_STATUS.SOLD_OUT,
+] satisfies PrismaCampaignStatusType[];
 
 const isActiveOperationalStatus = (
   status: PreorderCampaignStatus,
@@ -620,7 +630,7 @@ export class PrismaPreorderRepository implements PreorderRepository {
           unitPrice: moneyToDecimal(input.unitPrice),
           totalAmount: moneyToDecimal(pricing.totalAmount),
           depositRequired: moneyToDecimal(pricing.depositRequired),
-          status: PrismaReservationStatus.PENDING,
+          status: PRISMA_RESERVATION_STATUS.PENDING,
           expiresAt: input.expiresAt ?? null,
         },
         include: reservationDetailInclude,
@@ -724,7 +734,7 @@ export class PrismaPreorderRepository implements PreorderRepository {
           unitPrice: moneyToDecimal(input.unitPrice),
           totalAmount: moneyToDecimal(pricing.totalAmount),
           depositRequired: moneyToDecimal(pricing.depositRequired),
-          status: PrismaReservationStatus.PENDING,
+          status: PRISMA_RESERVATION_STATUS.PENDING,
           expiresAt: input.expiresAt ?? null,
         },
         include: reservationDetailInclude,
@@ -820,7 +830,7 @@ export class PrismaPreorderRepository implements PreorderRepository {
 
     const campaign = await prisma.preorderCampaign.update({
       where: { id },
-      data: { status: PrismaCampaignStatus.ARRIVED },
+      data: { status: PRISMA_CAMPAIGN_STATUS.ARRIVED },
       include: campaignDetailInclude,
     });
 
@@ -940,5 +950,51 @@ export class PrismaPreorderRepository implements PreorderRepository {
     });
 
     return payments.map(toDomainPayment);
+  }
+
+  async expirePendingReservations(
+    input: ExpirePendingPreorderReservationsInput,
+  ): Promise<ExpirePendingPreorderReservationsResult> {
+    const batchSize = expirationBatchSize(input.batchSize);
+
+    if (input.campaignId) {
+      const result = await prisma.preorderReservation.updateMany({
+        where: {
+          campaignId: input.campaignId,
+          status: PRISMA_RESERVATION_STATUS.PENDING,
+          expiresAt: { lt: input.now },
+        },
+        data: { status: PRISMA_RESERVATION_STATUS.EXPIRED },
+      });
+
+      return { expiredCount: result.count };
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const staleReservations = await tx.preorderReservation.findMany({
+        where: {
+          status: PRISMA_RESERVATION_STATUS.PENDING,
+          expiresAt: { lt: input.now },
+        },
+        select: { id: true },
+        orderBy: [{ expiresAt: "asc" }, { id: "asc" }],
+        take: batchSize,
+      });
+
+      if (staleReservations.length === 0) {
+        return { expiredCount: 0 };
+      }
+
+      const result = await tx.preorderReservation.updateMany({
+        where: {
+          id: { in: staleReservations.map((reservation) => reservation.id) },
+          status: PRISMA_RESERVATION_STATUS.PENDING,
+          expiresAt: { lt: input.now },
+        },
+        data: { status: PRISMA_RESERVATION_STATUS.EXPIRED },
+      });
+
+      return { expiredCount: result.count };
+    });
   }
 }

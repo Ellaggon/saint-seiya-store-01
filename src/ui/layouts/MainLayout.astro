@@ -45,6 +45,16 @@ const { title } = Astro.props;
 
     <Footer />
 
+    <script>
+      const authHashParams = new URLSearchParams(window.location.hash.slice(1));
+      if (
+        authHashParams.get("type") === "recovery" &&
+        window.location.pathname !== "/reset-password"
+      ) {
+        window.location.href = `/reset-password${window.location.hash}`;
+      }
+    </script>
+
     <style is:global>
       /* Spotlight Simulation */
       .spotlight-hover {
@@ -88,7 +98,7 @@ const { title } = Astro.props;
     <script>
       // Global spotlight effect
       document.querySelectorAll(".spotlight-hover").forEach((el) => {
-        el.addEventListener("mousemove", (e: any) => {
+        el.addEventListener("mousemove", (e: MouseEvent) => {
           const rect = el.getBoundingClientRect();
           const x = e.clientX - rect.left;
           const y = e.clientY - rect.top;

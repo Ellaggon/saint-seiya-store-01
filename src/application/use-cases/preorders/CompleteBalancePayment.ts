@@ -8,6 +8,12 @@ import type { PreorderRepository } from "@/domain/repositories/PreorderRepositor
 import { ApplicationError } from "@/application/errors/ApplicationError";
 import { PreorderMapper } from "@/application/dto/preorder.mapper";
 import type { PreorderPaymentDTO } from "@/application/dto/preorder.dto";
+import { Money } from "@/domain/value-objects/Money";
+import {
+  assertExactBalancePayment,
+  assertPositivePaymentAmount,
+  calculateReservationBalance,
+} from "@/application/services/PreorderPaymentPolicy";
 
 export interface CompleteBalancePaymentInput {
   reservationId: string;
@@ -36,15 +42,10 @@ export class CompleteBalancePayment {
         );
       }
 
-      const balanceDue = reservation.totalAmount.subtract(reservation.paidAmount);
-      if (input.amount > balanceDue.toNumber()) {
-        throw ApplicationError.paymentExceedsBalance();
-      }
-      if (input.amount !== balanceDue.toNumber()) {
-        throw ApplicationError.invalidPaymentAmount(
-          "Balance payment amount must equal current balance due",
-        );
-      }
+      const amount = Money.from(input.amount);
+      const balanceDue = calculateReservationBalance(reservation);
+      assertPositivePaymentAmount(amount);
+      assertExactBalancePayment(amount, balanceDue);
 
       const payment = await this.preorderRepository.registerPayment({
         reservationId: input.reservationId,

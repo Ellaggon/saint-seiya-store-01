@@ -7,15 +7,19 @@ export class R2Storage implements StorageService {
   private readonly publicUrl: string;
 
   constructor() {
-    this.bucket = process.env.R2_BUCKET_NAME || "";
-    this.publicUrl = process.env.R2_PUBLIC_URL || "";
+    this.bucket = requiredEnv(["R2_BUCKET_NAME", "R2_BUCKET"]);
+    const endpoint = resolveR2Endpoint();
+    this.publicUrl =
+      normalizeUrl(process.env.R2_PUBLIC_URL || process.env.R2_PUBLIC_BASE_URL || "") ||
+      `${endpoint}/${this.bucket}`;
 
     this.client = new S3Client({
       region: "auto",
-      endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      endpoint,
+      forcePathStyle: true,
       credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+        accessKeyId: requiredEnv(["R2_ACCESS_KEY_ID"]),
+        secretAccessKey: requiredEnv(["R2_SECRET_ACCESS_KEY"]),
       },
     });
   }
@@ -40,10 +44,39 @@ export class R2Storage implements StorageService {
 
     await this.client.send(command);
 
-    // Ensure publicUrl doesn't end with a slash to prevent double slashes
-    const baseUrl = this.publicUrl.endsWith("/")
-      ? this.publicUrl.slice(0, -1)
-      : this.publicUrl;
+    const baseUrl = this.publicUrl;
     return `${baseUrl}/${fileName}`;
   }
 }
+
+const requiredEnv = (names: string[]): string => {
+  for (const name of names) {
+    const value = process.env[name]?.trim();
+    if (value) return value;
+  }
+
+  throw new Error(`Missing required environment variable: ${names.join(" or ")}`);
+};
+
+const normalizeUrl = (value: string): string => {
+  const trimmed = value.trim();
+  return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+};
+
+const resolveR2Endpoint = (): string => {
+  const configuredEndpoint = process.env.R2_ENDPOINT?.trim();
+  if (configuredEndpoint) {
+    return normalizeUrl(
+      configuredEndpoint.startsWith("http")
+        ? configuredEndpoint
+        : `https://${configuredEndpoint}`,
+    );
+  }
+
+  const accountId = requiredEnv(["R2_ACCOUNT_ID"])
+    .replace(/^https?:\/\//, "")
+    .replace(/\/$/, "")
+    .replace(/\.r2\.cloudflarestorage\.com$/, "");
+
+  return `https://${accountId}.r2.cloudflarestorage.com`;
+};

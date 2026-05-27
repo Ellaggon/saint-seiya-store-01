@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { ListCollectionsUseCase } from "../../application/use-cases/ListCollectionsUseCase";
 import { PrismaCollectionRepository } from "../../infrastructure/database/PrismaCollectionRepository";
+import { legacyFailure, legacySuccess } from "@/endpoints/api/shared/api-response";
 
 export const GET: APIRoute = async () => {
   try {
@@ -9,14 +10,8 @@ export const GET: APIRoute = async () => {
 
     const collections = await useCase.execute();
 
-    return new Response(JSON.stringify(collections), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return legacySuccess(collections);
+  } catch (error: unknown) {
+    return legacyFailure(error);
   }
 };

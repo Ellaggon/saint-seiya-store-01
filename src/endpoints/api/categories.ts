@@ -1,21 +1,17 @@
 import type { APIRoute } from "astro";
-import { prisma } from "../../infrastructure/database/prisma";
+import { ListCategoriesUseCase } from "@/application/use-cases/admin/categories/ListCategoriesUseCase";
+import { legacyFailure, legacySuccess } from "@/endpoints/api/shared/api-response";
+import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
 
 // Quick endpoint for categories (Sagas)
 export const GET: APIRoute = async () => {
   try {
-    const categories = await prisma.category.findMany({
-      orderBy: { name: "asc" },
-    });
+    const repository = new PrismaProductRepository();
+    const useCase = new ListCategoriesUseCase(repository);
+    const categories = await useCase.execute();
 
-    return new Response(JSON.stringify(categories), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return legacySuccess(categories);
+  } catch (error: unknown) {
+    return legacyFailure(error);
   }
 };

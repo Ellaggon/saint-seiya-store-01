@@ -6,6 +6,7 @@ import CollectionList from "@/ui/components/admin/CollectionList.astro";
 const repo = new PrismaProductRepository();
 const listUseCase = new ListCollectionsUseCase(repo);
 const collections = await listUseCase.execute();
+const error = Astro.url.searchParams.get("error");
 ---
 
-<CollectionList collections={collections} />
+<CollectionList collections={collections} error={error} />

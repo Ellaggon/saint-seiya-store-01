@@ -3,9 +3,10 @@ import MainLayout from "../../layouts/MainLayout.astro";
 
 interface Props {
   categories: any[];
+  error?: string | null;
 }
 
-const { categories } = Astro.props;
+const { categories, error = null } = Astro.props;
 
 const actionLabel = (deletedAt?: Date | string | null): string =>
   deletedAt ? "Activar" : "Desactivar";
@@ -44,6 +45,14 @@ const actionConfirm = (deletedAt?: Date | string | null): string =>
         Añadir Nueva Categoría
       </a>
     </div>
+
+    {
+      error && (
+        <div class="border border-red-500/30 bg-red-500/5 text-red-400 px-5 py-4 text-xs font-bold uppercase tracking-widest mb-8">
+          {error}
+        </div>
+      )
+    }
 
     <!-- Table Section -->
     <div class="bg-zinc-950 border border-zinc-900 overflow-x-auto">

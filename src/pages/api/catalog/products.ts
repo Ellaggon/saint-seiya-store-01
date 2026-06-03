@@ -1,32 +1,16 @@
 import type { APIRoute } from "astro";
 import { CatalogQueryService } from "../../../application/services/CatalogQueryService";
 import { GetCatalogProductsUseCase } from "../../../application/use-cases/catalog/GetCatalogProductsUseCase";
-import type { CatalogSort } from "@/domain/repositories/ProductRepository";
 import { legacyFailure, legacySuccess } from "@/endpoints/api/shared/api-response";
 import { PrismaCatalogQueryRepository } from "@/infrastructure/database/PrismaCatalogQueryRepository";
-import { parsePageParams } from "@/shared/listing/pagination";
-import { resolveSort } from "@/shared/listing/sorting";
-
-const catalogSorts: CatalogSort[] = [
-  "created-desc",
-  "price-asc",
-  "price-desc",
-  "name-asc",
-];
+import { parseCatalogFilters } from "@/shared/listing/catalogQuery";
 
 export const GET: APIRoute = async ({ request }) => {
   try {
     const url = new URL(request.url);
     const params = url.searchParams;
 
-    const filters = {
-      category: params.get("category") || undefined,
-      collection: params.get("collection") || undefined,
-      character: params.get("character") || undefined,
-      status: params.get("status") || undefined,
-      sort: resolveSort(params.get("sort"), catalogSorts),
-      ...parsePageParams(params),
-    };
+    const filters = parseCatalogFilters(params);
 
     const queryService = new CatalogQueryService(
       new PrismaCatalogQueryRepository(),

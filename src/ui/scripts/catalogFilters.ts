@@ -11,6 +11,7 @@ class CatalogFilters {
   private paginationContainer: HTMLElement | null = null;
   private toolbarCount: HTMLElement | null = null;
   private sortSelect: HTMLSelectElement | null = null;
+  private searchForm: HTMLFormElement | null = null;
   private currentUrl: string = window.location.href;
   private abortController: AbortController | null = null;
 
@@ -27,6 +28,9 @@ class CatalogFilters {
     this.sortSelect = document.getElementById(
       "catalog-sort-select",
     ) as HTMLSelectElement | null;
+    this.searchForm = document.getElementById(
+      "catalog-search-form",
+    ) as HTMLFormElement | null;
 
     if (!this.gridContainer) return;
 
@@ -53,6 +57,44 @@ class CatalogFilters {
     this.sortSelect?.addEventListener("change", () => {
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.set("sort", this.sortSelect?.value || "created-desc");
+      nextUrl.searchParams.delete("page");
+      this.applyFilters(nextUrl);
+    });
+
+    this.searchForm?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const nextUrl = new URL(window.location.href);
+      const formData = new FormData(this.searchForm as HTMLFormElement);
+      const query = String(formData.get("q") || "").trim();
+
+      if (query) {
+        nextUrl.searchParams.set("q", query);
+      } else {
+        nextUrl.searchParams.delete("q");
+      }
+
+      nextUrl.searchParams.delete("page");
+      this.applyFilters(nextUrl);
+    });
+
+    document.addEventListener("submit", (e) => {
+      const target = e.target;
+      if (!(target instanceof HTMLFormElement)) return;
+      if (!target.matches("[data-catalog-filter-form]")) return;
+
+      e.preventDefault();
+      const nextUrl = new URL(window.location.href);
+      const formData = new FormData(target);
+      const managedFields = ["minPrice", "maxPrice", "showSoldOut"];
+
+      managedFields.forEach((field) => nextUrl.searchParams.delete(field));
+      formData.forEach((value, key) => {
+        const normalized = String(value).trim();
+        if (normalized) {
+          nextUrl.searchParams.set(key, normalized);
+        }
+      });
+
       nextUrl.searchParams.delete("page");
       this.applyFilters(nextUrl);
     });
@@ -128,6 +170,7 @@ class CatalogFilters {
     if (this.sortSelect) {
       this.sortSelect.value = url.searchParams.get("sort") || "created-desc";
     }
+    this.syncFormControls(url);
 
     this.currentUrl = url.href;
 
@@ -145,6 +188,29 @@ class CatalogFilters {
     }
   }
 
+  private syncFormControls(url: URL) {
+    const searchInput = document.getElementById(
+      "catalog-search-input",
+    ) as HTMLInputElement | null;
+    if (searchInput) {
+      searchInput.value = url.searchParams.get("q") || "";
+    }
+
+    const minPrice = document.querySelector(
+      'input[name="minPrice"]',
+    ) as HTMLInputElement | null;
+    const maxPrice = document.querySelector(
+      'input[name="maxPrice"]',
+    ) as HTMLInputElement | null;
+    const showSoldOut = document.querySelector(
+      'input[name="showSoldOut"]',
+    ) as HTMLInputElement | null;
+
+    if (minPrice) minPrice.value = url.searchParams.get("minPrice") || "";
+    if (maxPrice) maxPrice.value = url.searchParams.get("maxPrice") || "";
+    if (showSoldOut) showSoldOut.checked = url.searchParams.get("showSoldOut") === "true";
+  }
+
 
   private renderError() {
     if (!this.gridContainer) return;
@@ -156,13 +222,13 @@ class CatalogFilters {
     const title = document.createElement("h2");
     title.className =
       "text-red-500 font-black text-xs tracking-[0.5em] uppercase";
-    title.textContent = "FAILED TO LOAD COLLECTIBLES";
+    title.textContent = "No se pudo cargar el catálogo";
 
     const button = document.createElement("button");
     button.type = "button";
     button.className =
       "mt-8 text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em] border border-zinc-900 px-6 py-3 hover:border-amber-500 hover:text-amber-500 transition-all";
-    button.textContent = "RETRY CONNECTION";
+    button.textContent = "Reintentar";
     button.addEventListener("click", () => window.location.reload());
 
     wrapper.append(title, button);

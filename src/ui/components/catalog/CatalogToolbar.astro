@@ -2,59 +2,85 @@
 interface Props {
   resultCount: number;
   currentSort: string;
+  currentQuery?: string;
   selectId?: string;
   sortOptions?: { value: string; label: string }[];
 }
 const {
   resultCount,
   currentSort,
+  currentQuery = "",
   selectId = "catalog-sort-select",
   sortOptions = [
-    { value: "created-desc", label: "LATEST RELEASE" },
-    { value: "price-asc", label: "PRICE ASCENDING" },
-    { value: "price-desc", label: "PRICE DESCENDING" },
-    { value: "name-asc", label: "CHARACTER NAME" },
+    { value: "created-desc", label: "Más recientes" },
+    { value: "price-asc", label: "Precio menor a mayor" },
+    { value: "price-desc", label: "Precio mayor a menor" },
+    { value: "name-asc", label: "Nombre A-Z" },
   ],
 } = Astro.props;
 ---
 
 <div
-  class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-zinc-900 pb-4 mb-8"
+  class="flex flex-col gap-4 border-b border-zinc-900 pb-5 mb-8"
 >
-  <div
-    class="text-zinc-500 text-[11px] font-black uppercase tracking-widest mb-4 sm:mb-0"
+  <form
+    id="catalog-search-form"
+    action="/catalog"
+    method="get"
+    class="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3"
   >
-    SHOWING <span id="catalog-result-count" class="text-white"
-      >{resultCount}</span
-    > RESULTS
-  </div>
-
-  <div class="flex items-center gap-4 w-full sm:w-auto">
-    <span
-      class="text-zinc-500 text-[10px] font-black uppercase tracking-widest hidden sm:inline-block"
-      >SORT BY:</span
+    <label class="sr-only" for="catalog-search-input">Buscar productos</label>
+    <input
+      id="catalog-search-input"
+      name="q"
+      type="search"
+      value={currentQuery}
+      placeholder="Buscar por producto, personaje o colección"
+      class="w-full bg-black border border-zinc-800 text-white text-sm font-bold px-4 py-3 focus:outline-none focus:border-amber-500 placeholder:text-zinc-600"
+    />
+    <button
+      type="submit"
+      class="inline-flex items-center justify-center border border-amber-500 bg-amber-500 text-black text-[11px] font-black uppercase tracking-widest px-6 py-3 hover:bg-white hover:border-white transition-colors"
     >
-    <div class="relative w-full sm:w-auto">
-      <select
-        id={selectId}
-        class="w-full sm:w-auto bg-black border border-zinc-800 text-white text-[11px] font-black uppercase tracking-widest px-4 py-3 hover:border-amber-500 transition-colors focus:outline-none focus:border-amber-500 appearance-none cursor-pointer pr-10"
+      Buscar
+    </button>
+  </form>
+
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div
+      class="text-zinc-500 text-[11px] font-black uppercase tracking-widest"
+    >
+      <span id="catalog-result-count" class="text-white">{resultCount}</span>
+      productos encontrados
+    </div>
+
+    <div class="flex items-center gap-4 w-full sm:w-auto">
+      <span
+        class="text-zinc-500 text-[10px] font-black uppercase tracking-widest hidden sm:inline-block"
+        >Ordenar:</span
       >
-        {
-          sortOptions.map((option) => (
-            <option value={option.value} selected={currentSort === option.value}>
-              {option.label}
-            </option>
-          ))
-        }
-      </select>
-      <div
-        class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-500"
-      >
-        <svg class="w-3 h-3 fill-current" viewBox="0 0 20 20"
-          ><path
-            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-          ></path>
-        </svg>
+      <div class="relative w-full sm:w-auto">
+        <select
+          id={selectId}
+          class="w-full sm:w-auto bg-black border border-zinc-800 text-white text-[11px] font-black uppercase tracking-widest px-4 py-3 hover:border-amber-500 transition-colors focus:outline-none focus:border-amber-500 appearance-none cursor-pointer pr-10"
+        >
+          {
+            sortOptions.map((option) => (
+              <option value={option.value} selected={currentSort === option.value}>
+                {option.label}
+              </option>
+            ))
+          }
+        </select>
+        <div
+          class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-zinc-500"
+        >
+          <svg class="w-3 h-3 fill-current" viewBox="0 0 20 20"
+            ><path
+              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+            ></path>
+          </svg>
+        </div>
       </div>
     </div>
   </div>

@@ -44,6 +44,12 @@ const toPositiveInt = (value: unknown, fallback: number): number => {
   return normalized > 0 ? normalized : fallback;
 };
 
+const toPositiveMoney = (value: unknown): number | undefined => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return undefined;
+  return parsed >= 0 ? parsed : undefined;
+};
+
 const resolveSort = (sort?: string): CatalogSort => {
   const allowed: CatalogSort[] = [
     "created-desc",
@@ -66,10 +72,16 @@ const buildOrderBy = (sort: CatalogSort): Prisma.ProductOrderByWithRelationInput
 const buildWhereClause = (
   filters?: ProductFilters,
 ): Prisma.ProductWhereInput => {
+  const showSoldOut = filters?.showSoldOut === true;
   const whereClause: Prisma.ProductWhereInput = {
     deletedAt: null,
     status: {
-      in: publishedCatalogStatuses,
+      in: showSoldOut
+        ? [
+            ...publishedCatalogStatuses,
+            toPrismaProductStatus(ProductStatus.OUT_OF_STOCK),
+          ]
+        : publishedCatalogStatuses,
     },
   };
 
@@ -78,6 +90,31 @@ const buildWhereClause = (
     Object.values(ProductStatus).includes(filters.status as ProductStatus)
   ) {
     whereClause.status = toPrismaProductStatus(filters.status as ProductStatus);
+  }
+
+  const search = filters?.q?.trim();
+  if (search) {
+    whereClause.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { collection: { name: { contains: search, mode: "insensitive" } } },
+      { category: { name: { contains: search, mode: "insensitive" } } },
+      {
+        characters: {
+          some: {
+            character: { name: { contains: search, mode: "insensitive" } },
+          },
+        },
+      },
+    ];
+  }
+
+  const minPrice = toPositiveMoney(filters?.minPrice);
+  const maxPrice = toPositiveMoney(filters?.maxPrice);
+  if (minPrice !== undefined || maxPrice !== undefined) {
+    whereClause.price = {
+      ...(minPrice !== undefined ? { gte: minPrice } : {}),
+      ...(maxPrice !== undefined ? { lte: maxPrice } : {}),
+    };
   }
 
   if (filters?.category) {

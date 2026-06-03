@@ -2,26 +2,20 @@
 import CatalogResults from "@/ui/components/catalog/CatalogResults.astro";
 import { CatalogQueryService } from "@/application/services/CatalogQueryService";
 import { GetCatalogProductsUseCase } from "@/application/use-cases/catalog/GetCatalogProductsUseCase";
+import { GetCatalogMetadataUseCase } from "@/application/use-cases/catalog/GetCatalogMetadataUseCase";
 import { PrismaCatalogQueryRepository } from "@/infrastructure/database/PrismaCatalogQueryRepository";
-import { parsePageParams } from "@/shared/listing/pagination";
+import { parseCatalogFilters } from "@/shared/listing/catalogQuery";
 import { buildPageUrl } from "@/shared/listing/queryParams";
 import { toCatalogProductCardProps } from "@/ui/components/catalog/productCardViewModel";
 
 const params = Astro.url.searchParams;
-const pageParams = parsePageParams(params, { page: 1, pageSize: 24 });
-const currentFilters = {
-  category: params.get("category") || undefined,
-  collection: params.get("collection") || undefined,
-  character: params.get("character") || undefined,
-  status: params.get("status") || undefined,
-  sort: params.get("sort") || "created-desc",
-  page: pageParams.page,
-  pageSize: pageParams.pageSize,
-};
+const currentFilters = parseCatalogFilters(params, { page: 1, pageSize: 24 });
 
 const queryService = new CatalogQueryService(new PrismaCatalogQueryRepository());
 const useCase = new GetCatalogProductsUseCase(queryService);
+const metadataUseCase = new GetCatalogMetadataUseCase(queryService);
 const catalogResult = await useCase.execute(currentFilters);
+const metadata = await metadataUseCase.execute();
 
 const products = catalogResult.items.map(toCatalogProductCardProps);
 
@@ -33,5 +27,7 @@ const getPageUrl = (page: number) =>
   catalogResult={catalogResult}
   products={products}
   getPageUrl={getPageUrl}
+  metadata={metadata}
+  currentFilters={currentFilters}
   includeCountMarker={true}
 />

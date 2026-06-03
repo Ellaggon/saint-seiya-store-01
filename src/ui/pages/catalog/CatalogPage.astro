@@ -10,7 +10,7 @@ import CatalogResults from "../../components/catalog/CatalogResults.astro";
 import { CatalogQueryService } from "../../../application/services/CatalogQueryService";
 import { GetCatalogPageDataUseCase } from "../../../application/use-cases/catalog/GetCatalogPageDataUseCase";
 import { PrismaCatalogQueryRepository } from "../../../infrastructure/database/PrismaCatalogQueryRepository";
-import { parsePageParams } from "@/shared/listing/pagination";
+import { parseCatalogFilters } from "@/shared/listing/catalogQuery";
 import { buildPageUrl } from "@/shared/listing/queryParams";
 import { toCatalogProductCardProps } from "../../components/catalog/productCardViewModel";
 
@@ -20,16 +20,7 @@ const getCatalogPageData = new GetCatalogPageDataUseCase(queryService);
 
 // Read search params for filtering
 const params = Astro.url.searchParams;
-const pageParams = parsePageParams(params, { page: 1, pageSize: 24 });
-const currentFilters = {
-  category: params.get("category") || undefined,
-  collection: params.get("collection") || undefined,
-  character: params.get("character") || undefined,
-  status: params.get("status") || undefined,
-  sort: params.get("sort") || "created-desc",
-  page: pageParams.page,
-  pageSize: pageParams.pageSize,
-};
+const currentFilters = parseCatalogFilters(params, { page: 1, pageSize: 24 });
 
 // Execute Use Case for consolidated data fetching and caching
 const { products: catalogResult, filters: metadata } =
@@ -53,10 +44,11 @@ const getPageUrl = (page: number) =>
   buildPageUrl(Astro.url.pathname, Astro.url.origin, params, page);
 ---
 
-<MainLayout title="CATALOG - THE SANCTUARY">
+<MainLayout title="Catálogo">
   <GlobalHeroWrapper
-    title="THE SANCTUARY"
-    subtitle="SACRED ARCHIVE OF PREMIUM COLLECTIBLES."
+    title="Catálogo"
+    subtitle="Figuras disponibles y preventas seleccionadas."
+    compact={true}
   />
 
   <CatalogCategoryHero
@@ -83,12 +75,15 @@ const getPageUrl = (page: number) =>
           <CatalogToolbar
             resultCount={catalogResult.pagination.total}
             currentSort={catalogResult.sort}
+            currentQuery={currentFilters.q}
           />
 
           <CatalogResults
             catalogResult={catalogResult}
             products={products}
             getPageUrl={getPageUrl}
+            metadata={metadata}
+            currentFilters={currentFilters}
           />
         </main>
       </div>

@@ -6,6 +6,7 @@ import PreorderBadge from "../../components/preorders/PreorderBadge.astro";
 import PreorderCTA from "../../components/preorders/PreorderCTA.astro";
 import PreorderEta from "../../components/preorders/PreorderEta.astro";
 import PreorderPriceSummary from "../../components/preorders/PreorderPriceSummary.astro";
+import { formatPrice } from "@/lib/utils";
 
 interface Props {
   product: {
@@ -35,15 +36,15 @@ const preorderIsSoldOut = preorder
 const preorderIsOpen = preorder ? preorder.campaign.isOpen : false;
 
 const statusLabelMap: Record<string, string> = {
-  DRAFT: "DRAFT",
-  PUBLISHED: "PUBLISHED",
-  PRE_ORDER: "PRE-ORDER",
-  OUT_OF_STOCK: "OUT OF STOCK",
-  ARCHIVED: "ARCHIVED",
+  DRAFT: "Borrador",
+  PUBLISHED: "Disponible",
+  PRE_ORDER: "Preventa",
+  OUT_OF_STOCK: "Agotado",
+  ARCHIVED: "Archivado",
 };
 ---
 
-<MainLayout title={product ? `${product.name} | PRODUCT DETAIL` : "PRODUCT | DETAIL"}>
+<MainLayout title={product ? `${product.name} | Detalle de producto` : "Producto | Detalle"}>
   <main class="min-h-screen bg-black">
     {
       product ? (
@@ -68,7 +69,7 @@ const statusLabelMap: Record<string, string> = {
                 {product.name}
               </h1>
               <p class="text-amber-500 font-black mt-4 text-sm uppercase tracking-widest">
-                ${product.price.toFixed(2)}
+                {formatPrice(product.price)}
               </p>
             </div>
 
@@ -77,13 +78,13 @@ const statusLabelMap: Record<string, string> = {
                 {product.description}
               </p>
               <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
-                Category: <span class="text-white">{product.category ?? "N/A"}</span>
+                Categoría: <span class="text-white">{product.category ?? "N/A"}</span>
               </p>
               <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
-                Collection: <span class="text-white">{product.line ?? "N/A"}</span>
+                Colección: <span class="text-white">{product.line ?? "N/A"}</span>
               </p>
               <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
-                Characters:
+                Personajes:
                 <span class="text-white">
                   {(product.characters && product.characters.length > 0
                     ? product.characters.join(", ")
@@ -91,7 +92,7 @@ const statusLabelMap: Record<string, string> = {
                 </span>
               </p>
               <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
-                Height: <span class="text-white">{product.height} CM</span>
+                Altura: <span class="text-white">{product.height} CM</span>
               </p>
               <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
                 Material: <span class="text-white">{product.material || "N/A"}</span>
@@ -104,10 +105,10 @@ const statusLabelMap: Record<string, string> = {
                   <div class="flex items-center justify-between gap-4 border-b border-zinc-900 pb-4">
                     <div class="flex flex-col gap-2">
                       <span class="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em]">
-                        Preorder Campaign
+                        Campaña de preventa
                       </span>
                       <h2 class="text-white text-sm font-black uppercase tracking-widest">
-                        Reserved Allocation
+                        Reserva disponible
                       </h2>
                     </div>
                     <PreorderBadge
@@ -132,10 +133,10 @@ const statusLabelMap: Record<string, string> = {
                     <div class="border border-zinc-900 bg-black px-4 py-4">
                       <div class="flex items-center justify-between gap-3">
                         <span class="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em]">
-                          Full Price
+                          Precio total
                         </span>
                         <span class="text-amber-500 text-xs font-black uppercase tracking-widest">
-                          ${preorder.pricing.totalAmount.toFixed(2)}
+                          {formatPrice(preorder.pricing.totalAmount)}
                         </span>
                       </div>
                     </div>
@@ -155,8 +156,7 @@ const statusLabelMap: Record<string, string> = {
                   />
 
                   <p class="text-zinc-600 text-[9px] uppercase tracking-[0.2em]">
-                    Login required to reserve. Checkout integration will attach to this
-                    campaign flow in a later phase.
+                    Debes iniciar sesión para reservar. El pago queda asociado a esta campaña de preventa.
                   </p>
                 </section>
               )
@@ -167,10 +167,10 @@ const statusLabelMap: Record<string, string> = {
         <div class="max-w-[1280px] mx-auto px-4 py-20">
           <div class="border border-zinc-900 bg-zinc-950 px-8 py-12">
             <h1 class="text-white text-xl font-black uppercase tracking-widest">
-              Product not found
+              Producto no encontrado
             </h1>
             <p class="text-zinc-500 text-xs uppercase tracking-widest mt-4">
-              The requested product does not exist or is unavailable.
+              El producto solicitado no existe o no está disponible.
             </p>
           </div>
         </div>

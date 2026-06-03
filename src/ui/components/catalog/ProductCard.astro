@@ -4,6 +4,7 @@ import PreorderBadge from "../preorders/PreorderBadge.astro";
 import PreorderCTA from "../preorders/PreorderCTA.astro";
 import PreorderEta from "../preorders/PreorderEta.astro";
 import PreorderPriceSummary from "../preorders/PreorderPriceSummary.astro";
+import { formatPrice } from "@/lib/utils";
 
 interface Props {
   product: {
@@ -27,6 +28,13 @@ interface Props {
 const { product } = Astro.props;
 const preorder = product.preorder;
 const isPreorderSoldOut = preorder ? preorder.availableUnits <= 0 : false;
+const isPreorder = Boolean(preorder) || product.status === "PRE_ORDER";
+const isSoldOut = product.status === "OUT_OF_STOCK" || isPreorderSoldOut;
+const ctaLabel = isSoldOut
+  ? "Agotado"
+  : isPreorder
+    ? "Reservar preventa"
+    : "Ver producto";
 ---
 
 <a
@@ -45,15 +53,14 @@ const isPreorderSoldOut = preorder ? preorder.availableUnits <= 0 : false;
       loading="lazy"
     />
 
-    <!-- Badges -->
     <div class="absolute top-3 left-3 flex flex-col gap-2 z-10">
       {
         preorder ? (
           <PreorderBadge isOpen={preorder.isOpen} isSoldOut={isPreorderSoldOut} />
         ) : (
           product.status === "PRE_ORDER" && (
-            <span class="bg-[#E60012] text-white text-[10px] font-black uppercase tracking-widest px-2 py-1">
-              PRE-ORDER
+            <span class="bg-amber-500 text-black text-[10px] font-black uppercase tracking-widest px-2 py-1">
+              Preventa
             </span>
           )
         )
@@ -61,27 +68,26 @@ const isPreorderSoldOut = preorder ? preorder.availableUnits <= 0 : false;
       {
         product.status === "NEW" && (
           <span class="bg-[#E60012] text-white text-[10px] font-black uppercase tracking-widest px-2 py-1">
-            NEW
+            Nuevo
           </span>
         )
       }
       {
         product.status === "OUT_OF_STOCK" && (
           <span class="bg-zinc-800 text-zinc-400 border border-zinc-700 text-[10px] font-black uppercase tracking-widest px-2 py-1">
-            OUT OF STOCK
+            Agotado
           </span>
         )
       }
     </div>
 
-    <!-- View Details Overlay -->
     <div
       class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-20"
     >
       <span
         class="border border-amber-500 text-amber-500 text-xs font-black uppercase tracking-[0.2em] px-6 py-3 bg-black/80 backdrop-blur-sm shadow-[inset_0_0_10px_rgba(212,175,55,0.2)]"
       >
-        VIEW DETAILS
+        Ver detalles
       </span>
     </div>
   </div>
@@ -103,7 +109,7 @@ const isPreorderSoldOut = preorder ? preorder.availableUnits <= 0 : false;
         >{product.line}</span
       >
       <span class="text-amber-500 text-sm font-black uppercase tracking-widest"
-        >${product.price.toFixed(2)}</span
+        >{formatPrice(product.price)}</span
       >
     </div>
     {
@@ -122,5 +128,14 @@ const isPreorderSoldOut = preorder ? preorder.availableUnits <= 0 : false;
         </div>
       )
     }
+    <span
+      class={`mt-4 inline-flex items-center justify-center border px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-colors ${
+        isSoldOut
+          ? "border-zinc-800 text-zinc-500 bg-zinc-950"
+          : "border-amber-500 text-black bg-amber-500 group-hover:bg-white group-hover:border-white"
+      }`}
+    >
+      {ctaLabel}
+    </span>
   </div>
 </a>

@@ -10,6 +10,10 @@ interface Props {
     collection?: string;
     character?: string;
     status?: string;
+    q?: string;
+    minPrice?: number;
+    maxPrice?: number;
+    showSoldOut?: boolean;
     sort?: string;
     page?: number;
     pageSize?: number;
@@ -19,9 +23,9 @@ interface Props {
 const { metadata, currentFilters } = Astro.props;
 
 const statuses = [
-  { name: "PRE-ORDER", value: "PRE_ORDER" },
-  { name: "PUBLISHED", value: "PUBLISHED" },
-  { name: "OUT OF STOCK", value: "OUT_OF_STOCK" },
+  { name: "Disponible", value: "PUBLISHED" },
+  { name: "Preventa", value: "PRE_ORDER" },
+  { name: "Agotado", value: "OUT_OF_STOCK" },
 ];
 
 // Helper to build filter URL
@@ -43,7 +47,11 @@ const hasActiveFilters = Boolean(
   currentFilters.category ||
     currentFilters.collection ||
     currentFilters.character ||
-    currentFilters.status,
+    currentFilters.status ||
+    currentFilters.q ||
+    currentFilters.minPrice !== undefined ||
+    currentFilters.maxPrice !== undefined ||
+    currentFilters.showSoldOut,
 );
 ---
 
@@ -56,7 +64,7 @@ const hasActiveFilters = Boolean(
   >
     <span
       class="text-amber-500 font-black text-[11px] uppercase tracking-widest group-hover:text-amber-400 transition-colors"
-      >TOGGLE FILTERS</span
+      >Filtros</span
     >
     <span class="text-amber-500 text-lg leading-none">+</span>
   </label>
@@ -72,17 +80,16 @@ const hasActiveFilters = Boolean(
           data-filter-link
           class="inline-block text-amber-500 text-[9px] font-black uppercase tracking-[0.2em] border border-amber-500/30 px-4 py-2 hover:bg-amber-500 hover:text-black transition-all mb-4"
         >
-          CLEAR ALL FILTERS
+          Limpiar filtros
         </a>
       )
     }
 
-    <!-- POPULAR COLLECTIONS (Step 3) -->
     <div class="space-y-4 pt-4">
       <h4
         class="text-zinc-700 font-black text-[8px] uppercase tracking-[0.4em]"
       >
-        POPULAR ARCHIVES
+        Colecciones destacadas
       </h4>
       <div class="flex flex-wrap gap-2">
         {
@@ -103,7 +110,68 @@ const hasActiveFilters = Boolean(
       </div>
     </div>
 
-    <!-- FILTER BY LINE -->
+    <form
+      action="/catalog"
+      method="get"
+      data-catalog-filter-form
+      class="space-y-4 border border-zinc-900 bg-zinc-950 px-4 py-4"
+    >
+      {currentFilters.q && <input type="hidden" name="q" value={currentFilters.q} />}
+      {currentFilters.category && <input type="hidden" name="category" value={currentFilters.category} />}
+      {currentFilters.collection && <input type="hidden" name="collection" value={currentFilters.collection} />}
+      {currentFilters.character && <input type="hidden" name="character" value={currentFilters.character} />}
+      {currentFilters.status && <input type="hidden" name="status" value={currentFilters.status} />}
+      {currentFilters.sort && <input type="hidden" name="sort" value={currentFilters.sort} />}
+
+      <div class="flex items-center justify-between">
+        <h3 class="text-amber-500 font-black text-[10px] uppercase tracking-[0.3em]">
+          Precio
+        </h3>
+        <label class="flex items-center gap-2 text-zinc-500 text-[10px] font-black uppercase tracking-widest cursor-pointer">
+          <input
+            type="checkbox"
+            name="showSoldOut"
+            value="true"
+            checked={currentFilters.showSoldOut}
+            class="accent-amber-500"
+          />
+          Mostrar agotados
+        </label>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-2">
+          <span class="text-zinc-600 text-[9px] font-black uppercase tracking-widest">Desde Bs</span>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            name="minPrice"
+            value={currentFilters.minPrice ?? ""}
+            class="bg-black border border-zinc-800 text-white text-xs font-bold px-3 py-3 focus:outline-none focus:border-amber-500"
+          />
+        </label>
+        <label class="flex flex-col gap-2">
+          <span class="text-zinc-600 text-[9px] font-black uppercase tracking-widest">Hasta Bs</span>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            name="maxPrice"
+            value={currentFilters.maxPrice ?? ""}
+            class="bg-black border border-zinc-800 text-white text-xs font-bold px-3 py-3 focus:outline-none focus:border-amber-500"
+          />
+        </label>
+      </div>
+
+      <button
+        type="submit"
+        class="w-full border border-amber-500 text-amber-500 text-[10px] font-black uppercase tracking-widest px-4 py-3 hover:bg-amber-500 hover:text-black transition-colors"
+      >
+        Aplicar filtros
+      </button>
+    </form>
+
     <details open class="group/section">
       <summary
         class="flex items-center justify-between cursor-pointer list-none py-3 border-b border-zinc-900"
@@ -111,7 +179,7 @@ const hasActiveFilters = Boolean(
         <h3
           class="text-amber-500 font-black text-[10px] uppercase tracking-[0.3em]"
         >
-          FILTER BY LINE
+          Colección
         </h3>
         <span
           class="text-amber-500 text-xs transition-transform group-open/section:rotate-45"
@@ -167,7 +235,6 @@ const hasActiveFilters = Boolean(
       </ul>
     </details>
 
-    <!-- FILTER BY CHARACTER -->
     <details class="group/section">
       <summary
         class="flex items-center justify-between cursor-pointer list-none py-3 border-b border-zinc-900"
@@ -175,7 +242,7 @@ const hasActiveFilters = Boolean(
         <h3
           class="text-amber-500 font-black text-[10px] uppercase tracking-[0.3em]"
         >
-          FILTER BY CHARACTER
+          Personaje
         </h3>
         <span
           class="text-amber-500 text-xs transition-transform group-open/section:rotate-45"
@@ -231,7 +298,6 @@ const hasActiveFilters = Boolean(
       </ul>
     </details>
 
-    <!-- FILTER BY STATUS -->
     <details class="group/section">
       <summary
         class="flex items-center justify-between cursor-pointer list-none py-3 border-b border-zinc-900"
@@ -239,7 +305,7 @@ const hasActiveFilters = Boolean(
         <h3
           class="text-amber-500 font-black text-[10px] uppercase tracking-[0.3em]"
         >
-          FILTER BY STATUS
+          Disponibilidad
         </h3>
         <span
           class="text-amber-500 text-xs transition-transform group-open/section:rotate-45"

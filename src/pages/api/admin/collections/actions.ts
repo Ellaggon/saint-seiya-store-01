@@ -5,6 +5,30 @@ import { ArchiveCollectionUseCase } from "@/application/use-cases/admin/collecti
 import { DeleteCollectionUseCase } from "@/application/use-cases/admin/collections/DeleteCollectionUseCase";
 import { randomUUID } from "node:crypto";
 
+const redirectWithError = (
+  redirect: (
+    path: string,
+    status?: 300 | 301 | 302 | 303 | 304 | 307 | 308,
+  ) => Response,
+  path: string,
+  message: string,
+): Response => {
+  const params = new URLSearchParams({ error: message });
+  return redirect(`${path}?${params.toString()}`, 303);
+};
+
+const friendlyErrorMessage = (error: unknown): string => {
+  const message = error instanceof Error ? error.message : "Unexpected error";
+  if (
+    message.includes("Foreign key constraint") ||
+    message.includes("Product_collectionId_fkey")
+  ) {
+    return "No se puede eliminar esta colección porque tiene productos asociados. Desactívala o mueve esos productos a otra colección antes de eliminarla.";
+  }
+
+  return message;
+};
+
 export const POST: APIRoute = async ({ request, redirect, locals }) => {
   const user = locals.user;
   if (!user || user.role !== "ADMIN") {
@@ -64,9 +88,10 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
 
     return redirect("/admin/collections");
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unexpected error";
-    return new Response(JSON.stringify({ error: message }), {
-      status: 500,
-    });
+    return redirectWithError(
+      redirect,
+      "/admin/collections",
+      friendlyErrorMessage(error),
+    );
   }
 };

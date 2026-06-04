@@ -6,6 +6,7 @@ import CategoryList from "@/ui/components/admin/CategoryList.astro";
 const repo = new PrismaProductRepository();
 const listUseCase = new ListCategoriesUseCase(repo);
 const categories = await listUseCase.execute();
+const error = Astro.url.searchParams.get("error");
 ---
 
-<CategoryList categories={categories} />
+<CategoryList categories={categories} error={error} />

@@ -11,8 +11,11 @@ export function slugify(text: string): string {
 }
 
 export function formatPrice(amount: number | string): string {
-  return new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "EUR",
-  }).format(Number(amount));
+  const value = Number(amount);
+  const formatted = new Intl.NumberFormat("es-BO", {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(value) ? value : 0);
+
+  return `Bs ${formatted}`;
 }

@@ -2,10 +2,14 @@ import type { Product } from "../entities/Product";
 import type { ProductStatus } from "../entities/Product";
 
 export interface ProductFilters {
+  q?: string;
   category?: string;
   collection?: string;
   character?: string;
   status?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  showSoldOut?: boolean;
   sort?: CatalogSort;
   page?: number;
   pageSize?: number;

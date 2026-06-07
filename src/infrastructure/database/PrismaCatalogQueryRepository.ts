@@ -1,4 +1,10 @@
-import type { Prisma, ProductStatus as PrismaProductStatus } from "@prisma/client";
+import type {
+  Prisma,
+  ProductStatus as PrismaProductStatus,
+  PreorderCampaignStatus as PrismaPreorderCampaignStatus,
+  PreorderDepositType as PrismaPreorderDepositType,
+  PreorderReservationStatus as PrismaPreorderReservationStatus,
+} from "@prisma/client";
 import { ProductStatus } from "@/domain/entities/Product";
 import type {
   CatalogMetadataDTO,
@@ -10,6 +16,7 @@ import type {
   CatalogSort,
   ProductFilters,
 } from "@/domain/repositories/ProductRepository";
+import { resolveDisplayAvailability } from "@/shared/catalog/displayAvailability";
 import { prisma } from "./prisma";
 
 const DEFAULT_PAGE_SIZE = 24;
@@ -21,10 +28,28 @@ type CatalogProductRecord = {
   name: string;
   price: unknown;
   imageUrl: string | null;
+  stock: number;
   status: ProductStatus;
   collection: { name: string; slug: string } | null;
   characters: {
     character: { name: string; slug: string };
+  }[];
+  preorderCampaigns: {
+    id: string;
+    status: PrismaPreorderCampaignStatus;
+    totalSlots: number;
+    depositType: PrismaPreorderDepositType;
+    depositValue: unknown;
+    opensAt: Date | null;
+    closesAt: Date | null;
+    releaseDate: Date | null;
+    etaStart: Date | null;
+    etaEnd: Date | null;
+    etaLabel: string | null;
+    reservations: {
+      quantity: number;
+      status: PrismaPreorderReservationStatus;
+    }[];
   }[];
 };
 
@@ -35,6 +60,13 @@ const toPrismaProductStatus = (
 const publishedCatalogStatuses = [
   toPrismaProductStatus(ProductStatus.PUBLISHED),
   toPrismaProductStatus(ProductStatus.PRE_ORDER),
+];
+
+const activeReservationStatuses: PrismaPreorderReservationStatus[] = [
+  "PENDING",
+  "CONFIRMED",
+  "PARTIALLY_PAID",
+  "PAID",
 ];
 
 const toPositiveInt = (value: unknown, fallback: number): number => {
@@ -56,6 +88,7 @@ const resolveSort = (sort?: string): CatalogSort => {
     "price-asc",
     "price-desc",
     "name-asc",
+    "eta-asc",
   ];
   return allowed.includes(sort as CatalogSort)
     ? (sort as CatalogSort)
@@ -68,6 +101,15 @@ const buildOrderBy = (sort: CatalogSort): Prisma.ProductOrderByWithRelationInput
   if (sort === "name-asc") return [{ name: "asc" }, { createdAt: "desc" }];
   return [{ createdAt: "desc" }];
 };
+
+const buildOpenCampaignWhere = (
+  now: Date,
+): Prisma.PreorderCampaignWhereInput => ({
+  deletedAt: null,
+  status: "ACTIVE",
+  OR: [{ opensAt: null }, { opensAt: { lte: now } }],
+  AND: [{ OR: [{ closesAt: null }, { closesAt: { gte: now } }] }],
+});
 
 const buildWhereClause = (
   filters?: ProductFilters,
@@ -90,6 +132,12 @@ const buildWhereClause = (
     Object.values(ProductStatus).includes(filters.status as ProductStatus)
   ) {
     whereClause.status = toPrismaProductStatus(filters.status as ProductStatus);
+  }
+
+  if (filters?.openPreorders || filters?.sort === "eta-asc") {
+    whereClause.preorderCampaigns = {
+      some: buildOpenCampaignWhere(new Date()),
+    };
   }
 
   const search = filters?.q?.trim();
@@ -136,20 +184,132 @@ const buildWhereClause = (
   return whereClause;
 };
 
-const toCatalogProductDTO = (product: CatalogProductRecord): CatalogProductDTO => ({
-  id: product.id,
-  name: product.name,
-  price: Number(product.price),
-  imageUrl: product.imageUrl,
-  character: product.characters[0]?.character.name,
-  line: product.collection?.name,
-  status: product.status,
+const calculateDepositAmount = (
+  price: number,
+  depositType: PrismaPreorderDepositType,
+  depositValue: unknown,
+): number => {
+  const value = Number(depositValue);
+  if (!Number.isFinite(value)) return 0;
+  if (depositType === "FULL") return price;
+  if (depositType === "FIXED") return Math.min(value, price);
+  return Math.min(price * (value / 100), price);
+};
+
+const campaignDateValue = (
+  campaign: CatalogProductRecord["preorderCampaigns"][number],
+): number => {
+  const value =
+    campaign.etaStart?.getTime() ??
+    campaign.releaseDate?.getTime() ??
+    campaign.etaEnd?.getTime();
+  return value ?? Number.MAX_SAFE_INTEGER;
+};
+
+const selectPrimaryCampaign = (
+  campaigns: CatalogProductRecord["preorderCampaigns"],
+) =>
+  [...campaigns].sort((a, b) => campaignDateValue(a) - campaignDateValue(b))[0];
+
+const toCatalogProductDTO = (product: CatalogProductRecord): CatalogProductDTO => {
+  const price = Number(product.price);
+  const campaign = selectPrimaryCampaign(product.preorderCampaigns);
+  const reservedUnits =
+    campaign?.reservations.reduce((total, reservation) => {
+      if (!activeReservationStatuses.includes(reservation.status)) {
+        return total;
+      }
+      return total + reservation.quantity;
+    }, 0) ?? 0;
+  const availableUnits = campaign
+    ? Math.max(campaign.totalSlots - reservedUnits, 0)
+    : 0;
+
+  const preorder = campaign
+    ? {
+        campaignId: campaign.id,
+        etaLabel: campaign.etaLabel,
+        etaStart: campaign.etaStart?.toISOString() ?? null,
+        releaseDate: campaign.releaseDate?.toISOString() ?? null,
+        availableUnits,
+        totalUnits: campaign.totalSlots,
+        depositAmount: calculateDepositAmount(
+          price,
+          campaign.depositType,
+          campaign.depositValue,
+        ),
+        isOpen: availableUnits > 0,
+      }
+    : undefined;
+
+  return {
+    id: product.id,
+    name: product.name,
+    price,
+    imageUrl: product.imageUrl,
+    character: product.characters[0]?.character.name,
+    line: product.collection?.name,
+    status: product.status,
+    displayAvailability: resolveDisplayAvailability({
+      status: product.status,
+      stock: product.stock,
+      preorder,
+    }),
+    preorder,
+  };
+};
+
+const productSelect = (
+  now: Date,
+): Prisma.ProductSelect => ({
+  id: true,
+  name: true,
+  price: true,
+  imageUrl: true,
+  stock: true,
+  status: true,
+  collection: {
+    select: { name: true, slug: true },
+  },
+  characters: {
+    select: {
+      character: {
+        select: { name: true, slug: true },
+      },
+    },
+  },
+  preorderCampaigns: {
+    where: buildOpenCampaignWhere(now),
+    select: {
+      id: true,
+      status: true,
+      totalSlots: true,
+      depositType: true,
+      depositValue: true,
+      opensAt: true,
+      closesAt: true,
+      releaseDate: true,
+      etaStart: true,
+      etaEnd: true,
+      etaLabel: true,
+      reservations: {
+        where: {
+          status: { in: activeReservationStatuses },
+        },
+        select: {
+          quantity: true,
+          status: true,
+        },
+      },
+    },
+  },
 });
 
 export class PrismaCatalogQueryRepository implements CatalogQueryRepository {
   async listCatalogProducts(
     filters?: ProductFilters,
   ): Promise<CatalogProductsResponseDTO> {
+    const now = new Date();
     const page = toPositiveInt(filters?.page, 1);
     const requestedPageSize = toPositiveInt(filters?.pageSize, DEFAULT_PAGE_SIZE);
     const pageSize = Math.min(
@@ -159,28 +319,70 @@ export class PrismaCatalogQueryRepository implements CatalogQueryRepository {
     const sort = resolveSort(filters?.sort);
     const whereClause = buildWhereClause(filters);
 
+    if (sort === "eta-asc") {
+      const campaigns = await prisma.preorderCampaign.findMany({
+        where: {
+          ...buildOpenCampaignWhere(now),
+          product: whereClause,
+        },
+        select: {
+          productId: true,
+        },
+        orderBy: [
+          { etaStart: { sort: "asc", nulls: "last" } },
+          { releaseDate: { sort: "asc", nulls: "last" } },
+          { createdAt: "desc" },
+        ],
+      });
+      const orderedProductIds = [
+        ...new Set(campaigns.map((campaign) => campaign.productId)),
+      ];
+      const total = orderedProductIds.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(page, totalPages);
+      const pageIds = orderedProductIds.slice(
+        (safePage - 1) * pageSize,
+        safePage * pageSize,
+      );
+      const products = pageIds.length
+        ? await prisma.product.findMany({
+            where: { id: { in: pageIds } },
+            select: productSelect(now),
+          })
+        : [];
+      const productMap = new Map(
+        products.map((product) => [
+          product.id,
+          product as unknown as CatalogProductRecord,
+        ]),
+      );
+
+      return {
+        items: pageIds
+          .map((id) => productMap.get(id))
+          .filter((product): product is CatalogProductRecord => Boolean(product))
+          .map((product) =>
+            toCatalogProductDTO({
+              ...product,
+              status: product.status as ProductStatus,
+            }),
+          ),
+        pagination: {
+          page: safePage,
+          pageSize,
+          total,
+          totalPages,
+        },
+        sort,
+      };
+    }
+
     const total = await prisma.product.count({ where: whereClause });
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, totalPages);
     const products = await prisma.product.findMany({
       where: whereClause,
-      select: {
-        id: true,
-        name: true,
-        price: true,
-        imageUrl: true,
-        status: true,
-        collection: {
-          select: { name: true, slug: true },
-        },
-        characters: {
-          select: {
-            character: {
-              select: { name: true, slug: true },
-            },
-          },
-        },
-      },
+      select: productSelect(now),
       orderBy: buildOrderBy(sort),
       skip: (safePage - 1) * pageSize,
       take: pageSize,
@@ -189,7 +391,7 @@ export class PrismaCatalogQueryRepository implements CatalogQueryRepository {
     return {
       items: products.map((product) =>
         toCatalogProductDTO({
-          ...product,
+          ...(product as unknown as CatalogProductRecord),
           status: product.status as ProductStatus,
         }),
       ),

@@ -3,10 +3,23 @@ interface Props {
   href?: string;
   isOpen: boolean;
   isSoldOut?: boolean;
+  productId?: string;
+  campaignId?: string;
 }
 
-const { href, isOpen, isSoldOut = false } = Astro.props;
+const {
+  href,
+  isOpen,
+  isSoldOut = false,
+  productId,
+  campaignId,
+} = Astro.props;
 const disabled = !isOpen || isSoldOut;
+const trackingAttrs = {
+  "data-conversion-event": "preorder_cta_click",
+  "data-product-id": productId,
+  "data-campaign-id": campaignId,
+};
 ---
 
 {
@@ -17,12 +30,16 @@ const disabled = !isOpen || isSoldOut;
   ) : href ? (
     <a
       href={href}
+      {...trackingAttrs}
       class="block border border-amber-500 text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-3 text-center hover:bg-amber-500 hover:text-black transition-all"
     >
       Reservar
     </a>
   ) : (
-    <span class="block border border-amber-500 text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-3 text-center">
+    <span
+      {...trackingAttrs}
+      class="block border border-amber-500 text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-3 text-center"
+    >
       Reservar
     </span>
   )

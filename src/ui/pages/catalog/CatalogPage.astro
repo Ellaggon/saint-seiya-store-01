@@ -27,6 +27,27 @@ const { products: catalogResult, filters: metadata } =
   await getCatalogPageData.execute(currentFilters);
 
 const products = catalogResult.items.map(toCatalogProductCardProps);
+const catalogStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Catálogo Saint Seiya Store",
+  itemListElement: products.map((product, index) => ({
+    "@type": "ListItem",
+    position: (catalogResult.pagination.page - 1) * catalogResult.pagination.pageSize + index + 1,
+    item: {
+      "@type": "Product",
+      name: product.name,
+      image: product.image,
+      url: new URL(`/product/${product.id}`, Astro.url.origin).toString(),
+      offers: {
+        "@type": "Offer",
+        priceCurrency: "BOB",
+        price: product.price,
+        availability: product.displayAvailability.schemaAvailability,
+      },
+    },
+  })),
+};
 
 // Helper to build category URL
 const getCategoryUrl = (slug?: string) => {
@@ -44,7 +65,11 @@ const getPageUrl = (page: number) =>
   buildPageUrl(Astro.url.pathname, Astro.url.origin, params, page);
 ---
 
-<MainLayout title="Catálogo">
+<MainLayout
+  title="Catálogo"
+  description="Catálogo de figuras Saint Seiya disponibles y preventas activas en Bolivianos."
+  structuredData={catalogStructuredData}
+>
   <GlobalHeroWrapper
     title="Catálogo"
     subtitle="Figuras disponibles y preventas seleccionadas."

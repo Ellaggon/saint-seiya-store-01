@@ -10,6 +10,7 @@ export interface ProductFilters {
   minPrice?: number;
   maxPrice?: number;
   showSoldOut?: boolean;
+  openPreorders?: boolean;
   sort?: CatalogSort;
   page?: number;
   pageSize?: number;
@@ -19,7 +20,8 @@ export type CatalogSort =
   | "created-desc"
   | "price-asc"
   | "price-desc"
-  | "name-asc";
+  | "name-asc"
+  | "eta-asc";
 
 export interface CatalogMetadata {
   categories: {

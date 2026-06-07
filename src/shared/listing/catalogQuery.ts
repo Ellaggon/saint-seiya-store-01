@@ -10,6 +10,7 @@ export const catalogSorts = [
   "price-asc",
   "price-desc",
   "name-asc",
+  "eta-asc",
 ] as const satisfies readonly CatalogSort[];
 
 const toPositiveMoney = (value: string | null): number | undefined => {
@@ -31,6 +32,7 @@ export const parseCatalogFilters = (
   minPrice: toPositiveMoney(params.get("minPrice")),
   maxPrice: toPositiveMoney(params.get("maxPrice")),
   showSoldOut: params.get("showSoldOut") === "true",
+  openPreorders: params.get("openPreorders") === "true",
   sort: resolveSort(params.get("sort"), catalogSorts, "created-desc"),
   ...parsePageParams(params, pageDefaults),
 });

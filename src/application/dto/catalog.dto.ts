@@ -1,5 +1,6 @@
 import type { ProductStatus } from "../../domain/entities/Product";
 import type { CatalogSort } from "../../domain/repositories/ProductRepository";
+import type { DisplayAvailability } from "@/shared/catalog/displayAvailability";
 
 export interface ProductDTO {
   id: string;
@@ -78,6 +79,17 @@ export interface CatalogProductDTO {
   character?: string;
   line?: string;
   status: ProductStatus;
+  displayAvailability?: DisplayAvailability;
+  preorder?: {
+    campaignId: string;
+    etaLabel?: string | null;
+    etaStart?: string | null;
+    releaseDate?: string | null;
+    availableUnits: number;
+    totalUnits: number;
+    depositAmount: number;
+    isOpen: boolean;
+  };
 }
 
 export interface CatalogPaginationDTO {

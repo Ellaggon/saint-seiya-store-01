@@ -36,6 +36,11 @@ const statusLabels: Record<string, string> = {
   PRE_ORDER: "Preventa",
   OUT_OF_STOCK: "Agotado",
 };
+const availabilityLabels: Record<string, string> = {
+  available: "Disponible ahora",
+  "preorder-open": "Preventas abiertas",
+  "out-of-stock": "Agotados",
+};
 
 const findLabel = (
   items: { slug: string; name: string }[] | undefined,
@@ -67,10 +72,12 @@ const activeChips = [
         label: findLabel(metadata?.collections, currentFilters.collection),
       }
     : null,
-  currentFilters.character
+  currentFilters.availability
     ? {
-        key: "character",
-        label: findLabel(metadata?.characters, currentFilters.character),
+        key: "availability",
+        label:
+          availabilityLabels[currentFilters.availability] ||
+          currentFilters.availability,
       }
     : null,
   currentFilters.status

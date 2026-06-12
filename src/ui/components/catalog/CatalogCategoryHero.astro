@@ -16,79 +16,38 @@ interface Props {
 const { categories, currentCategory, getCategoryUrl } = Astro.props;
 ---
 
-<div class="bg-black py-10 md:py-12 border-b border-zinc-900 border-t border-zinc-900">
-  <div class="max-w-[1400px] mx-auto px-6">
-    <div class="flex flex-col gap-8">
-      <div class="relative overflow-hidden">
-        <div class="flex flex-col gap-3 text-center md:text-left">
-          <p class="text-amber-500 text-[10px] font-black uppercase tracking-[0.3em]">Comprar por categoría</p>
-          <h2 class="text-2xl md:text-4xl font-black text-white uppercase tracking-tight leading-none">Encuentra tu línea de colección</h2>
-          <div class="w-12 h-1 bg-amber-500 mx-auto md:mx-0 mt-2"></div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<div class="bg-black border-y border-zinc-900">
+  <div class="max-w-[1400px] mx-auto px-4 md:px-6 py-5">
+    <div class="flex items-center gap-3 overflow-x-auto pb-1">
+      <span class="text-zinc-500 text-sm font-medium flex-shrink-0">
+        Categorías
+      </span>
+      <a
+        href={getCategoryUrl()}
+        data-filter-link
+        data-category-card
+        class={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+          !currentCategory
+            ? "bg-white text-black"
+            : "bg-zinc-950 text-zinc-400 hover:text-white"
+        }`}
+      >
+        Todas
+      </a>
+      {categories.map((cat) => (
         <a
-          href={getCategoryUrl()}
+          href={getCategoryUrl(cat.slug)}
           data-filter-link
           data-category-card
-          class={`relative group overflow-hidden bg-zinc-950 border aspect-[16/9] transition-all duration-300 flex flex-col items-center justify-center text-center gap-6 ${
-            !currentCategory
-              ? "border-amber-500 bg-amber-500/5"
-              : "border-zinc-900 hover:border-amber-500"
+          class={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+            currentCategory === cat.slug
+              ? "bg-white text-black"
+              : "bg-zinc-950 text-zinc-400 hover:text-white"
           }`}
         >
-          <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-10"></div>
-
-          <div class="relative z-20 flex flex-col items-center gap-3 p-6">
-            <span class={`text-lg font-black uppercase tracking-widest transition-colors ${
-              !currentCategory ? "text-amber-500" : "text-white group-hover:text-amber-500"
-            }`}>
-              Todas
-            </span>
-            <div class={`h-px bg-amber-500/30 transition-all duration-300 ${
-              !currentCategory ? "w-16 bg-amber-500" : "w-10 group-hover:w-16 group-hover:bg-amber-500"
-            }`}></div>
-            <p class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest">
-              Ver catálogo completo
-            </p>
-          </div>
+          {cat.name}
         </a>
-
-        {categories.map((cat) => (
-          <a
-            href={getCategoryUrl(cat.slug)}
-            data-filter-link
-            data-category-card
-            class={`relative group overflow-hidden bg-zinc-950 border aspect-[16/9] transition-all duration-300 flex flex-col items-center justify-center text-center ${
-              currentCategory === cat.slug
-                ? "border-amber-500"
-                : "border-zinc-900 hover:border-amber-500"
-            }`}
-          >
-            <div
-              class="absolute inset-0 z-0 bg-cover bg-center transition-transform duration-500 ease-out group-hover:scale-105 parallax-bg"
-              style={cat.imageUrl ? `background-image: url(${cat.imageUrl});` : `background: linear-gradient(to top, #09090b, #18181b);`}
-            ></div>
-
-            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-80 z-10 group-hover:opacity-90 transition-opacity"></div>
-            
-            <div class="relative z-20 flex flex-col items-center gap-3 p-6">
-              <span class={`text-lg md:text-xl font-black uppercase tracking-widest transition-colors text-center drop-shadow-2xl ${
-                currentCategory === cat.slug ? "text-amber-500" : "text-white group-hover:text-amber-500"
-              }`}>
-                {cat.name}
-              </span>
-              
-              <div class={`h-px transition-all duration-300 ${
-                currentCategory === cat.slug ? "w-16 bg-amber-500" : "w-10 bg-zinc-700 group-hover:w-16 group-hover:bg-amber-500"
-              }`}></div>
-              
-              <span class="text-zinc-500 text-[10px] font-black uppercase tracking-widest group-hover:text-zinc-300 transition-colors">Ver productos</span>
-            </div>
-          </a>
-        ))}
-      </div>
+      ))}
     </div>
   </div>
 </div>
@@ -111,9 +70,3 @@ const { categories, currentCategory, getCategoryUrl } = Astro.props;
     }
   });
 </script>
-
-<style>
-  .aspect-\[16\/9\] {
-    aspect-ratio: 16 / 9;
-  }
-</style>

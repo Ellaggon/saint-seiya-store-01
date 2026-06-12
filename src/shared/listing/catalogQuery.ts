@@ -27,7 +27,7 @@ export const parseCatalogFilters = (
   q: params.get("q")?.trim() || undefined,
   category: params.get("category") || undefined,
   collection: params.get("collection") || undefined,
-  character: params.get("character") || undefined,
+  availability: params.get("availability") || undefined,
   status: params.get("status") || undefined,
   minPrice: toPositiveMoney(params.get("minPrice")),
   maxPrice: toPositiveMoney(params.get("maxPrice")),

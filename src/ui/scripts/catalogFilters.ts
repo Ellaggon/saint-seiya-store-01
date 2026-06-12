@@ -291,7 +291,12 @@ class CatalogFilters {
       if (link.hasAttribute("data-page-link")) return;
 
       const href = new URL(link.href);
-      const isActive = ["collection", "character", "category", "status"].some(
+      const isActive = [
+        "availability",
+        "collection",
+        "category",
+        "status",
+      ].some(
         (key) =>
           href.searchParams.has(key) &&
           href.searchParams.get(key) === url.searchParams.get(key),

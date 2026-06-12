@@ -5,25 +5,11 @@ import type { CatalogProductsResponseDTO } from "@/application/dto/catalog.dto";
 import type { CatalogMetadataDTO } from "@/application/dto/catalog.dto";
 import type { ProductFilters } from "@/domain/repositories/ProductRepository";
 import { formatPrice } from "@/lib/utils";
+import type { ProductCardViewModel } from "./productCardViewModel";
 
 interface Props {
   catalogResult: CatalogProductsResponseDTO;
-  products: {
-    id: string;
-    name: string;
-    character: string;
-    line: string;
-    price: number;
-    image: string;
-    status: string;
-    preorder?: {
-      etaLabel?: string | null;
-      availableUnits: number;
-      totalUnits: number;
-      depositAmount: number;
-      isOpen: boolean;
-    };
-  }[];
+  products: ProductCardViewModel[];
   getPageUrl: (page: number) => string;
   metadata?: CatalogMetadataDTO | null;
   currentFilters?: ProductFilters;
@@ -101,6 +87,9 @@ const activeChips = [
     : null,
   currentFilters.showSoldOut
     ? { key: "showSoldOut", label: "Incluye agotados" }
+    : null,
+  currentFilters.openPreorders
+    ? { key: "openPreorders", label: "Preventas abiertas" }
     : null,
 ].filter(Boolean) as { key: string; label: string }[];
 ---

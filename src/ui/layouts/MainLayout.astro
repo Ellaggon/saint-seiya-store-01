@@ -9,9 +9,18 @@ import "../styles/global.css";
  */
 interface Props {
   title: string;
+  description?: string;
+  structuredData?: Record<string, unknown> | Record<string, unknown>[];
 }
 
-const { title } = Astro.props;
+const {
+  title,
+  description = "Saint Seiya Store - Figuras coleccionables y preventas premium",
+  structuredData,
+} = Astro.props;
+const structuredDataJson = structuredData
+  ? JSON.stringify(structuredData).replace(/</g, "\\u003c")
+  : null;
 ---
 
 <!DOCTYPE html>
@@ -20,7 +29,7 @@ const { title } = Astro.props;
     <meta charset="UTF-8" />
     <meta
       name="description"
-      content="Saint Seiya Store - Figuras coleccionables y preventas premium"
+      content={description}
     />
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -33,6 +42,14 @@ const { title } = Astro.props;
       rel="stylesheet"
     />
     <title>{title} | Saint Seiya Store</title>
+    {
+      structuredDataJson && (
+        <script
+          type="application/ld+json"
+          set:html={structuredDataJson}
+        />
+      )
+    }
   </head>
   <body
     class="min-h-screen bg-black text-white selection:bg-amber-500 selection:text-black antialiased overflow-x-hidden pt-16 md:pt-20"
@@ -53,6 +70,36 @@ const { title } = Astro.props;
       ) {
         window.location.href = `/reset-password${window.location.hash}`;
       }
+    </script>
+
+    <script>
+      window.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+
+        const tracked = target.closest("[data-conversion-event]");
+        if (!(tracked instanceof HTMLElement)) return;
+
+        const eventName = tracked.dataset.conversionEvent;
+        if (!eventName) return;
+
+        const payload = {
+          event: eventName,
+          productId: tracked.dataset.productId,
+          productName: tracked.dataset.productName,
+          campaignId: tracked.dataset.campaignId,
+          availability: tracked.dataset.productAvailability,
+          href:
+            tracked instanceof HTMLAnchorElement
+              ? tracked.href
+              : tracked.getAttribute("href"),
+        };
+
+        window.dispatchEvent(
+          new CustomEvent("commerce:conversion", { detail: payload }),
+        );
+        (window as unknown as { dataLayer?: unknown[] }).dataLayer?.push(payload);
+      });
     </script>
 
     <style is:global>

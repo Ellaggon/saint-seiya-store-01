@@ -19,6 +19,18 @@ class CatalogFilters {
     this.init();
   }
 
+  private track(eventName: string, payload: Record<string, unknown> = {}) {
+    const eventPayload = {
+      event: eventName,
+      ...payload,
+    };
+
+    window.dispatchEvent(
+      new CustomEvent("commerce:conversion", { detail: eventPayload }),
+    );
+    (window as unknown as { dataLayer?: unknown[] }).dataLayer?.push(eventPayload);
+  }
+
   private init() {
     this.gridContainer = document.getElementById("catalog-grid-container");
     this.paginationContainer = document.getElementById(
@@ -58,6 +70,9 @@ class CatalogFilters {
       const nextUrl = new URL(window.location.href);
       nextUrl.searchParams.set("sort", this.sortSelect?.value || "created-desc");
       nextUrl.searchParams.delete("page");
+      this.track("catalog_sort_change", {
+        sort: this.sortSelect?.value || "created-desc",
+      });
       this.applyFilters(nextUrl);
     });
 
@@ -74,6 +89,7 @@ class CatalogFilters {
       }
 
       nextUrl.searchParams.delete("page");
+      this.track("catalog_search_submit", { query });
       this.applyFilters(nextUrl);
     });
 
@@ -85,7 +101,12 @@ class CatalogFilters {
       e.preventDefault();
       const nextUrl = new URL(window.location.href);
       const formData = new FormData(target);
-      const managedFields = ["minPrice", "maxPrice", "showSoldOut"];
+      const managedFields = [
+        "minPrice",
+        "maxPrice",
+        "showSoldOut",
+        "openPreorders",
+      ];
 
       managedFields.forEach((field) => nextUrl.searchParams.delete(field));
       formData.forEach((value, key) => {
@@ -96,6 +117,12 @@ class CatalogFilters {
       });
 
       nextUrl.searchParams.delete("page");
+      this.track("catalog_filter_submit", {
+        minPrice: nextUrl.searchParams.get("minPrice"),
+        maxPrice: nextUrl.searchParams.get("maxPrice"),
+        showSoldOut: nextUrl.searchParams.get("showSoldOut") === "true",
+        openPreorders: nextUrl.searchParams.get("openPreorders") === "true",
+      });
       this.applyFilters(nextUrl);
     });
   }
@@ -205,10 +232,14 @@ class CatalogFilters {
     const showSoldOut = document.querySelector(
       'input[name="showSoldOut"]',
     ) as HTMLInputElement | null;
+    const openPreorders = document.querySelector(
+      'input[name="openPreorders"]',
+    ) as HTMLInputElement | null;
 
     if (minPrice) minPrice.value = url.searchParams.get("minPrice") || "";
     if (maxPrice) maxPrice.value = url.searchParams.get("maxPrice") || "";
     if (showSoldOut) showSoldOut.checked = url.searchParams.get("showSoldOut") === "true";
+    if (openPreorders) openPreorders.checked = url.searchParams.get("openPreorders") === "true";
   }
 
 

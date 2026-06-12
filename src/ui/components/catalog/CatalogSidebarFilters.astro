@@ -14,6 +14,7 @@ interface Props {
     minPrice?: number;
     maxPrice?: number;
     showSoldOut?: boolean;
+    openPreorders?: boolean;
     sort?: string;
     page?: number;
     pageSize?: number;
@@ -51,7 +52,8 @@ const hasActiveFilters = Boolean(
     currentFilters.q ||
     currentFilters.minPrice !== undefined ||
     currentFilters.maxPrice !== undefined ||
-    currentFilters.showSoldOut,
+    currentFilters.showSoldOut ||
+    currentFilters.openPreorders,
 );
 ---
 
@@ -138,6 +140,17 @@ const hasActiveFilters = Boolean(
           Mostrar agotados
         </label>
       </div>
+
+      <label class="flex items-center justify-between gap-3 border border-zinc-900 bg-black px-3 py-3 text-zinc-400 text-[10px] font-black uppercase tracking-widest cursor-pointer hover:border-amber-500 transition-colors">
+        <span>Preventas abiertas</span>
+        <input
+          type="checkbox"
+          name="openPreorders"
+          value="true"
+          checked={currentFilters.openPreorders}
+          class="accent-amber-500"
+        />
+      </label>
 
       <div class="grid grid-cols-2 gap-3">
         <label class="flex flex-col gap-2">

@@ -23,7 +23,7 @@ const {
 const heightClass = fullHeight
   ? "min-h-[calc(100vh-80px)]"
   : compact
-    ? "min-h-[240px] md:min-h-[320px]"
+    ? "min-h-[180px] md:min-h-[220px]"
     : "min-h-[60vh] md:min-h-[70vh]";
 const bgStyle = backgroundImage
   ? `background-image: url('${backgroundImage}')`
@@ -51,17 +51,17 @@ const bgStyle = backgroundImage
     class="relative z-20 max-w-[1280px] w-full mx-auto px-6 text-center animate-fade-in-up"
   >
     <div class={`flex flex-col items-center ${compact ? "gap-4" : "gap-6"}`}>
-      <div class={`w-12 h-[1px] bg-amber-500 ${compact ? "" : "mb-2"}`}></div>
+      <div class={`w-10 h-[1px] bg-amber-500 ${compact ? "" : "mb-2"}`}></div>
 
       <h1
-        class={`font-black text-white uppercase tracking-tighter leading-[0.9] ${compact ? "text-4xl md:text-6xl mb-1" : "text-5xl md:text-8xl lg:text-9xl mb-4"}`}
+        class={`font-black text-white tracking-tight leading-[0.95] ${compact ? "text-4xl md:text-5xl mb-1" : "text-5xl md:text-8xl lg:text-9xl mb-4"}`}
       >
         {title}
       </h1>
 
       {
         subtitle && (
-          <p class={`text-zinc-400 font-bold uppercase max-w-2xl leading-relaxed opacity-80 ${compact ? "text-[11px] md:text-xs tracking-[0.2em]" : "text-sm md:text-lg tracking-[0.4em]"}`}>
+          <p class={`text-zinc-400 font-medium max-w-2xl leading-relaxed opacity-80 ${compact ? "text-sm md:text-base" : "text-sm md:text-lg tracking-[0.4em] uppercase"}`}>
             {subtitle}
           </p>
         )

@@ -115,6 +115,7 @@ const buildWhereClause = (
   filters?: ProductFilters,
 ): Prisma.ProductWhereInput => {
   const showSoldOut = filters?.showSoldOut === true;
+  const availability = filters?.availability;
   const whereClause: Prisma.ProductWhereInput = {
     deletedAt: null,
     status: {
@@ -127,14 +128,36 @@ const buildWhereClause = (
     },
   };
 
+  if (availability === "available") {
+    whereClause.status = toPrismaProductStatus(ProductStatus.PUBLISHED);
+    whereClause.stock = { gt: 0 };
+    whereClause.preorderCampaigns = {
+      none: buildOpenCampaignWhere(new Date()),
+    };
+  } else if (availability === "preorder-open") {
+    whereClause.status = toPrismaProductStatus(ProductStatus.PRE_ORDER);
+    whereClause.preorderCampaigns = {
+      some: buildOpenCampaignWhere(new Date()),
+    };
+  } else if (availability === "out-of-stock") {
+    whereClause.OR = [
+      { status: toPrismaProductStatus(ProductStatus.OUT_OF_STOCK) },
+      {
+        status: toPrismaProductStatus(ProductStatus.PUBLISHED),
+        stock: { lte: 0 },
+      },
+    ];
+  }
+
   if (
+    !availability &&
     filters?.status &&
     Object.values(ProductStatus).includes(filters.status as ProductStatus)
   ) {
     whereClause.status = toPrismaProductStatus(filters.status as ProductStatus);
   }
 
-  if (filters?.openPreorders || filters?.sort === "eta-asc") {
+  if (!availability && (filters?.openPreorders || filters?.sort === "eta-asc")) {
     whereClause.preorderCampaigns = {
       some: buildOpenCampaignWhere(new Date()),
     };
@@ -142,7 +165,8 @@ const buildWhereClause = (
 
   const search = filters?.q?.trim();
   if (search) {
-    whereClause.OR = [
+    const searchClause: Prisma.ProductWhereInput = {
+      OR: [
       { name: { contains: search, mode: "insensitive" } },
       { collection: { name: { contains: search, mode: "insensitive" } } },
       { category: { name: { contains: search, mode: "insensitive" } } },
@@ -153,7 +177,19 @@ const buildWhereClause = (
           },
         },
       },
-    ];
+      ],
+    };
+
+    if (whereClause.OR) {
+      const existingOr = whereClause.OR;
+      delete whereClause.OR;
+      whereClause.AND = [{ OR: existingOr }, searchClause];
+    } else {
+      whereClause.AND = [
+        ...(Array.isArray(whereClause.AND) ? whereClause.AND : []),
+        searchClause,
+      ];
+    }
   }
 
   const minPrice = toPositiveMoney(filters?.minPrice);

@@ -2,17 +2,12 @@
 import CatalogGrid from "./CatalogGrid.astro";
 import CatalogPagination from "./CatalogPagination.astro";
 import type { CatalogProductsResponseDTO } from "@/application/dto/catalog.dto";
-import type { CatalogMetadataDTO } from "@/application/dto/catalog.dto";
-import type { ProductFilters } from "@/domain/repositories/ProductRepository";
-import { formatPrice } from "@/lib/utils";
 import type { ProductCardViewModel } from "./productCardViewModel";
 
 interface Props {
   catalogResult: CatalogProductsResponseDTO;
   products: ProductCardViewModel[];
   getPageUrl: (page: number) => string;
-  metadata?: CatalogMetadataDTO | null;
-  currentFilters?: ProductFilters;
   includeCountMarker?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
@@ -23,75 +18,11 @@ const {
   catalogResult,
   products,
   getPageUrl,
-  metadata = null,
-  currentFilters = {},
   includeCountMarker = false,
   emptyTitle = "No encontramos productos",
   emptyDescription = "Prueba con otra búsqueda o limpia los filtros activos.",
   resetHref = "/catalog",
 } = Astro.props;
-
-const statusLabels: Record<string, string> = {
-  PUBLISHED: "Disponible",
-  PRE_ORDER: "Preventa",
-  OUT_OF_STOCK: "Agotado",
-};
-
-const findLabel = (
-  items: { slug: string; name: string }[] | undefined,
-  slug?: string,
-) => items?.find((item) => item.slug === slug)?.name || slug;
-
-const removeFilterUrl = (key: string) => {
-  const url = new URL("/catalog", Astro.url.origin);
-  const params = new URLSearchParams(Astro.url.search);
-  params.delete(key);
-  params.delete("page");
-  const search = params.toString();
-  return `${url.pathname}${search ? `?${search}` : ""}`;
-};
-
-const activeChips = [
-  currentFilters.q
-    ? { key: "q", label: `Búsqueda: ${currentFilters.q}` }
-    : null,
-  currentFilters.category
-    ? {
-        key: "category",
-        label: findLabel(metadata?.categories, currentFilters.category),
-      }
-    : null,
-  currentFilters.collection
-    ? {
-        key: "collection",
-        label: findLabel(metadata?.collections, currentFilters.collection),
-      }
-    : null,
-  currentFilters.character
-    ? {
-        key: "character",
-        label: findLabel(metadata?.characters, currentFilters.character),
-      }
-    : null,
-  currentFilters.status
-    ? {
-        key: "status",
-        label: statusLabels[currentFilters.status] || currentFilters.status,
-      }
-    : null,
-  currentFilters.minPrice !== undefined
-    ? { key: "minPrice", label: `Desde ${formatPrice(currentFilters.minPrice)}` }
-    : null,
-  currentFilters.maxPrice !== undefined
-    ? { key: "maxPrice", label: `Hasta ${formatPrice(currentFilters.maxPrice)}` }
-    : null,
-  currentFilters.showSoldOut
-    ? { key: "showSoldOut", label: "Incluye agotados" }
-    : null,
-  currentFilters.openPreorders
-    ? { key: "openPreorders", label: "Preventas abiertas" }
-    : null,
-].filter(Boolean) as { key: string; label: string }[];
 ---
 
 {
@@ -101,37 +32,6 @@ const activeChips = [
 }
 
 <div id="catalog-grid-container">
-  {
-    activeChips.length > 0 && (
-      <div class="mb-6 flex flex-col gap-3 border border-zinc-900 bg-zinc-950 px-4 py-4">
-        <div class="flex items-center justify-between gap-4">
-          <span class="text-zinc-500 text-[10px] font-black uppercase tracking-widest">
-            Filtros activos
-          </span>
-          <a
-            href="/catalog"
-            data-filter-link
-            class="text-amber-500 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors"
-          >
-            Limpiar todos
-          </a>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          {activeChips.map((chip) => (
-            <a
-              href={removeFilterUrl(chip.key)}
-              data-filter-link
-              class="inline-flex items-center gap-2 border border-zinc-800 bg-black px-3 py-2 text-zinc-300 text-[10px] font-black uppercase tracking-widest hover:border-amber-500 hover:text-amber-500 transition-colors"
-            >
-              <span>{chip.label}</span>
-              <span aria-hidden="true">x</span>
-            </a>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
   {
     products.length > 0 ? (
       <CatalogGrid products={products} />

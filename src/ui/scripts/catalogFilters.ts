@@ -7,11 +7,14 @@ const isAbortError = (error: unknown): boolean =>
   error instanceof DOMException && error.name === "AbortError";
 
 class CatalogFilters {
+  private static readonly sidebarStorageKey = "catalogSidebarCollapsed";
   private gridContainer: HTMLElement | null = null;
   private paginationContainer: HTMLElement | null = null;
   private toolbarCount: HTMLElement | null = null;
   private sortSelect: HTMLSelectElement | null = null;
   private searchForm: HTMLFormElement | null = null;
+  private marketplace: HTMLElement | null = null;
+  private sidebarToggle: HTMLButtonElement | null = null;
   private currentUrl: string = window.location.href;
   private abortController: AbortController | null = null;
 
@@ -43,8 +46,14 @@ class CatalogFilters {
     this.searchForm = document.getElementById(
       "catalog-search-form",
     ) as HTMLFormElement | null;
+    this.marketplace = document.getElementById("catalog-marketplace");
+    this.sidebarToggle = document.getElementById(
+      "catalog-sidebar-toggle",
+    ) as HTMLButtonElement | null;
 
     if (!this.gridContainer) return;
+
+    this.initSidebarToggle();
 
     document.addEventListener("click", (e) => {
       const target = e.target;
@@ -125,6 +134,50 @@ class CatalogFilters {
       });
       this.applyFilters(nextUrl);
     });
+  }
+
+  private initSidebarToggle() {
+    if (!this.marketplace || !this.sidebarToggle) return;
+
+    const storedValue = this.getStoredSidebarState();
+    const isCollapsed = storedValue === "true";
+    this.setSidebarCollapsed(isCollapsed);
+
+    this.sidebarToggle.addEventListener("click", () => {
+      const nextValue =
+        this.marketplace?.dataset.sidebarCollapsed !== "true";
+      this.setSidebarCollapsed(nextValue);
+      this.storeSidebarState(nextValue);
+    });
+  }
+
+  private getStoredSidebarState(): string | null {
+    try {
+      return window.localStorage.getItem(CatalogFilters.sidebarStorageKey);
+    } catch {
+      return null;
+    }
+  }
+
+  private storeSidebarState(isCollapsed: boolean) {
+    try {
+      window.localStorage.setItem(
+        CatalogFilters.sidebarStorageKey,
+        String(isCollapsed),
+      );
+    } catch {
+      // The toggle still works for the current page if storage is unavailable.
+    }
+  }
+
+  private setSidebarCollapsed(isCollapsed: boolean) {
+    if (!this.marketplace || !this.sidebarToggle) return;
+
+    this.marketplace.dataset.sidebarCollapsed = String(isCollapsed);
+    this.sidebarToggle.setAttribute("aria-expanded", String(!isCollapsed));
+    const label = isCollapsed ? "Mostrar filtros" : "Ocultar filtros";
+    this.sidebarToggle.setAttribute("aria-label", label);
+    this.sidebarToggle.setAttribute("title", label);
   }
 
   private async fetchPartialHtml(

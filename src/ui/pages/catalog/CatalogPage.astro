@@ -88,11 +88,48 @@ const getPageUrl = (page: number) =>
         class="flex flex-col lg:flex-row gap-10 xl:gap-14 max-w-[1480px] mx-auto pt-8 md:pt-10"
       >
         <!-- Sidebar -->
-        <div class="w-full lg:w-auto">
-          <CatalogSidebarFilters
-            metadata={metadata}
-            currentFilters={currentFilters}
-          />
+        <div
+          data-catalog-sidebar-column
+          class="w-full lg:w-[280px] lg:flex-shrink-0 lg:overflow-hidden"
+        >
+          <button
+            id="catalog-sidebar-toggle"
+            type="button"
+            class="hidden lg:inline-flex mb-5 h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-zinc-950/80 text-zinc-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur hover:border-white/20 hover:bg-zinc-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 transition-[border-color,background-color,color,box-shadow,transform] duration-200 ease-out hover:-translate-y-px"
+            aria-controls="catalog-sidebar"
+            aria-expanded="true"
+            aria-label="Ocultar filtros"
+            title="Ocultar filtros"
+          >
+            <svg
+              data-sidebar-toggle-icon
+              class="h-[18px] w-[18px]"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3.5" y="4" width="17" height="16" rx="4"></rect>
+              <path d="M9.25 4.5v15"></path>
+              <path d="M6.25 8.25h.01"></path>
+              <path d="M6.25 12h.01"></path>
+              <path d="M6.25 15.75h.01"></path>
+              <path
+                data-sidebar-toggle-chevron
+                d="m14.25 9.25 2.75 2.75-2.75 2.75"
+              ></path>
+            </svg>
+          </button>
+
+          <div id="catalog-sidebar" data-catalog-sidebar>
+            <CatalogSidebarFilters
+              metadata={metadata}
+              currentFilters={currentFilters}
+            />
+          </div>
         </div>
 
         <!-- Main Content (Toolbar + Grid) -->
@@ -107,8 +144,6 @@ const getPageUrl = (page: number) =>
             catalogResult={catalogResult}
             products={products}
             getPageUrl={getPageUrl}
-            metadata={metadata}
-            currentFilters={currentFilters}
           />
         </main>
       </div>
@@ -118,12 +153,12 @@ const getPageUrl = (page: number) =>
   <!-- Skeleton Template for AJAX loading (Step 8) -->
   <template id="catalog-skeleton-template">
     <div
-      class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 md:gap-10"
+      class="catalog-skeleton-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 md:gap-10"
     >
       {
         Array.from({ length: 8 }).map(() => (
           <div class="flex flex-col gap-4 animate-pulse">
-            <div class="w-full aspect-square bg-zinc-950 border border-zinc-900" />
+            <div class="w-full aspect-[4/5] bg-zinc-950 border border-zinc-900" />
             <div class="flex flex-col gap-2">
               <div class="h-3 bg-zinc-900 w-1/3 mt-1" />
               <div class="h-4 bg-zinc-800 w-full mt-1" />
@@ -140,4 +175,53 @@ const getPageUrl = (page: number) =>
   </template>
 
   <script src="../../scripts/catalogFilters.ts"></script>
+
+  <style>
+    @media (min-width: 1024px) {
+      #catalog-marketplace [data-catalog-sidebar-column] {
+        transition:
+          width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+          margin 320ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      #catalog-marketplace [data-catalog-sidebar] {
+        transition:
+          opacity 220ms ease,
+          transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+          visibility 0s linear 0s;
+        will-change: opacity, transform;
+      }
+
+      #catalog-marketplace [data-sidebar-toggle-chevron] {
+        transform-origin: center;
+        transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      #catalog-marketplace[data-sidebar-collapsed="true"] [data-catalog-sidebar-column] {
+        width: 40px;
+      }
+
+      #catalog-marketplace[data-sidebar-collapsed="true"] [data-catalog-sidebar] {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(-10px);
+        visibility: hidden;
+        transition:
+          opacity 180ms ease,
+          transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+          visibility 0s linear 180ms;
+      }
+
+      #catalog-marketplace[data-sidebar-collapsed="true"] [data-sidebar-toggle-chevron] {
+        transform: rotate(180deg);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      :global(#catalog-marketplace[data-sidebar-collapsed="true"] .catalog-products-grid),
+      :global(#catalog-marketplace[data-sidebar-collapsed="true"] .catalog-skeleton-grid) {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+  </style>
 </MainLayout>

@@ -3,6 +3,7 @@ import { PrismaProductRepository } from "@/infrastructure/database/PrismaProduct
 import { SaveCollectionUseCase } from "@/application/use-cases/admin/collections/SaveCollectionUseCase";
 import { ArchiveCollectionUseCase } from "@/application/use-cases/admin/collections/ArchiveCollectionUseCase";
 import { DeleteCollectionUseCase } from "@/application/use-cases/admin/collections/DeleteCollectionUseCase";
+import { invalidateCatalogCache } from "@/application/services/CatalogQueryService";
 import { randomUUID } from "node:crypto";
 
 const redirectWithError = (
@@ -86,6 +87,7 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
       await deleteUseCase.execute(targetId);
     }
 
+    invalidateCatalogCache();
     return redirect("/admin/collections");
   } catch (error: unknown) {
     return redirectWithError(

@@ -12,6 +12,7 @@ import { GetCatalogPageDataUseCase } from "../../../application/use-cases/catalo
 import { PrismaCatalogQueryRepository } from "../../../infrastructure/database/PrismaCatalogQueryRepository";
 import { parseCatalogFilters } from "@/shared/listing/catalogQuery";
 import { buildPageUrl } from "@/shared/listing/queryParams";
+import { siteOrigin } from "@/lib/siteUrl";
 import { toCatalogProductCardProps } from "../../components/catalog/productCardViewModel";
 
 // Instantiate Service and Use Case
@@ -52,7 +53,7 @@ const catalogStructuredData = {
       "@type": "Product",
       name: product.name,
       image: product.image,
-      url: new URL(`/product/${product.id}`, Astro.url.origin).toString(),
+      url: new URL(`/product/${product.id}`, siteOrigin).toString(),
       offers: {
         "@type": "Offer",
         priceCurrency: "BOB",

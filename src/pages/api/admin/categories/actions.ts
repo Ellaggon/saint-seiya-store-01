@@ -4,6 +4,7 @@ import { SaveCategoryUseCase } from "@/application/use-cases/admin/categories/Sa
 import { ArchiveCategoryUseCase } from "@/application/use-cases/admin/categories/ArchiveCategoryUseCase";
 import { DeleteCategoryUseCase } from "@/application/use-cases/admin/categories/DeleteCategoryUseCase";
 import { invalidateCatalogCache } from "@/application/services/CatalogQueryService";
+import { invalidatePreorderCache } from "@/application/services/PreorderQueryCache";
 import { randomUUID } from "node:crypto";
 
 const redirectWithError = (
@@ -88,6 +89,7 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
     }
 
     invalidateCatalogCache();
+    invalidatePreorderCache();
     return redirect("/admin/categories");
   } catch (error: unknown) {
     return redirectWithError(

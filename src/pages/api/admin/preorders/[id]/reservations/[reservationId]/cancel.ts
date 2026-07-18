@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 
 import { createCancelReservationUseCase } from "@/infrastructure/preorders/PreorderUseCaseFactory";
 import { invalidateCatalogCache } from "@/application/services/CatalogQueryService";
+import { invalidatePreorderCache } from "@/application/services/PreorderQueryCache";
 import { ApplicationError } from "@/endpoints/api/shared/api-errors";
 import { failure, success } from "@/endpoints/api/shared/api-response";
 import { requireAdmin } from "@/endpoints/api/shared/auth";
@@ -21,6 +22,7 @@ export const POST: APIRoute = async ({ params, locals }) => {
     });
 
     invalidateCatalogCache();
+    invalidatePreorderCache();
     return success(data);
   } catch (error) {
     return failure(error);

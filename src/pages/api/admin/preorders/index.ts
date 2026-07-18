@@ -5,6 +5,7 @@ import {
   createListPreordersUseCase,
 } from "@/infrastructure/preorders/PreorderUseCaseFactory";
 import { invalidateCatalogCache } from "@/application/services/CatalogQueryService";
+import { invalidatePreorderCache } from "@/application/services/PreorderQueryCache";
 import { failure, success } from "@/endpoints/api/shared/api-response";
 import { requireAdmin } from "@/endpoints/api/shared/auth";
 import {
@@ -54,6 +55,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     invalidateCatalogCache();
+    invalidatePreorderCache();
     return success(data, { status: 201 });
   } catch (error) {
     return failure(error);

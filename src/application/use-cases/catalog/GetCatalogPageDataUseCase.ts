@@ -11,8 +11,10 @@ export class GetCatalogPageDataUseCase {
   async execute(
     filters?: ProductFilters,
   ): Promise<{ products: CatalogProductsResponseDTO; filters: CatalogMetadataDTO }> {
-    const products = await this.catalogQueryService.getCatalogProducts(filters);
-    const filtersData = await this.catalogQueryService.getCatalogMetadata();
+    const [products, filtersData] = await Promise.all([
+      this.catalogQueryService.getCatalogProducts(filters),
+      this.catalogQueryService.getCatalogMetadata(),
+    ]);
     
     return {
       products,

@@ -91,6 +91,7 @@ export type PrismaReservationRecord = PrismaReservationModel & {
 
 export type PrismaCampaignRecord = PrismaCampaignModel & {
   reservations?: PrismaReservationRecord[];
+  reservedUnits?: number | bigint | null;
 };
 
 export const ACTIVE_RESERVATION_STATUSES: PrismaReservationStatusType[] = [
@@ -242,6 +243,14 @@ export const calculateReservedUnits = (
     .filter((reservation) => isActiveReservationStatus(reservation.status))
     .reduce((total, reservation) => total + reservation.quantity, 0);
 
+const resolveReservedUnits = (campaign: PrismaCampaignRecord): number => {
+  if (campaign.reservedUnits !== undefined && campaign.reservedUnits !== null) {
+    return Number(campaign.reservedUnits);
+  }
+
+  return calculateReservedUnits(campaign.reservations);
+};
+
 export const toDomainPayment = (
   payment: PrismaPaymentRecord,
 ): PreorderPayment =>
@@ -290,7 +299,7 @@ export const toDomainCampaign = (
     productId: campaign.productId,
     status: campaignStatusToDomain[campaign.status],
     totalSlots: campaign.totalSlots,
-    reservedUnits: calculateReservedUnits(campaign.reservations),
+    reservedUnits: resolveReservedUnits(campaign),
     depositType: depositTypeToDomain[campaign.depositType],
     depositValue: decimalToMoney(campaign.depositValue).toNumber(),
     allowFullPayment: campaign.allowFullPayment,

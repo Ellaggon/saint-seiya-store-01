@@ -56,17 +56,25 @@ const activeReservationWhere = {
   },
 } satisfies Prisma.PreorderReservationWhereInput;
 
+const preorderProductSummaryInclude = {
+  category: true,
+  collection: true,
+  characters: {
+    include: {
+      character: true,
+    },
+  },
+} satisfies Prisma.ProductInclude;
+
+const campaignProductInclude = {
+  product: {
+    include: preorderProductSummaryInclude,
+  },
+} satisfies Prisma.PreorderCampaignInclude;
+
 const campaignDetailInclude = {
   product: {
-    include: {
-      category: true,
-      collection: true,
-      characters: {
-        include: {
-          character: true,
-        },
-      },
-    },
+    include: preorderProductSummaryInclude,
   },
   reservations: {
     where: activeReservationWhere,
@@ -91,6 +99,14 @@ const campaignDetailInclude = {
 type CampaignDetailRecord = Prisma.PreorderCampaignGetPayload<{
   include: typeof campaignDetailInclude;
 }>;
+
+type CampaignListRecord = Prisma.PreorderCampaignGetPayload<{
+  include: typeof campaignProductInclude;
+}> & {
+  reservedUnits?: number | bigint | null;
+};
+
+type CampaignRecordForList = CampaignDetailRecord | CampaignListRecord;
 
 const reservationDetailInclude = {
   payments: true,
@@ -186,7 +202,7 @@ const campaignOrderBy = (
 };
 
 const toProductSummary = (
-  product: CampaignDetailRecord["product"],
+  product: CampaignRecordForList["product"],
 ): PreorderProductSummary => ({
   id: product.id,
   name: product.name,
@@ -216,11 +232,41 @@ const toProductSummary = (
 });
 
 const toCampaignWithProduct = (
-  record: CampaignDetailRecord,
+  record: CampaignRecordForList,
 ): PreorderCampaignWithProduct => ({
   campaign: toDomainCampaign(record),
   product: toProductSummary(record.product),
 });
+
+const withReservedUnitAggregates = async <T extends { id: string }>(
+  campaigns: T[],
+): Promise<(T & { reservedUnits: number })[]> => {
+  if (campaigns.length === 0) return [];
+
+  const reservedByCampaign = await prisma.preorderReservation.groupBy({
+    by: ["campaignId"],
+    where: {
+      campaignId: {
+        in: campaigns.map((campaign) => campaign.id),
+      },
+      ...activeReservationWhere,
+    },
+    _sum: {
+      quantity: true,
+    },
+  });
+  const reservedUnitsByCampaignId = new Map(
+    reservedByCampaign.map((row) => [
+      row.campaignId,
+      row._sum.quantity ?? 0,
+    ]),
+  );
+
+  return campaigns.map((campaign) => ({
+    ...campaign,
+    reservedUnits: reservedUnitsByCampaignId.get(campaign.id) ?? 0,
+  }));
+};
 
 const lockCampaign = async (
   tx: TransactionClient,
@@ -318,7 +364,7 @@ const assertNoActiveCampaignForProduct = async (
 };
 
 const campaignMatchesAvailability = (
-  campaign: CampaignDetailRecord,
+  campaign: CampaignRecordForList,
   availability: PreorderCampaignFilters["availability"],
   now: Date,
 ): boolean => {
@@ -423,23 +469,52 @@ export class PrismaPreorderRepository implements PreorderRepository {
     const availabilityFilteredCampaigns = filters?.availability
       ? await this.findCampaignRecordsForList(where, filters)
       : undefined;
-    const total = availabilityFilteredCampaigns
-      ? availabilityFilteredCampaigns.length
-      : await prisma.preorderCampaign.count({ where });
+    let total: number;
+    let campaigns: CampaignRecordForList[];
+
+    if (availabilityFilteredCampaigns) {
+      total = availabilityFilteredCampaigns.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(page, totalPages);
+      campaigns = availabilityFilteredCampaigns.slice(
+        (safePage - 1) * pageSize,
+        safePage * pageSize,
+      );
+
+      return {
+        items: campaigns.map(toDomainCampaign),
+        page: safePage,
+        pageSize,
+        total,
+        totalPages,
+      };
+    }
+
+    const requestedPage = page;
+    const [recordCount, requestedPageCampaigns] = await Promise.all([
+      prisma.preorderCampaign.count({ where }),
+      prisma.preorderCampaign.findMany({
+        where,
+        include: campaignProductInclude,
+        orderBy: campaignOrderBy(filters?.sort),
+        skip: (requestedPage - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+    total = recordCount;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    const safePage = Math.min(page, totalPages);
-    const campaigns = availabilityFilteredCampaigns
-      ? availabilityFilteredCampaigns.slice(
-          (safePage - 1) * pageSize,
-          safePage * pageSize,
-        )
-      : await prisma.preorderCampaign.findMany({
-          where,
-          include: campaignDetailInclude,
-          orderBy: campaignOrderBy(filters?.sort),
-          skip: (safePage - 1) * pageSize,
-          take: pageSize,
-        });
+    const safePage = Math.min(requestedPage, totalPages);
+    campaigns =
+      safePage === requestedPage
+        ? requestedPageCampaigns
+        : await prisma.preorderCampaign.findMany({
+            where,
+            include: campaignProductInclude,
+            orderBy: campaignOrderBy(filters?.sort),
+            skip: (safePage - 1) * pageSize,
+            take: pageSize,
+          });
+    campaigns = await withReservedUnitAggregates(campaigns);
 
     return {
       items: campaigns.map(toDomainCampaign),
@@ -484,7 +559,7 @@ export class PrismaPreorderRepository implements PreorderRepository {
 
   private async listCampaignRecords(
     filters?: PreorderCampaignFilters,
-  ): Promise<PreorderPaginatedResult<CampaignDetailRecord>> {
+  ): Promise<PreorderPaginatedResult<CampaignRecordForList>> {
     const page = toPositiveInt(filters?.page, 1);
     const requestedPageSize = toPositiveInt(filters?.pageSize, DEFAULT_PAGE_SIZE);
     const pageSize = Math.min(MAX_PAGE_SIZE, requestedPageSize);
@@ -493,23 +568,52 @@ export class PrismaPreorderRepository implements PreorderRepository {
     const availabilityFilteredCampaigns = filters?.availability
       ? await this.findCampaignRecordsForList(where, filters)
       : undefined;
-    const total = availabilityFilteredCampaigns
-      ? availabilityFilteredCampaigns.length
-      : await prisma.preorderCampaign.count({ where });
+    let total: number;
+    let campaigns: CampaignRecordForList[];
+
+    if (availabilityFilteredCampaigns) {
+      total = availabilityFilteredCampaigns.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      const safePage = Math.min(page, totalPages);
+      campaigns = availabilityFilteredCampaigns.slice(
+        (safePage - 1) * pageSize,
+        safePage * pageSize,
+      );
+
+      return {
+        items: campaigns,
+        page: safePage,
+        pageSize,
+        total,
+        totalPages,
+      };
+    }
+
+    const requestedPage = page;
+    const [recordCount, requestedPageCampaigns] = await Promise.all([
+      prisma.preorderCampaign.count({ where }),
+      prisma.preorderCampaign.findMany({
+        where,
+        include: campaignProductInclude,
+        orderBy: campaignOrderBy(filters?.sort),
+        skip: (requestedPage - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+    total = recordCount;
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    const safePage = Math.min(page, totalPages);
-    const campaigns = availabilityFilteredCampaigns
-      ? availabilityFilteredCampaigns.slice(
-          (safePage - 1) * pageSize,
-          safePage * pageSize,
-        )
-      : await prisma.preorderCampaign.findMany({
-          where,
-          include: campaignDetailInclude,
-          orderBy: campaignOrderBy(filters?.sort),
-          skip: (safePage - 1) * pageSize,
-          take: pageSize,
-        });
+    const safePage = Math.min(requestedPage, totalPages);
+    campaigns =
+      safePage === requestedPage
+        ? requestedPageCampaigns
+        : await prisma.preorderCampaign.findMany({
+            where,
+            include: campaignProductInclude,
+            orderBy: campaignOrderBy(filters?.sort),
+            skip: (safePage - 1) * pageSize,
+            take: pageSize,
+          });
+    campaigns = await withReservedUnitAggregates(campaigns);
 
     return {
       items: campaigns,
@@ -523,12 +627,13 @@ export class PrismaPreorderRepository implements PreorderRepository {
   private async findCampaignRecordsForList(
     where: Prisma.PreorderCampaignWhereInput,
     filters?: PreorderCampaignFilters,
-  ): Promise<CampaignDetailRecord[]> {
-    const campaigns = await prisma.preorderCampaign.findMany({
+  ): Promise<CampaignRecordForList[]> {
+    const campaignRecords = await prisma.preorderCampaign.findMany({
       where,
-      include: campaignDetailInclude,
+      include: campaignProductInclude,
       orderBy: campaignOrderBy(filters?.sort),
     });
+    const campaigns = await withReservedUnitAggregates(campaignRecords);
 
     if (!filters?.availability) return campaigns;
 

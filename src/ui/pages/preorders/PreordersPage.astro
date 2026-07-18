@@ -6,6 +6,7 @@ import CatalogResults from "../../components/catalog/CatalogResults.astro";
 import CatalogToolbar from "../../components/catalog/CatalogToolbar.astro";
 import PreorderFilters from "../../components/preorders/PreorderFilters.astro";
 import type { PreorderListItemDTO } from "@/application/dto/preorder.dto";
+import { getCachedPreorderList } from "@/application/services/PreorderQueryCache";
 import { PreorderCampaignStatus } from "@/domain/entities/PreorderCampaign";
 import { createListPreordersUseCase } from "@/infrastructure/preorders/PreorderUseCaseFactory";
 import { parsePageParams } from "@/shared/listing/pagination";
@@ -14,6 +15,20 @@ import { resolveSort } from "@/shared/listing/sorting";
 import { toPreorderProductCardProps } from "../../components/catalog/productCardViewModel";
 
 const params = Astro.url.searchParams;
+const isBasePreordersPage = params.toString().length === 0;
+
+Astro.response.headers.set(
+  "Cache-Control",
+  isBasePreordersPage
+    ? "public, max-age=0, s-maxage=120, stale-while-revalidate=300"
+    : "public, max-age=0, s-maxage=60, stale-while-revalidate=180",
+);
+Astro.response.headers.set(
+  "CDN-Cache-Control",
+  isBasePreordersPage
+    ? "public, max-age=120, stale-while-revalidate=300"
+    : "public, max-age=60, stale-while-revalidate=180",
+);
 
 const toOptionalNumber = (value: string | null): number | undefined => {
   if (!value) return undefined;
@@ -34,7 +49,7 @@ const currentFilters = {
 };
 
 const listPreorders = createListPreordersUseCase();
-const preorderResult = await listPreorders.execute({
+const preorderInput = {
   status:
     currentFilters.availability === "SOLD_OUT"
       ? PreorderCampaignStatus.SOLD_OUT
@@ -51,7 +66,10 @@ const preorderResult = await listPreorders.execute({
   pageSize: currentFilters.pageSize,
   minPrice: toOptionalNumber(params.get("minPrice")),
   maxPrice: toOptionalNumber(params.get("maxPrice")),
-});
+};
+const preorderResult = await getCachedPreorderList(preorderInput, () =>
+  listPreorders.execute(preorderInput),
+);
 
 const products = preorderResult.items.map(toPreorderProductCardProps);
 

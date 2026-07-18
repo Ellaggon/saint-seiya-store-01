@@ -5,6 +5,7 @@ import { ArchiveProductUseCase } from "@/application/use-cases/admin/products/Ar
 import { ProductStatus } from "@/domain/entities/Product";
 import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
 import { invalidateCatalogCache } from "@/application/services/CatalogQueryService";
+import { invalidatePreorderCache } from "@/application/services/PreorderQueryCache";
 
 // Helper to validate admin role (redundant because of middleware but safe)
 const ensureAdmin = (locals: App.Locals) => {
@@ -78,6 +79,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       });
 
       invalidateCatalogCache();
+      invalidatePreorderCache();
       return redirect(safeReturnTo(formData));
     }
 
@@ -99,6 +101,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       });
 
       invalidateCatalogCache();
+      invalidatePreorderCache();
       return redirect("/admin/products");
     }
 
@@ -107,6 +110,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       await useCase.execute(requiredString(formData, "id"));
 
       invalidateCatalogCache();
+      invalidatePreorderCache();
       return redirect("/admin/products");
     }
 

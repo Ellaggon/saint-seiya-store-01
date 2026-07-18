@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 
 import { createRegisterManualPreorderPaymentUseCase } from "@/infrastructure/preorders/PreorderUseCaseFactory";
 import { invalidateCatalogCache } from "@/application/services/CatalogQueryService";
+import { invalidatePreorderCache } from "@/application/services/PreorderQueryCache";
 import { ApplicationError } from "@/endpoints/api/shared/api-errors";
 import { failure, success } from "@/endpoints/api/shared/api-response";
 import { requireAdmin } from "@/endpoints/api/shared/auth";
@@ -33,6 +34,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     });
 
     invalidateCatalogCache();
+    invalidatePreorderCache();
     return success(data, { status: 201 });
   } catch (error) {
     return failure(error);

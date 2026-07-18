@@ -4,6 +4,7 @@ import vercel from "@astrojs/vercel";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+  site: process.env.SITE_URL ?? "https://saint-seiya-store-01.vercel.app",
   output: "server",
   prefetch: {
     defaultStrategy: "hover",

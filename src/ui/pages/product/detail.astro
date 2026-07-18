@@ -8,6 +8,7 @@ import PreorderEta from "../../components/preorders/PreorderEta.astro";
 import PreorderPriceSummary from "../../components/preorders/PreorderPriceSummary.astro";
 import { formatPrice } from "@/lib/utils";
 import { resolveDisplayAvailability } from "@/shared/catalog/displayAvailability";
+import { siteOrigin } from "@/lib/siteUrl";
 
 interface Props {
   product: {
@@ -47,7 +48,7 @@ const displayAvailability = product
         : null,
     })
   : null;
-const canonicalUrl = product ? new URL(`/product/${product.id}`, Astro.url.origin) : null;
+const canonicalUrl = product ? new URL(`/product/${product.id}`, siteOrigin) : null;
 const productDescription = product
   ? `${product.name} - ${displayAvailability?.label ?? "Producto"} en Saint Seiya Store. Precio ${formatPrice(product.price)}.`
   : "Producto no encontrado en Saint Seiya Store.";

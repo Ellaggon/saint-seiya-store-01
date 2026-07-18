@@ -1,10 +1,10 @@
 import type {
-  Prisma,
   ProductStatus as PrismaProductStatus,
   PreorderCampaignStatus as PrismaPreorderCampaignStatus,
   PreorderDepositType as PrismaPreorderDepositType,
   PreorderReservationStatus as PrismaPreorderReservationStatus,
 } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { ProductStatus } from "@/domain/entities/Product";
 import type {
   CatalogMetadataDTO,
@@ -51,6 +51,45 @@ type CatalogProductRecord = {
       status: PrismaPreorderReservationStatus;
     }[];
   }[];
+};
+
+type CatalogProductRawRecord = {
+  id: string;
+  name: string;
+  price: unknown;
+  imageUrl: string | null;
+  stock: number;
+  status: ProductStatus;
+  collectionName: string | null;
+  collectionSlug: string | null;
+  characterName: string | null;
+  characterSlug: string | null;
+  campaignId: string | null;
+  campaignStatus: PrismaPreorderCampaignStatus | null;
+  totalSlots: number | null;
+  depositType: PrismaPreorderDepositType | null;
+  depositValue: unknown | null;
+  opensAt: Date | null;
+  closesAt: Date | null;
+  releaseDate: Date | null;
+  etaStart: Date | null;
+  etaEnd: Date | null;
+  etaLabel: string | null;
+  reservedUnits: number | bigint | null;
+  totalCount: number | bigint;
+};
+
+type CatalogMetadataRawRecord = {
+  categories: unknown;
+  collections: unknown;
+  characters: unknown;
+};
+
+type CatalogMetadataItem = {
+  id: string;
+  name: string;
+  slug: string;
+  count: number | bigint | null;
 };
 
 const toPrismaProductStatus = (
@@ -100,6 +139,19 @@ const buildOrderBy = (sort: CatalogSort): Prisma.ProductOrderByWithRelationInput
   if (sort === "price-desc") return [{ price: "desc" }, { createdAt: "desc" }];
   if (sort === "name-asc") return [{ name: "asc" }, { createdAt: "desc" }];
   return [{ createdAt: "desc" }];
+};
+
+const buildRawOrderBy = (sort: CatalogSort): Prisma.Sql => {
+  if (sort === "price-asc") {
+    return Prisma.sql`p.price ASC, p."createdAt" DESC`;
+  }
+  if (sort === "price-desc") {
+    return Prisma.sql`p.price DESC, p."createdAt" DESC`;
+  }
+  if (sort === "name-asc") {
+    return Prisma.sql`p.name ASC, p."createdAt" DESC`;
+  }
+  return Prisma.sql`p."createdAt" DESC`;
 };
 
 const buildOpenCampaignWhere = (
@@ -220,6 +272,135 @@ const buildWhereClause = (
   return whereClause;
 };
 
+const buildRawWhereClause = (
+  filters?: ProductFilters,
+  now: Date = new Date(),
+): Prisma.Sql => {
+  const conditions: Prisma.Sql[] = [
+    Prisma.sql`p."deletedAt" IS NULL`,
+  ];
+  const showSoldOut = filters?.showSoldOut === true;
+  const availability = filters?.availability;
+  const baseStatuses = showSoldOut
+    ? [...publishedCatalogStatuses, toPrismaProductStatus(ProductStatus.OUT_OF_STOCK)]
+    : publishedCatalogStatuses;
+
+  if (availability === "available") {
+    conditions.push(
+      Prisma.sql`p.status = ${toPrismaProductStatus(ProductStatus.PUBLISHED)}::"ProductStatus"`,
+      Prisma.sql`p.stock > 0`,
+      Prisma.sql`NOT EXISTS (
+        SELECT 1
+        FROM "PreorderCampaign" availability_campaign
+        WHERE availability_campaign."productId" = p.id
+          AND availability_campaign."deletedAt" IS NULL
+          AND availability_campaign.status = 'ACTIVE'::"PreorderCampaignStatus"
+          AND (availability_campaign."opensAt" IS NULL OR availability_campaign."opensAt" <= ${now})
+          AND (availability_campaign."closesAt" IS NULL OR availability_campaign."closesAt" >= ${now})
+      )`,
+    );
+  } else if (availability === "preorder-open") {
+    conditions.push(
+      Prisma.sql`p.status = ${toPrismaProductStatus(ProductStatus.PRE_ORDER)}::"ProductStatus"`,
+      Prisma.sql`EXISTS (
+        SELECT 1
+        FROM "PreorderCampaign" availability_campaign
+        WHERE availability_campaign."productId" = p.id
+          AND availability_campaign."deletedAt" IS NULL
+          AND availability_campaign.status = 'ACTIVE'::"PreorderCampaignStatus"
+          AND (availability_campaign."opensAt" IS NULL OR availability_campaign."opensAt" <= ${now})
+          AND (availability_campaign."closesAt" IS NULL OR availability_campaign."closesAt" >= ${now})
+      )`,
+    );
+  } else if (availability === "out-of-stock") {
+    conditions.push(
+      Prisma.sql`(
+        p.status = ${toPrismaProductStatus(ProductStatus.OUT_OF_STOCK)}::"ProductStatus"
+        OR (
+          p.status = ${toPrismaProductStatus(ProductStatus.PUBLISHED)}::"ProductStatus"
+          AND p.stock <= 0
+        )
+      )`,
+    );
+  } else {
+    if (
+      filters?.status &&
+      Object.values(ProductStatus).includes(filters.status as ProductStatus)
+    ) {
+      conditions.push(
+        Prisma.sql`p.status = ${toPrismaProductStatus(filters.status as ProductStatus)}::"ProductStatus"`,
+      );
+    } else {
+      conditions.push(
+        Prisma.sql`p.status IN (${Prisma.join(
+          baseStatuses.map((status) => Prisma.sql`${status}::"ProductStatus"`),
+        )})`,
+      );
+    }
+
+    if (filters?.openPreorders || filters?.sort === "eta-asc") {
+      conditions.push(
+        Prisma.sql`EXISTS (
+          SELECT 1
+          FROM "PreorderCampaign" availability_campaign
+          WHERE availability_campaign."productId" = p.id
+            AND availability_campaign."deletedAt" IS NULL
+            AND availability_campaign.status = 'ACTIVE'::"PreorderCampaignStatus"
+            AND (availability_campaign."opensAt" IS NULL OR availability_campaign."opensAt" <= ${now})
+            AND (availability_campaign."closesAt" IS NULL OR availability_campaign."closesAt" >= ${now})
+        )`,
+      );
+    }
+  }
+
+  const search = filters?.q?.trim();
+  if (search) {
+    conditions.push(
+      Prisma.sql`(
+        p.name ILIKE ${`%${search}%`}
+        OR collection.name ILIKE ${`%${search}%`}
+        OR category.name ILIKE ${`%${search}%`}
+        OR EXISTS (
+          SELECT 1
+          FROM "ProductCharacter" search_pc
+          INNER JOIN "Character" search_character
+            ON search_character.id = search_pc."characterId"
+          WHERE search_pc."productId" = p.id
+            AND search_character.name ILIKE ${`%${search}%`}
+        )
+      )`,
+    );
+  }
+
+  const minPrice = toPositiveMoney(filters?.minPrice);
+  const maxPrice = toPositiveMoney(filters?.maxPrice);
+  if (minPrice !== undefined) conditions.push(Prisma.sql`p.price >= ${minPrice}`);
+  if (maxPrice !== undefined) conditions.push(Prisma.sql`p.price <= ${maxPrice}`);
+
+  if (filters?.category) {
+    conditions.push(Prisma.sql`category.slug = ${filters.category}`);
+  }
+
+  if (filters?.collection) {
+    conditions.push(Prisma.sql`collection.slug = ${filters.collection}`);
+  }
+
+  if (filters?.character) {
+    conditions.push(
+      Prisma.sql`EXISTS (
+        SELECT 1
+        FROM "ProductCharacter" filter_pc
+        INNER JOIN "Character" filter_character
+          ON filter_character.id = filter_pc."characterId"
+        WHERE filter_pc."productId" = p.id
+          AND filter_character.slug = ${filters.character}
+      )`,
+    );
+  }
+
+  return Prisma.sql`WHERE ${Prisma.join(conditions, " AND ")}`;
+};
+
 const calculateDepositAmount = (
   price: number,
   depositType: PrismaPreorderDepositType,
@@ -295,6 +476,83 @@ const toCatalogProductDTO = (product: CatalogProductRecord): CatalogProductDTO =
   };
 };
 
+const toNumber = (value: number | bigint | null | undefined): number =>
+  value === null || value === undefined ? 0 : Number(value);
+
+const toCatalogProductDTOFromRaw = (
+  product: CatalogProductRawRecord,
+): CatalogProductDTO => {
+  const price = Number(product.price);
+  const campaign =
+    product.campaignId && product.depositType
+      ? {
+          id: product.campaignId,
+          totalSlots: product.totalSlots ?? 0,
+          depositType: product.depositType,
+          depositValue: product.depositValue,
+          etaLabel: product.etaLabel,
+          etaStart: product.etaStart,
+          releaseDate: product.releaseDate,
+        }
+      : null;
+  const reservedUnits = toNumber(product.reservedUnits);
+  const availableUnits = campaign
+    ? Math.max(campaign.totalSlots - reservedUnits, 0)
+    : 0;
+  const preorder = campaign
+    ? {
+        campaignId: campaign.id,
+        etaLabel: campaign.etaLabel,
+        etaStart: campaign.etaStart?.toISOString() ?? null,
+        releaseDate: campaign.releaseDate?.toISOString() ?? null,
+        availableUnits,
+        totalUnits: campaign.totalSlots,
+        depositAmount: calculateDepositAmount(
+          price,
+          campaign.depositType,
+          campaign.depositValue,
+        ),
+        isOpen: availableUnits > 0,
+      }
+    : undefined;
+
+  return {
+    id: product.id,
+    name: product.name,
+    price,
+    imageUrl: product.imageUrl,
+    character: product.characterName ?? undefined,
+    line: product.collectionName ?? undefined,
+    status: product.status,
+    displayAvailability: resolveDisplayAvailability({
+      status: product.status,
+      stock: product.stock,
+      preorder,
+    }),
+    preorder,
+  };
+};
+
+const isCatalogMetadataItem = (value: unknown): value is CatalogMetadataItem => {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.id === "string" &&
+    typeof item.name === "string" &&
+    typeof item.slug === "string"
+  );
+};
+
+const normalizeMetadataItems = (items: unknown) =>
+  Array.isArray(items)
+    ? items.filter(isCatalogMetadataItem).map((item) => ({
+        id: item.id,
+        name: item.name,
+        slug: item.slug,
+        count: toNumber(item.count),
+      }))
+    : [];
+
 const productSelect = (
   now: Date,
 ): Prisma.ProductSelect => ({
@@ -340,6 +598,95 @@ const productSelect = (
     },
   },
 });
+
+const listCatalogProductRows = (
+  rawWhereClause: Prisma.Sql,
+  sort: CatalogSort,
+  now: Date,
+  skip: number,
+  take: number,
+): Promise<CatalogProductRawRecord[]> =>
+  prisma.$queryRaw<CatalogProductRawRecord[]>`
+    SELECT
+      p.id,
+      p.name,
+      p.price,
+      p."imageUrl",
+      p.stock,
+      p.status,
+      collection.name AS "collectionName",
+      collection.slug AS "collectionSlug",
+      primary_character.name AS "characterName",
+      primary_character.slug AS "characterSlug",
+      primary_campaign.id AS "campaignId",
+      primary_campaign.status AS "campaignStatus",
+      primary_campaign."totalSlots",
+      primary_campaign."depositType",
+      primary_campaign."depositValue",
+      primary_campaign."opensAt",
+      primary_campaign."closesAt",
+      primary_campaign."releaseDate",
+      primary_campaign."etaStart",
+      primary_campaign."etaEnd",
+      primary_campaign."etaLabel",
+      primary_campaign."reservedUnits",
+      COUNT(*) OVER()::int AS "totalCount"
+    FROM "Product" p
+    INNER JOIN "Category" category
+      ON category.id = p."categoryId"
+    INNER JOIN "Collection" collection
+      ON collection.id = p."collectionId"
+    LEFT JOIN LATERAL (
+      SELECT character.name, character.slug
+      FROM "ProductCharacter" product_character
+      INNER JOIN "Character" character
+        ON character.id = product_character."characterId"
+      WHERE product_character."productId" = p.id
+      ORDER BY character.name ASC
+      LIMIT 1
+    ) primary_character ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT
+        campaign.id,
+        campaign.status,
+        campaign."totalSlots",
+        campaign."depositType",
+        campaign."depositValue",
+        campaign."opensAt",
+        campaign."closesAt",
+        campaign."releaseDate",
+        campaign."etaStart",
+        campaign."etaEnd",
+        campaign."etaLabel",
+        COALESCE(reserved_units.quantity, 0)::int AS "reservedUnits"
+      FROM "PreorderCampaign" campaign
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(SUM(reservation.quantity), 0)::int AS quantity
+        FROM "PreorderReservation" reservation
+        WHERE reservation."campaignId" = campaign.id
+          AND reservation.status IN (${Prisma.join(
+            activeReservationStatuses.map(
+              (status) => Prisma.sql`${status}::"PreorderReservationStatus"`,
+            ),
+          )})
+      ) reserved_units ON TRUE
+      WHERE campaign."productId" = p.id
+        AND campaign."deletedAt" IS NULL
+        AND campaign.status = 'ACTIVE'::"PreorderCampaignStatus"
+        AND (campaign."opensAt" IS NULL OR campaign."opensAt" <= ${now})
+        AND (campaign."closesAt" IS NULL OR campaign."closesAt" >= ${now})
+      ORDER BY
+        campaign."etaStart" ASC NULLS LAST,
+        campaign."releaseDate" ASC NULLS LAST,
+        campaign."etaEnd" ASC NULLS LAST,
+        campaign."createdAt" DESC
+      LIMIT 1
+    ) primary_campaign ON TRUE
+    ${rawWhereClause}
+    ORDER BY ${buildRawOrderBy(sort)}
+    OFFSET ${skip}
+    LIMIT ${take}
+  `;
 
 export class PrismaCatalogQueryRepository implements CatalogQueryRepository {
   async listCatalogProducts(
@@ -413,24 +760,31 @@ export class PrismaCatalogQueryRepository implements CatalogQueryRepository {
       };
     }
 
-    const total = await prisma.product.count({ where: whereClause });
+    const requestedSkip = (page - 1) * pageSize;
+    const rawWhereClause = buildRawWhereClause(filters, now);
+    const rows = await listCatalogProductRows(
+      rawWhereClause,
+      sort,
+      now,
+      requestedSkip,
+      pageSize,
+    );
+    const total = toNumber(rows[0]?.totalCount);
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const safePage = Math.min(page, totalPages);
-    const products = await prisma.product.findMany({
-      where: whereClause,
-      select: productSelect(now),
-      orderBy: buildOrderBy(sort),
-      skip: (safePage - 1) * pageSize,
-      take: pageSize,
-    });
+    const products =
+      safePage === page
+        ? rows
+        : await listCatalogProductRows(
+            rawWhereClause,
+            sort,
+            now,
+            (safePage - 1) * pageSize,
+            pageSize,
+          );
 
     return {
-      items: products.map((product) =>
-        toCatalogProductDTO({
-          ...(product as unknown as CatalogProductRecord),
-          status: product.status as ProductStatus,
-        }),
-      ),
+      items: products.map(toCatalogProductDTOFromRaw),
       pagination: {
         page: safePage,
         pageSize,
@@ -442,65 +796,85 @@ export class PrismaCatalogQueryRepository implements CatalogQueryRepository {
   }
 
   async getCatalogMetadata(): Promise<CatalogMetadataDTO> {
-    const baseWhere = buildWhereClause();
-
-    const categoriesDb = await prisma.category.findMany({
-      where: { deletedAt: null },
-      select: { id: true, name: true, slug: true },
-      orderBy: { name: "asc" },
-    });
-    const collectionsDb = await prisma.collection.findMany({
-      where: { deletedAt: null },
-      select: { id: true, name: true, slug: true },
-      orderBy: { name: "asc" },
-    });
-    const charactersDb = await prisma.character.findMany({
-      select: { id: true, name: true, slug: true },
-      orderBy: { name: "asc" },
-    });
-    const categoryCountsDb = await prisma.product.groupBy({
-      by: ["categoryId"],
-      where: baseWhere,
-      _count: { _all: true },
-    });
-    const collectionCountsDb = await prisma.product.groupBy({
-      by: ["collectionId"],
-      where: baseWhere,
-      _count: { _all: true },
-    });
-    const characterCountsDb = await prisma.productCharacter.groupBy({
-      by: ["characterId"],
-      where: {
-        product: baseWhere,
-      },
-      _count: { _all: true },
-    });
-
-    const categoryMap = new Map(
-      categoryCountsDb.map((item) => [item.categoryId, item._count._all]),
-    );
-
-    const collectionMap = new Map(
-      collectionCountsDb.map((item) => [item.collectionId, item._count._all]),
-    );
-
-    const characterMap = new Map(
-      characterCountsDb.map((item) => [item.characterId, item._count._all]),
-    );
+    const [metadata] = await prisma.$queryRaw<CatalogMetadataRawRecord[]>`
+      WITH catalog_products AS (
+        SELECT p.id, p."categoryId", p."collectionId"
+        FROM "Product" p
+        WHERE p."deletedAt" IS NULL
+          AND p.status IN (${Prisma.join(
+            publishedCatalogStatuses.map(
+              (status) => Prisma.sql`${status}::"ProductStatus"`,
+            ),
+          )})
+      ),
+      category_counts AS (
+        SELECT "categoryId", COUNT(*)::int AS count
+        FROM catalog_products
+        GROUP BY "categoryId"
+      ),
+      collection_counts AS (
+        SELECT "collectionId", COUNT(*)::int AS count
+        FROM catalog_products
+        GROUP BY "collectionId"
+      ),
+      character_counts AS (
+        SELECT pc."characterId", COUNT(*)::int AS count
+        FROM "ProductCharacter" pc
+        INNER JOIN catalog_products cp
+          ON cp.id = pc."productId"
+        GROUP BY pc."characterId"
+      )
+      SELECT
+        COALESCE((
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'id', category.id,
+              'name', category.name,
+              'slug', category.slug,
+              'count', COALESCE(category_counts.count, 0)
+            )
+            ORDER BY category.name ASC
+          )
+          FROM "Category" category
+          LEFT JOIN category_counts
+            ON category_counts."categoryId" = category.id
+          WHERE category."deletedAt" IS NULL
+        ), '[]'::jsonb) AS categories,
+        COALESCE((
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'id', collection.id,
+              'name', collection.name,
+              'slug', collection.slug,
+              'count', COALESCE(collection_counts.count, 0)
+            )
+            ORDER BY collection.name ASC
+          )
+          FROM "Collection" collection
+          LEFT JOIN collection_counts
+            ON collection_counts."collectionId" = collection.id
+          WHERE collection."deletedAt" IS NULL
+        ), '[]'::jsonb) AS collections,
+        COALESCE((
+          SELECT jsonb_agg(
+            jsonb_build_object(
+              'id', character.id,
+              'name', character.name,
+              'slug', character.slug,
+              'count', COALESCE(character_counts.count, 0)
+            )
+            ORDER BY character.name ASC
+          )
+          FROM "Character" character
+          LEFT JOIN character_counts
+            ON character_counts."characterId" = character.id
+        ), '[]'::jsonb) AS characters
+    `;
 
     return {
-      categories: categoriesDb.map((category) => ({
-        ...category,
-        count: categoryMap.get(category.id) ?? 0,
-      })),
-      collections: collectionsDb.map((collection) => ({
-        ...collection,
-        count: collectionMap.get(collection.id) ?? 0,
-      })),
-      characters: charactersDb.map((character) => ({
-        ...character,
-        count: characterMap.get(character.id) ?? 0,
-      })),
+      categories: normalizeMetadataItems(metadata?.categories),
+      collections: normalizeMetadataItems(metadata?.collections),
+      characters: normalizeMetadataItems(metadata?.characters),
     };
   }
 }

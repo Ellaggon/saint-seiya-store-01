@@ -5,6 +5,10 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   output: "server",
+  prefetch: {
+    defaultStrategy: "hover",
+    prefetchAll: false,
+  },
 
   adapter: vercel({
     webAnalytics: {

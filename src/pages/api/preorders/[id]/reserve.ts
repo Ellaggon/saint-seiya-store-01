@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 
 import { createReservePreorderUseCase } from "@/infrastructure/preorders/PreorderUseCaseFactory";
+import { invalidateCatalogCache } from "@/application/services/CatalogQueryService";
 import { failure, success } from "@/endpoints/api/shared/api-response";
 import { requireUser } from "@/endpoints/api/shared/auth";
 import {
@@ -29,6 +30,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
       now: new Date(),
     });
 
+    invalidateCatalogCache();
     return success(data, { status: 201 });
   } catch (error) {
     return failure(error);

@@ -2,7 +2,6 @@
 import CatalogResults from "@/ui/components/catalog/CatalogResults.astro";
 import { CatalogQueryService } from "@/application/services/CatalogQueryService";
 import { GetCatalogProductsUseCase } from "@/application/use-cases/catalog/GetCatalogProductsUseCase";
-import { GetCatalogMetadataUseCase } from "@/application/use-cases/catalog/GetCatalogMetadataUseCase";
 import { PrismaCatalogQueryRepository } from "@/infrastructure/database/PrismaCatalogQueryRepository";
 import { parseCatalogFilters } from "@/shared/listing/catalogQuery";
 import { buildPageUrl } from "@/shared/listing/queryParams";
@@ -10,12 +9,24 @@ import { toCatalogProductCardProps } from "@/ui/components/catalog/productCardVi
 
 const params = Astro.url.searchParams;
 const currentFilters = parseCatalogFilters(params, { page: 1, pageSize: 24 });
+const isBaseCatalogPartial = params.toString().length === 0;
+
+Astro.response.headers.set(
+  "Cache-Control",
+  isBaseCatalogPartial
+    ? "public, max-age=0, s-maxage=300, stale-while-revalidate=600"
+    : "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
+);
+Astro.response.headers.set(
+  "CDN-Cache-Control",
+  isBaseCatalogPartial
+    ? "public, max-age=300, stale-while-revalidate=600"
+    : "public, max-age=60, stale-while-revalidate=300",
+);
 
 const queryService = new CatalogQueryService(new PrismaCatalogQueryRepository());
 const useCase = new GetCatalogProductsUseCase(queryService);
-const metadataUseCase = new GetCatalogMetadataUseCase(queryService);
 const catalogResult = await useCase.execute(currentFilters);
-const metadata = await metadataUseCase.execute();
 
 const products = catalogResult.items.map(toCatalogProductCardProps);
 
@@ -27,7 +38,5 @@ const getPageUrl = (page: number) =>
   catalogResult={catalogResult}
   products={products}
   getPageUrl={getPageUrl}
-  metadata={metadata}
-  currentFilters={currentFilters}
   includeCountMarker={true}
 />

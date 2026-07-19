@@ -1,8 +1,15 @@
 ---
 import LoginPage from "../ui/pages/auth/LoginPage.astro";
 
+if (Astro.url.searchParams.has("password")) {
+  const safeUrl = new URL(Astro.url);
+  safeUrl.searchParams.delete("password");
+  return Astro.redirect(`${safeUrl.pathname}${safeUrl.search}`);
+}
+
 // Get returnTo from URL search params
 const returnTo = Astro.url.searchParams.get("returnTo") || "/";
+const initialEmail = Astro.url.searchParams.get("email") || "";
 ---
 
-<LoginPage returnTo={returnTo} />
+<LoginPage returnTo={returnTo} initialEmail={initialEmail} />

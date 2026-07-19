@@ -7,17 +7,24 @@
 interface Props {
   variant?: "black" | "dark";
   withBorder?: boolean;
+  fullWidth?: boolean;
   className?: string;
 }
 
-const { variant = "black", withBorder = false, className = "" } = Astro.props;
+const {
+  variant = "black",
+  withBorder = false,
+  fullWidth = false,
+  className = "",
+} = Astro.props;
 
 const bgClass = variant === "dark" ? "bg-[#1A1A1A]" : "bg-black";
 const borderClass = withBorder ? "border-t border-zinc-900" : "";
+const widthClass = fullWidth ? "w-full px-4 md:px-8 2xl:px-10" : "max-w-[1280px] mx-auto px-6";
 ---
 
-<section class={`${bgClass} ${borderClass} py-24 md:py-32 ${className}`}>
-  <div class="max-w-[1280px] mx-auto px-6">
+<section class={`${bgClass} ${borderClass} ${className}`}>
+  <div class={widthClass}>
     <slot />
   </div>
 </section>

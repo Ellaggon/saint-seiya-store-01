@@ -14,19 +14,41 @@ interface Props {
 }
 
 const { categories, currentCategory, getCategoryUrl } = Astro.props;
+const categorySubtitle = "Figuras disponibles y preventas seleccionadas de esta saga.";
 ---
 
-<div class="bg-black border-y border-zinc-900">
-  <div class="max-w-[1400px] mx-auto px-4 md:px-6 py-5">
-    <div class="flex items-center gap-3 overflow-x-auto pb-1">
+<div
+  id="catalog-category-strip"
+  class="relative -mt-1 overflow-hidden"
+>
+  <div class="relative z-10 mx-auto max-w-[1400px] px-4 pb-4 pt-3 sm:px-6 md:px-8 md:pb-5 md:pt-3 lg:flex justify-end">
+    <div class="relative">
+      <div
+        class="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-black/95 to-transparent md:hidden"
+        aria-hidden="true"
+      >
+      </div>
+      <div
+        class="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-black/95 to-transparent md:hidden"
+        aria-hidden="true"
+      >
+      </div>
+
+      <nav
+        class="flex items-center gap-1 overflow-x-auto rounded-md bg-black/45 p-1 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-md md:inline-flex md:max-w-full"
+        aria-label="Sagas del catálogo"
+      >
       <a
         href={getCategoryUrl()}
         data-filter-link
         data-category-card
-        class={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-          !currentCategory
-            ? "bg-white text-black"
-            : "bg-zinc-950 text-zinc-400 hover:text-white"
+        data-category-name="Catálogo"
+        data-category-subtitle="Figuras disponibles y preventas seleccionadas."
+          data-category-image=""
+          class={`flex-shrink-0 rounded px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] transition-all md:px-5 ${
+            !currentCategory
+            ? "bg-amber-500 text-black shadow-[0_8px_24px_rgba(245,158,11,0.18)]"
+            : "text-zinc-500 hover:bg-white/5 hover:text-white bg-zinc-950/80"
         }`}
       >
         Todas
@@ -36,34 +58,19 @@ const { categories, currentCategory, getCategoryUrl } = Astro.props;
           href={getCategoryUrl(cat.slug)}
           data-filter-link
           data-category-card
-          class={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+          data-category-name={cat.name}
+          data-category-subtitle={categorySubtitle}
+          data-category-image={cat.imageUrl || ""}
+          class={`flex-shrink-0 rounded px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.14em] transition-all md:px-5 ${
             currentCategory === cat.slug
-              ? "bg-white text-black"
-              : "bg-zinc-950 text-zinc-400 hover:text-white"
+              ? "bg-amber-500 text-black shadow-[0_8px_24px_rgba(245,158,11,0.18)]"
+              : "bg-zinc-950/80 text-zinc-500 hover:bg-white/5 hover:text-white"
           }`}
         >
           {cat.name}
         </a>
       ))}
+      </nav>
     </div>
   </div>
 </div>
-
-<script>
-  document.addEventListener("click", (e) => {
-    const target = e.target as HTMLElement;
-    const card = target.closest("[data-category-card]");
-    
-    if (card) {
-      const marketplace = document.getElementById("catalog-marketplace");
-      if (marketplace) {
-        setTimeout(() => {
-          marketplace.scrollIntoView({
-            behavior: "smooth",
-            block: "start"
-          });
-        }, 120);
-      }
-    }
-  });
-</script>

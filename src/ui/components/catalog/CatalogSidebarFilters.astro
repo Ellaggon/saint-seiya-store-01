@@ -22,10 +22,12 @@ interface Props {
 
 const { metadata, currentFilters } = Astro.props;
 
-const availabilityOptions = [
-  { name: "Disponible ahora", value: "available" },
-  { name: "Preventas abiertas", value: "preorder-open" },
-  { name: "Agotados", value: "out-of-stock" },
+const sortOptions = [
+  { value: "created-desc", label: "Más recientes" },
+  { value: "price-asc", label: "Precio menor a mayor" },
+  { value: "price-desc", label: "Precio mayor a menor" },
+  { value: "name-asc", label: "Nombre A-Z" },
+  { value: "eta-asc", label: "Llegada más próxima" },
 ];
 
 // Helper to build filter URL
@@ -43,36 +45,24 @@ const getFilterUrl = (key: string, value: string | null) => {
   return `${url.pathname}?${params.toString()}`;
 };
 
-const getAvailabilityUrl = (value: string | null) => {
+const hasActiveFilters = Boolean(
+  currentFilters.collection ||
+    currentFilters.q ||
+    currentFilters.minPrice !== undefined ||
+    currentFilters.maxPrice !== undefined,
+);
+
+const getClearSidebarFiltersUrl = () => {
   const url = new URL(Astro.url.pathname, Astro.url.origin);
-  const params = new URLSearchParams(Astro.url.search);
+  const params = new URLSearchParams();
 
-  params.delete("status");
-  params.delete("openPreorders");
-  params.delete("showSoldOut");
-
-  if (value === null) {
-    params.delete("availability");
-  } else {
-    params.set("availability", value);
-  }
-  params.delete("page");
+  if (currentFilters.category) params.set("category", currentFilters.category);
+  if (currentFilters.q) params.set("q", currentFilters.q);
+  if (currentFilters.sort) params.set("sort", currentFilters.sort);
 
   const search = params.toString();
   return `${url.pathname}${search ? `?${search}` : ""}`;
 };
-
-const hasActiveFilters = Boolean(
-  currentFilters.category ||
-    currentFilters.collection ||
-    currentFilters.availability ||
-    currentFilters.status ||
-    currentFilters.q ||
-    currentFilters.minPrice !== undefined ||
-    currentFilters.maxPrice !== undefined ||
-    currentFilters.showSoldOut ||
-    currentFilters.openPreorders,
-);
 ---
 
 <aside class="w-full lg:w-[280px] flex-shrink-0">
@@ -80,7 +70,7 @@ const hasActiveFilters = Boolean(
 
   <label
     for="filter-toggle"
-    class="lg:hidden flex items-center justify-between border border-zinc-900 bg-zinc-950 px-5 py-4 cursor-pointer hover:border-zinc-700 transition-colors mb-8 group"
+    class="lg:hidden mb-5 flex cursor-pointer items-center justify-between rounded-md border border-zinc-900 bg-zinc-950/80 px-4 py-3.5 transition-colors hover:border-zinc-700 md:mb-6 md:px-5 md:py-4 group"
   >
     <span
       class="text-white font-semibold text-sm group-hover:text-amber-400 transition-colors"
@@ -91,120 +81,134 @@ const hasActiveFilters = Boolean(
 
   <!-- Filter content -->
   <div
-    class="hidden peer-checked:block lg:block space-y-7 animate-in fade-in slide-in-from-top-4 duration-300"
+    class="hidden peer-checked:block lg:block animate-in fade-in slide-in-from-top-4 duration-300"
   >
     {
       hasActiveFilters && (
         <a
-          href="/catalog"
+          href={getClearSidebarFiltersUrl()}
           data-filter-link
-          class="inline-flex text-zinc-400 text-sm font-medium hover:text-white transition-colors"
+          class="mb-6 inline-flex text-xs font-semibold text-zinc-500 transition-colors hover:text-white"
         >
           Limpiar filtros
         </a>
       )
     }
 
-    <section class="space-y-3">
-      <h3 class="text-white text-sm font-semibold">Estado de compra</h3>
-      <ul class="space-y-1">
-        {
-          availabilityOptions.map((option) => (
-            <li>
-              <a
-                href={getAvailabilityUrl(
-                  currentFilters.availability === option.value ? null : option.value,
-                )}
-                data-filter-link
-                class={`flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors ${
-                  currentFilters.availability === option.value
-                    ? "bg-white text-black"
-                    : "text-zinc-400 hover:bg-zinc-950 hover:text-white"
-                }`}
-              >
-                <span>{option.name}</span>
-                {currentFilters.availability === option.value && (
-                  <span aria-hidden="true">✓</span>
-                )}
-              </a>
-            </li>
-          ))
-        }
-      </ul>
-    </section>
+    <div class="space-y-8">
+      <section class="space-y-3">
+        <h3 class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">
+          Ordenar
+        </h3>
+        <div class="relative">
+          <select
+            id="catalog-sort-select"
+            name="sort"
+            class="w-full appearance-none rounded-md border border-zinc-800 bg-black px-3 py-3 pr-10 text-sm font-semibold text-white transition-colors hover:border-zinc-600 focus:border-amber-500 focus:outline-none"
+          >
+            {
+              sortOptions.map((option) => (
+                <option
+                  value={option.value}
+                  selected={(currentFilters.sort || "created-desc") === option.value}
+                >
+                  {option.label}
+                </option>
+              ))
+            }
+          </select>
+          <div
+            class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-zinc-500"
+          >
+            <svg
+              class="h-3 w-3 fill-current"
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+            >
+              <path
+                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+              />
+            </svg>
+          </div>
+        </div>
+      </section>
 
     <form
       action="/catalog"
       method="get"
       data-catalog-filter-form
-      class="space-y-4 border-t border-zinc-900 pt-6"
+      class="space-y-4"
     >
       {currentFilters.q && <input type="hidden" name="q" value={currentFilters.q} />}
       {currentFilters.category && <input type="hidden" name="category" value={currentFilters.category} />}
       {currentFilters.collection && <input type="hidden" name="collection" value={currentFilters.collection} />}
-      {currentFilters.availability && <input type="hidden" name="availability" value={currentFilters.availability} />}
-      {currentFilters.status && <input type="hidden" name="status" value={currentFilters.status} />}
       {currentFilters.sort && <input type="hidden" name="sort" value={currentFilters.sort} />}
 
-      <h3 class="text-white text-sm font-semibold">Precio</h3>
+      <h3 class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">
+        Precio
+      </h3>
 
-      <div class="grid grid-cols-2 gap-3">
-        <label class="flex flex-col gap-2">
-          <span class="text-zinc-500 text-xs font-medium">Desde Bs</span>
+      <div class="grid grid-cols-2 gap-2.5">
+        <label class="flex flex-col gap-1.5">
+          <span class="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
+            Desde Bs
+          </span>
           <input
             type="number"
             min="0"
             step="1"
             name="minPrice"
             value={currentFilters.minPrice ?? ""}
-            class="bg-black border border-zinc-800 text-white text-sm px-3 py-3 focus:outline-none focus:border-zinc-500"
+            class="rounded-md border border-zinc-800 bg-black px-3 py-3 text-sm text-white transition-colors focus:border-amber-500 focus:outline-none"
           />
         </label>
-        <label class="flex flex-col gap-2">
-          <span class="text-zinc-500 text-xs font-medium">Hasta Bs</span>
+        <label class="flex flex-col gap-1.5">
+          <span class="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
+            Hasta Bs
+          </span>
           <input
             type="number"
             min="0"
             step="1"
             name="maxPrice"
             value={currentFilters.maxPrice ?? ""}
-            class="bg-black border border-zinc-800 text-white text-sm px-3 py-3 focus:outline-none focus:border-zinc-500"
+            class="rounded-md border border-zinc-800 bg-black px-3 py-3 text-sm text-white transition-colors focus:border-amber-500 focus:outline-none"
           />
         </label>
       </div>
 
       <button
         type="submit"
-        class="w-full rounded-md bg-white text-black text-sm font-semibold px-4 py-3 hover:bg-zinc-200 transition-colors"
+        class="w-full rounded-md bg-amber-500 px-4 py-3 text-sm font-black text-black transition-colors hover:bg-amber-400"
       >
         Aplicar
       </button>
     </form>
 
-    <details open class="group/section border-t border-zinc-900 pt-5">
+    <details open class="group/section">
       <summary
-        class="flex items-center justify-between cursor-pointer list-none py-3 border-b border-zinc-900"
+        class="flex cursor-pointer list-none items-center justify-between py-1"
       >
         <h3
-          class="text-white text-sm font-semibold"
+          class="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500"
         >
           Colección
         </h3>
         <span
-          class="text-zinc-500 text-xs transition-transform group-open/section:rotate-45"
+          class="text-sm leading-none text-zinc-500 transition-transform group-open/section:rotate-45"
           >+</span
         >
       </summary>
-      <ul class="flex flex-col gap-1 mt-3">
+      <ul class="mt-3 flex flex-col gap-1">
         {
           metadata?.collections.map((coll) => (
             <li>
               <a
                 href={getFilterUrl("collection", coll.slug)}
                 data-filter-link
-                class={`group/item block rounded-md px-3 py-2 transition-colors ${
+                class={`group/item block rounded-md px-3 py-2.5 transition-colors ${
                   currentFilters.collection === coll.slug
-                    ? "bg-white"
+                    ? "bg-amber-500"
                     : "hover:bg-zinc-950"
                 }`}
               >
@@ -215,10 +219,10 @@ const hasActiveFilters = Boolean(
                       : "text-zinc-400 group-hover/item:text-white"
                   }`}
                 >
-                  <span class="flex items-center gap-2">
-                    {coll.name}
+                  <span class="flex min-w-0 flex-1 items-center justify-between gap-3">
+                    <span class="truncate">{coll.name}</span>
                     <span
-                      class={`text-xs ${
+                      class={`flex-none text-xs ${
                         currentFilters.collection === coll.slug
                           ? "text-black/50"
                           : "text-zinc-600"
@@ -237,6 +241,7 @@ const hasActiveFilters = Boolean(
         }
       </ul>
     </details>
+    </div>
 
   </div>
 </aside>

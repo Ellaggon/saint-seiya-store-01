@@ -35,6 +35,12 @@ const isSoldOut =
   availability.code === "UNAVAILABLE" ||
   isPreorderSoldOut;
 const ctaLabel = availability.canReserve ? "Reservar preventa" : availability.canPurchase ? "Ver producto" : availability.label;
+const availabilityBadgeClass = availability.canPurchase
+  ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-300"
+  : "border-zinc-700/70 bg-black/70 text-zinc-400";
+const availabilityDotClass = availability.canPurchase
+  ? "bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.75)]"
+  : "bg-zinc-500";
 ---
 
 <a
@@ -46,12 +52,12 @@ const ctaLabel = availability.canReserve ? "Reservar preventa" : availability.ca
   data-product-availability={availability.code}
 >
   <div
-    class="relative w-full aspect-[4/5] bg-zinc-950 border border-zinc-900 group-hover:border-zinc-700 transition-colors duration-300 overflow-hidden"
+    class="relative w-full aspect-[4/5] overflow-hidden rounded-[18px] bg-zinc-950 border border-zinc-900 group-hover:border-zinc-700 transition-colors duration-300"
   >
     <img
       src={product.image}
       alt={product.name}
-      class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity duration-300"
+      class="h-full w-full rounded-[inherit] object-cover opacity-90 transition-opacity duration-300 group-hover:opacity-100"
       loading="lazy"
     />
 
@@ -61,13 +67,14 @@ const ctaLabel = availability.canReserve ? "Reservar preventa" : availability.ca
           <PreorderBadge isOpen={preorder.isOpen} isSoldOut={isPreorderSoldOut} />
         ) : (
           <span
-            class={`rounded-full text-xs font-semibold px-3 py-1 ${
-              availability.canPurchase
-                ? "bg-green-500 text-black"
-                : "bg-zinc-800 text-zinc-400 border border-zinc-700"
-            }`}
+            class={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] shadow-[0_10px_30px_rgba(0,0,0,0.32)] backdrop-blur ${availabilityBadgeClass}`}
           >
-            {availability.label}
+            <span
+              class={`h-1.5 w-1.5 rounded-full ${availabilityDotClass}`}
+              aria-hidden="true"
+            >
+            </span>
+            <span>{availability.label}</span>
           </span>
         )
       }
@@ -94,7 +101,9 @@ const ctaLabel = availability.canReserve ? "Reservar preventa" : availability.ca
       <span class="text-white text-base font-semibold">
         {formatPrice(product.price)}
       </span>
-      <span class="text-zinc-500 text-sm">{availability.label}</span>
+      <span class="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-600">
+        {availability.label}
+      </span>
     </div>
 
     {

@@ -89,6 +89,7 @@ type CatalogMetadataItem = {
   id: string;
   name: string;
   slug: string;
+  imageUrl?: string | null;
   count: number | bigint | null;
 };
 
@@ -549,6 +550,7 @@ const normalizeMetadataItems = (items: unknown) =>
         id: item.id,
         name: item.name,
         slug: item.slug,
+        imageUrl: item.imageUrl ?? null,
         count: toNumber(item.count),
       }))
     : [];
@@ -831,6 +833,7 @@ export class PrismaCatalogQueryRepository implements CatalogQueryRepository {
               'id', category.id,
               'name', category.name,
               'slug', category.slug,
+              'imageUrl', category."imageUrl",
               'count', COALESCE(category_counts.count, 0)
             )
             ORDER BY category.name ASC

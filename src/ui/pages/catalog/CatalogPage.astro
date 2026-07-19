@@ -2,7 +2,6 @@
 import MainLayout from "../../layouts/MainLayout.astro";
 import GlobalHeroWrapper from "../../components/layout/GlobalHeroWrapper.astro";
 import Section from "../../components/layout/Section.astro";
-import CatalogToolbar from "../../components/catalog/CatalogToolbar.astro";
 import CatalogSidebarFilters from "../../components/catalog/CatalogSidebarFilters.astro";
 import CatalogCategoryHero from "../../components/catalog/CatalogCategoryHero.astro";
 import CatalogResults from "../../components/catalog/CatalogResults.astro";
@@ -42,6 +41,9 @@ const { products: catalogResult, filters: metadata } =
   await getCatalogPageData.execute(currentFilters);
 
 const products = catalogResult.items.map(toCatalogProductCardProps);
+const activeCategory = metadata?.categories.find(
+  (category) => category.slug === currentFilters.category,
+);
 const catalogStructuredData = {
   "@context": "https://schema.org",
   "@type": "ItemList",
@@ -78,6 +80,9 @@ const getCategoryUrl = (slug?: string) => {
 
 const getPageUrl = (page: number) =>
   buildPageUrl(Astro.url.pathname, Astro.url.origin, params, page);
+const catalogVisualHeaderStyle = activeCategory?.imageUrl
+  ? `background-image: url('${activeCategory.imageUrl}')`
+  : "";
 ---
 
 <MainLayout
@@ -85,76 +90,92 @@ const getPageUrl = (page: number) =>
   description="Catálogo de figuras Saint Seiya disponibles y preventas activas en Bolivianos."
   structuredData={catalogStructuredData}
 >
-  <GlobalHeroWrapper
-    title="Catálogo"
-    subtitle="Figuras disponibles y preventas seleccionadas."
-    compact={true}
-  />
+  <div
+    id="catalog-visual-header"
+    class="relative overflow-hidden bg-black bg-cover bg-center bg-no-repeat"
+    style={catalogVisualHeaderStyle}
+  >
+    <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/45 to-black/80"></div>
+    <div class="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black to-transparent"></div>
 
-  <CatalogCategoryHero
-    categories={metadata?.categories || []}
-    currentCategory={currentFilters.category}
-    getCategoryUrl={getCategoryUrl}
-  />
+    <div class="relative z-10">
+      <GlobalHeroWrapper
+        htmlId="catalog-hero"
+        defaultTitle="Catálogo"
+        defaultSubtitle="Figuras disponibles y preventas seleccionadas."
+        title={activeCategory?.name || "Catálogo"}
+        subtitle={
+          activeCategory
+            ? "Figuras disponibles y preventas seleccionadas de esta saga."
+            : "Figuras disponibles y preventas seleccionadas."
+        }
+        compact={true}
+        inheritedBackground={true}
+        hideArchitecturalLines={true}
+      />
 
-  <Section variant="black">
-    <div class="px-4" id="catalog-marketplace">
+      <CatalogCategoryHero
+        categories={metadata?.categories || []}
+        currentCategory={currentFilters.category}
+        getCategoryUrl={getCategoryUrl}
+      />
+    </div>
+  </div>
+
+  <Section variant="black" fullWidth={true}>
+    <div
+      id="catalog-marketplace"
+      class="px-4 sm:px-6 md:px-8 lg:px-6 xl:px-20 2xl:px-32"
+    >
       <div
-        class="flex flex-col lg:flex-row gap-10 xl:gap-14 max-w-[1480px] mx-auto pt-8 md:pt-10"
+        class="flex flex-col gap-6 pt-4 md:gap-8 md:pt-6 lg:flex-row lg:pt-8 xl:gap-10 2xl:gap-12 w-full"
       >
         <!-- Sidebar -->
         <div
           data-catalog-sidebar-column
-          class="w-full lg:w-[280px] lg:flex-shrink-0 lg:overflow-hidden"
+          class="w-full lg:flex lg:flex-shrink-0 lg:items-start lg:gap-3 lg:overflow-visible"
         >
-          <button
-            id="catalog-sidebar-toggle"
-            type="button"
-            class="hidden lg:inline-flex mb-5 h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-zinc-950/80 text-zinc-400 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur hover:border-white/20 hover:bg-zinc-900 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 transition-[border-color,background-color,color,box-shadow,transform] duration-200 ease-out hover:-translate-y-px"
-            aria-controls="catalog-sidebar"
-            aria-expanded="true"
-            aria-label="Ocultar filtros"
-            title="Ocultar filtros"
-          >
-            <svg
-              data-sidebar-toggle-icon
-              class="h-[18px] w-[18px]"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.7"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <rect x="3.5" y="4" width="17" height="16" rx="4"></rect>
-              <path d="M9.25 4.5v15"></path>
-              <path d="M6.25 8.25h.01"></path>
-              <path d="M6.25 12h.01"></path>
-              <path d="M6.25 15.75h.01"></path>
-              <path
-                data-sidebar-toggle-chevron
-                d="m14.25 9.25 2.75 2.75-2.75 2.75"
-              ></path>
-            </svg>
-          </button>
-
           <div id="catalog-sidebar" data-catalog-sidebar>
             <CatalogSidebarFilters
               metadata={metadata}
               currentFilters={currentFilters}
             />
           </div>
+
+          <button
+            id="catalog-sidebar-toggle"
+            type="button"
+            class="hidden lg:sticky lg:top-28 lg:flex h-36 w-10 flex-none items-center justify-center gap-2 rounded-md border border-white/10 bg-zinc-950/75 text-zinc-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur transition-all duration-200 hover:border-amber-500/50 hover:bg-zinc-900 hover:text-amber-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
+            aria-controls="catalog-sidebar"
+            aria-expanded="true"
+            aria-label="Ocultar filtros"
+            title="Ocultar filtros"
+          >
+            <span
+              data-sidebar-toggle-label
+              class="text-[10px] font-black uppercase tracking-[0.24em]"
+              style="writing-mode: vertical-rl;"
+            >
+              Filtros
+            </span>
+            <svg
+              data-sidebar-toggle-chevron
+              class="h-3.5 w-3.5 transition-transform duration-300"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="square"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m15 18-6-6 6-6"></path>
+            </svg>
+          </button>
         </div>
 
-        <!-- Main Content (Toolbar + Grid) -->
-        <main class="flex-1 min-w-0 flex flex-col">
-          <CatalogToolbar
-            resultCount={catalogResult.pagination.total}
-            currentSort={catalogResult.sort}
-            currentQuery={currentFilters.q}
-          />
-
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0 flex flex-col xl:px-20">
           <CatalogResults
             catalogResult={catalogResult}
             products={products}
@@ -192,19 +213,30 @@ const getPageUrl = (page: number) =>
   <script src="../../scripts/catalogFilters.ts"></script>
 
   <style>
+    #catalog-visual-header #catalog-hero,
+    #catalog-visual-header #catalog-category-strip {
+      background-image: none !important;
+    }
+
     @media (min-width: 1024px) {
       #catalog-marketplace [data-catalog-sidebar-column] {
+        width: 332px;
         transition:
           width 320ms cubic-bezier(0.22, 1, 0.36, 1),
           margin 320ms cubic-bezier(0.22, 1, 0.36, 1);
       }
 
       #catalog-marketplace [data-catalog-sidebar] {
+        width: 280px;
+        flex: 0 0 280px;
+        overflow: hidden;
         transition:
+          width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+          flex-basis 320ms cubic-bezier(0.22, 1, 0.36, 1),
           opacity 220ms ease,
           transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
           visibility 0s linear 0s;
-        will-change: opacity, transform;
+        will-change: width, opacity, transform;
       }
 
       #catalog-marketplace [data-sidebar-toggle-chevron] {
@@ -213,15 +245,19 @@ const getPageUrl = (page: number) =>
       }
 
       #catalog-marketplace[data-sidebar-collapsed="true"] [data-catalog-sidebar-column] {
-        width: 40px;
+        width: 52px;
       }
 
       #catalog-marketplace[data-sidebar-collapsed="true"] [data-catalog-sidebar] {
+        width: 0;
+        flex-basis: 0;
         opacity: 0;
         pointer-events: none;
-        transform: translateX(-10px);
+        transform: translateX(-12px);
         visibility: hidden;
         transition:
+          width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+          flex-basis 320ms cubic-bezier(0.22, 1, 0.36, 1),
           opacity 180ms ease,
           transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
           visibility 0s linear 180ms;
@@ -230,12 +266,31 @@ const getPageUrl = (page: number) =>
       #catalog-marketplace[data-sidebar-collapsed="true"] [data-sidebar-toggle-chevron] {
         transform: rotate(180deg);
       }
+
+      #catalog-marketplace[data-sidebar-collapsed="true"] #catalog-sidebar-toggle {
+        border-color: rgba(245, 158, 11, 0.36);
+        color: rgb(245, 158, 11);
+      }
     }
 
     @media (min-width: 1024px) {
+      :global(#catalog-marketplace .catalog-products-grid),
+      :global(#catalog-marketplace .catalog-skeleton-grid) {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
       :global(#catalog-marketplace[data-sidebar-collapsed="true"] .catalog-products-grid),
       :global(#catalog-marketplace[data-sidebar-collapsed="true"] .catalog-skeleton-grid) {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 1536px) {
+      :global(#catalog-marketplace .catalog-products-grid),
+      :global(#catalog-marketplace .catalog-skeleton-grid),
+      :global(#catalog-marketplace[data-sidebar-collapsed="true"] .catalog-products-grid),
+      :global(#catalog-marketplace[data-sidebar-collapsed="true"] .catalog-skeleton-grid) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
   </style>

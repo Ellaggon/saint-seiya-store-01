@@ -176,8 +176,14 @@ class CatalogFilters {
     this.marketplace.dataset.sidebarCollapsed = String(isCollapsed);
     this.sidebarToggle.setAttribute("aria-expanded", String(!isCollapsed));
     const label = isCollapsed ? "Mostrar filtros" : "Ocultar filtros";
+    const visibleLabel = this.sidebarToggle.querySelector(
+      "[data-sidebar-toggle-label]",
+    );
     this.sidebarToggle.setAttribute("aria-label", label);
     this.sidebarToggle.setAttribute("title", label);
+    if (visibleLabel) {
+      visibleLabel.textContent = isCollapsed ? "Mostrar" : "Filtros";
+    }
   }
 
   private async fetchPartialHtml(
@@ -236,6 +242,7 @@ class CatalogFilters {
     if (nextPagination && this.paginationContainer) {
       this.paginationContainer.replaceWith(nextPagination);
       this.paginationContainer = nextPagination;
+      this.toolbarCount = document.getElementById("catalog-result-count");
     }
     if (nextCount && this.toolbarCount) {
       this.toolbarCount.textContent = nextCount.textContent || "0";
@@ -243,6 +250,7 @@ class CatalogFilters {
 
     this.updateFilterActiveStates(url);
     this.updateCategoryActive(url);
+    this.updateCategoryHero(url);
 
     if (updateHistory) {
       window.history.pushState({}, "", url.href);
@@ -328,13 +336,68 @@ class CatalogFilters {
       const cardCat = cardUrl.searchParams.get("category");
       
       if (cardCat === activeCat) {
-        card.classList.add("border-amber-500");
-        card.classList.remove("border-zinc-900");
+        card.classList.add(
+          "bg-amber-500",
+          "text-black",
+          "shadow-[0_8px_24px_rgba(245,158,11,0.18)]",
+        );
+        card.classList.remove(
+          "bg-zinc-950/80",
+          "text-zinc-500",
+          "hover:bg-white/5",
+          "hover:text-white",
+        );
       } else {
-        card.classList.remove("border-amber-500");
-        card.classList.add("border-zinc-900");
+        card.classList.remove(
+          "bg-amber-500",
+          "text-black",
+          "shadow-[0_8px_24px_rgba(245,158,11,0.18)]",
+        );
+        card.classList.add(
+          "bg-zinc-950/80",
+          "text-zinc-500",
+          "hover:bg-white/5",
+          "hover:text-white",
+        );
       }
     });
+  }
+
+  private updateCategoryHero(url: URL) {
+    const hero = document.getElementById("catalog-hero");
+    const visualHeader = document.getElementById("catalog-visual-header");
+    const categoryStrip = document.getElementById("catalog-category-strip");
+    if (!hero) return;
+
+    const activeCat = url.searchParams.get("category");
+    const categoryCards = document.querySelectorAll("[data-category-card]");
+    const activeCard = Array.from(categoryCards).find((card) => {
+      if (!(card instanceof HTMLAnchorElement)) return false;
+      const cardUrl = new URL(card.href);
+      return cardUrl.searchParams.get("category") === activeCat;
+    });
+
+    if (!(activeCard instanceof HTMLElement)) return;
+
+    const title =
+      activeCard.dataset.categoryName || hero.dataset.defaultTitle || "Catálogo";
+    const subtitle =
+      activeCard.dataset.categorySubtitle ||
+      hero.dataset.defaultSubtitle ||
+      "Figuras disponibles y preventas seleccionadas.";
+    const image = activeCard.dataset.categoryImage || "";
+    const titleElement = hero.querySelector("[data-hero-title]");
+    const subtitleElement = hero.querySelector("[data-hero-subtitle]");
+
+    if (titleElement) titleElement.textContent = title;
+    if (subtitleElement) subtitleElement.textContent = subtitle;
+    if (visualHeader) {
+      hero.style.backgroundImage = "";
+      if (categoryStrip) categoryStrip.style.backgroundImage = "";
+      visualHeader.style.backgroundImage = image ? `url("${image}")` : "";
+    } else {
+      hero.style.backgroundImage = image ? `url("${image}")` : "";
+    }
   }
 
   private updateFilterActiveStates(url: URL) {
@@ -342,6 +405,7 @@ class CatalogFilters {
     filterLinks.forEach((link) => {
       if (!(link instanceof HTMLAnchorElement)) return;
       if (link.hasAttribute("data-page-link")) return;
+      if (link.hasAttribute("data-category-card")) return;
 
       const href = new URL(link.href);
       const isActive = [

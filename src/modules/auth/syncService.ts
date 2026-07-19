@@ -16,15 +16,39 @@ export class AuthSyncService {
       return existingUser;
     }
 
-    return prisma.user.create({
-      data: {
-        id: input.id,
-        email: input.email ?? "",
-        name: input.name ?? "",
-        role: "CUSTOMER",
-        status: "ACTIVE",
-      },
-    });
+    if (input.email) {
+      const existingUserByEmail = await prisma.user.findUnique({
+        where: { email: input.email },
+      });
+
+      if (existingUserByEmail) {
+        return existingUserByEmail;
+      }
+    }
+
+    try {
+      return await prisma.user.create({
+        data: {
+          id: input.id,
+          email: input.email ?? "",
+          name: input.name ?? "",
+          role: "CUSTOMER",
+          status: "ACTIVE",
+        },
+      });
+    } catch (error) {
+      if (!input.email) throw error;
+
+      const existingUserByEmail = await prisma.user.findUnique({
+        where: { email: input.email },
+      });
+
+      if (existingUserByEmail) {
+        return existingUserByEmail;
+      }
+
+      throw error;
+    }
   }
 }
 

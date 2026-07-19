@@ -2,14 +2,12 @@
 interface Props {
   resultCount: number;
   currentSort: string;
-  currentQuery?: string;
   selectId?: string;
   sortOptions?: { value: string; label: string }[];
 }
 const {
   resultCount,
   currentSort,
-  currentQuery = "",
   selectId = "catalog-sort-select",
   sortOptions = [
     { value: "created-desc", label: "Más recientes" },
@@ -24,29 +22,6 @@ const {
 <div
   class="flex flex-col gap-4 border-b border-zinc-900 pb-5 mb-8"
 >
-  <form
-    id="catalog-search-form"
-    action="/catalog"
-    method="get"
-    class="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-3"
-  >
-    <label class="sr-only" for="catalog-search-input">Buscar productos</label>
-    <input
-      id="catalog-search-input"
-      name="q"
-      type="search"
-      value={currentQuery}
-      placeholder="Buscar por producto o colección"
-      class="w-full bg-black border border-zinc-800 text-white text-sm font-bold px-4 py-3 focus:outline-none focus:border-amber-500 placeholder:text-zinc-600"
-    />
-    <button
-      type="submit"
-      class="inline-flex items-center justify-center border border-amber-500 bg-amber-500 text-black text-[11px] font-black uppercase tracking-widest px-6 py-3 hover:bg-white hover:border-white transition-colors"
-    >
-      Buscar
-    </button>
-  </form>
-
   <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
     <div
       class="text-zinc-500 text-[11px] font-black uppercase tracking-widest"

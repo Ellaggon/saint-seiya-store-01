@@ -20,9 +20,9 @@
     min-height: 100vh;
   }
 
-  /* Force zero border-radius globally */
+  /* Keep square defaults while allowing explicit rounded utility classes. */
   * {
-    border-radius: 0 !important;
+    border-radius: 0;
   }
 }
 

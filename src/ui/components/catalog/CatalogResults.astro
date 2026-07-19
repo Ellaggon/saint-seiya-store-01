@@ -57,6 +57,17 @@ const {
 </div>
 
 <div id="catalog-pagination-container">
+  <div
+    class="mt-8 text-right text-[11px] font-black uppercase tracking-widest text-zinc-500"
+  >
+    <span id="catalog-result-count" class="text-white">
+      {catalogResult.pagination.total}
+    </span>
+    {catalogResult.pagination.total === 1
+      ? " producto encontrado"
+      : " productos encontrados"}
+  </div>
+
   <CatalogPagination
     currentPage={catalogResult.pagination.page}
     totalPages={catalogResult.pagination.totalPages}

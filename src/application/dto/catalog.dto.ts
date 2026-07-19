@@ -66,7 +66,13 @@ export interface CreateCharacterRequestDTO {
 }
 
 export interface CatalogMetadataDTO {
-  categories: { id: string; name: string; slug: string; count: number }[];
+  categories: {
+    id: string;
+    name: string;
+    slug: string;
+    imageUrl?: string | null;
+    count: number;
+  }[];
   collections: { id: string; name: string; slug: string; count: number }[];
   characters: { id: string; name: string; slug: string; count: number }[];
 }

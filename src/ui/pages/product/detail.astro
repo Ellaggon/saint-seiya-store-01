@@ -81,6 +81,16 @@ const productStructuredData =
         },
       }
     : undefined;
+const availabilityBadgeClass = displayAvailability?.canPurchase
+  ? "bg-emerald-400/10 text-emerald-300"
+  : "bg-zinc-900/80 text-zinc-400";
+const availabilityDotClass = displayAvailability?.canPurchase
+  ? "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.8)]"
+  : "bg-zinc-500";
+const charactersLabel =
+  product && product.characters && product.characters.length > 0
+    ? product.characters.join(", ")
+    : product?.character || "N/A";
 ---
 
 <MainLayout
@@ -91,61 +101,95 @@ const productStructuredData =
   <main class="min-h-screen bg-black">
     {
       product ? (
-        <div class="max-w-[1280px] mx-auto px-4 py-16 grid grid-cols-1 lg:grid-cols-2 gap-12">
-          <div class="w-full aspect-square border border-zinc-900 bg-zinc-950 overflow-hidden">
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              class="w-full h-full object-cover"
-              loading="eager"
-            />
+        <div class="mx-auto grid max-w-[1440px] grid-cols-1 gap-12 px-4 pb-20 pt-24 md:px-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(420px,0.7fr)] lg:gap-16 lg:pt-28 2xl:px-10">
+          <div class="lg:sticky lg:top-28 lg:self-start">
+            <div class="relative overflow-hidden rounded-md bg-zinc-950/70">
+              <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(245,158,11,0.12),transparent_34%)]">
+              </div>
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                class="relative z-10 h-full min-h-[420px] w-full object-cover md:min-h-[620px]"
+                loading="eager"
+              />
+              <div class="absolute inset-x-0 bottom-0 z-20 h-28 bg-gradient-to-t from-black/70 to-transparent">
+              </div>
+            </div>
           </div>
 
-          <div class="flex flex-col gap-10">
-            <div class="border-b border-zinc-900 pb-6">
-              <div class="flex items-center gap-3 mb-4">
-                <span class="bg-zinc-900 border border-zinc-700 text-zinc-300 text-[10px] font-black uppercase tracking-widest px-2 py-1">
+          <div class="flex flex-col gap-9 lg:py-6">
+            <section class="space-y-7">
+              <div class="flex flex-wrap items-center gap-3">
+                <span
+                  class={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] ${availabilityBadgeClass}`}
+                >
+                  <span
+                    class={`h-1.5 w-1.5 rounded-full ${availabilityDotClass}`}
+                    aria-hidden="true"
+                  >
+                  </span>
                   {displayAvailability?.label}
                 </span>
+                {product.category && (
+                  <span class="rounded-md bg-zinc-950 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                    {product.category}
+                  </span>
+                )}
               </div>
-              <h1 class="text-3xl md:text-5xl font-black uppercase text-white leading-tight">
-                {product.name}
-              </h1>
-              <p class="text-amber-500 font-black mt-4 text-sm uppercase tracking-widest">
-                {formatPrice(product.price)}
-              </p>
-            </div>
 
-            <div class="space-y-4 border border-zinc-900 bg-zinc-950 px-5 py-5">
-              <p class="text-zinc-300 text-xs uppercase tracking-widest font-bold">
+              <div class="space-y-5">
+                <p class="text-[10px] font-black uppercase tracking-[0.32em] text-amber-500">
+                  Sanctuary Archive
+                </p>
+                <h1 class="text-4xl font-black uppercase leading-[0.95] tracking-tight text-white md:text-6xl">
+                {product.name}
+                </h1>
+              </div>
+
+              <p class="max-w-2xl text-base leading-8 text-zinc-400">
                 {product.description}
               </p>
-              <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
-                Categoría: <span class="text-white">{product.category ?? "N/A"}</span>
-              </p>
-              <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
-                Colección: <span class="text-white">{product.line ?? "N/A"}</span>
-              </p>
-              <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
-                Personajes:
-                <span class="text-white">
-                  {(product.characters && product.characters.length > 0
-                    ? product.characters.join(", ")
-                    : product.character) || "N/A"}
+
+            </section>
+
+            <section class="rounded-2xl bg-zinc-950/60 p-5 md:p-6">
+              <div class="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                <div class="space-y-1">
+                  <p class="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-600">
+                    Precio
+                  </p>
+                  <p class="text-4xl font-black tracking-tight text-white">
+                    {formatPrice(product.price)}
+                  </p>
+                </div>
+                <span class="inline-flex w-fit items-center rounded-md bg-amber-500 px-5 py-3 text-[11px] font-black uppercase tracking-[0.16em] text-black">
+                  {displayAvailability?.canPurchase ? "Disponible" : displayAvailability?.label}
                 </span>
-              </p>
-              <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
-                Altura: <span class="text-white">{product.height} CM</span>
-              </p>
-              <p class="text-zinc-400 text-xs uppercase tracking-widest font-bold">
-                Material: <span class="text-white">{product.material || "N/A"}</span>
-              </p>
-            </div>
+              </div>
+
+              <dl class="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {[
+                  ["Colección", product.line ?? "No especificada"],
+                  ["Personajes", charactersLabel === "N/A" ? "No especificado" : charactersLabel],
+                  ["Altura", `${product.height} cm`],
+                  ["Material", product.material || "No especificado"],
+                ].map(([label, value]) => (
+                  <div class="rounded-xl bg-black/35 px-4 py-4">
+                    <dt class="text-[9px] font-black uppercase tracking-[0.22em] text-zinc-600">
+                      {label}
+                    </dt>
+                    <dd class="mt-2 text-sm font-semibold leading-6 text-zinc-100">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
 
             {
               preorder && (
-                <section class="border border-zinc-900 bg-zinc-950 px-5 py-5 space-y-5">
-                  <div class="flex items-center justify-between gap-4 border-b border-zinc-900 pb-4">
+                <section class="space-y-5 rounded-md bg-zinc-950/70 px-5 py-5">
+                  <div class="flex items-center justify-between gap-4">
                     <div class="flex flex-col gap-2">
                       <span class="text-zinc-500 text-[9px] font-black uppercase tracking-[0.3em]">
                         Campaña de preventa
@@ -168,12 +212,12 @@ const productStructuredData =
                   />
 
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div class="border border-zinc-900 bg-black px-4 py-4">
+                    <div class="rounded-md bg-black/70 px-4 py-4">
                       <PreorderPriceSummary
                         depositAmount={preorder.pricing.depositRequired}
                       />
                     </div>
-                    <div class="border border-zinc-900 bg-black px-4 py-4">
+                    <div class="rounded-md bg-black/70 px-4 py-4">
                       <div class="flex items-center justify-between gap-3">
                         <span class="text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em]">
                           Precio total
@@ -210,7 +254,7 @@ const productStructuredData =
         </div>
       ) : (
         <div class="max-w-[1280px] mx-auto px-4 py-20">
-          <div class="border border-zinc-900 bg-zinc-950 px-8 py-12">
+          <div class="rounded-md bg-zinc-950 px-8 py-12">
             <h1 class="text-white text-xl font-black uppercase tracking-widest">
               Producto no encontrado
             </h1>

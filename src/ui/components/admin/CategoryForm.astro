@@ -229,62 +229,84 @@ const { category, isEditing = false } = Astro.props;
 </MainLayout>
 
 <script>
-  const fileInput = document.getElementById("image-upload") as HTMLInputElement;
-  const statusText = document.getElementById("upload-status");
-  const imageUrlInput = document.getElementById("imageUrl") as HTMLInputElement;
-  const previewContainer = document.getElementById("image-preview-container");
-  const previewImg = document.getElementById(
-    "image-preview",
-  ) as HTMLImageElement;
-  const urlText = document.getElementById("image-url-text");
+  const initializeCategoryImageUpload = () => {
+    const fileInput = document.getElementById(
+      "image-upload",
+    ) as HTMLInputElement | null;
+    if (!fileInput || fileInput.dataset.uploadInitialized === "true") return;
 
-  fileInput?.addEventListener("change", async () => {
-    const file = fileInput.files?.[0];
-    if (!file) return;
+    fileInput.dataset.uploadInitialized = "true";
 
-    // Visual feedback
-    const originalStatus = statusText?.innerHTML;
-    if (statusText) statusText.textContent = "COPIANDO AL ARCHIVO... (SUBIENDO)";
-    fileInput.disabled = true;
+    fileInput.addEventListener("change", async () => {
+      const statusText = document.getElementById("upload-status");
+      const imageUrlInput = document.getElementById(
+        "imageUrl",
+      ) as HTMLInputElement | null;
+      const previewContainer = document.getElementById(
+        "image-preview-container",
+      );
+      const previewImg = document.getElementById(
+        "image-preview",
+      ) as HTMLImageElement | null;
+      const urlText = document.getElementById("image-url-text");
+      const file = fileInput.files?.[0];
 
-    const formData = new FormData();
-    formData.append("file", file);
+      if (!file) return;
 
-    try {
-      const response = await fetch("/api/upload-category-image", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Error en la subida");
-      }
-
-      const data = await response.json();
-
-      // Update hidden input
-      if (imageUrlInput) {
-        imageUrlInput.value = data.url;
-      }
-
-      // Update preview
-      if (previewImg) previewImg.src = data.url;
-      if (urlText) urlText.textContent = data.url;
-      if (previewContainer) previewContainer.classList.remove("hidden");
-      if (statusText) statusText.textContent = "¡BANNER VINCULADO!";
-
-      setTimeout(() => {
-        if (statusText && originalStatus) statusText.innerHTML = originalStatus;
-      }, 3000);
-    } catch (error: any) {
-      console.error("Upload error:", error);
+      const originalStatus = statusText?.innerHTML;
       if (statusText) {
-        statusText.textContent = "ERROR: " + error.message;
-        statusText.classList.add("text-red-500");
+        statusText.textContent = "COPIANDO AL ARCHIVO... (SUBIENDO)";
+        statusText.classList.remove("text-red-500");
       }
-    } finally {
-      fileInput.disabled = false;
-    }
-  });
+      fileInput.disabled = true;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const response = await fetch("/api/upload-category-image", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Error en la subida");
+        }
+
+        const data = await response.json();
+
+        if (imageUrlInput) {
+          imageUrlInput.value = data.url;
+        }
+
+        if (previewImg) previewImg.src = data.url;
+        if (urlText) urlText.textContent = data.url;
+        if (previewContainer) previewContainer.classList.remove("hidden");
+        if (statusText) statusText.textContent = "¡BANNER VINCULADO!";
+
+        setTimeout(() => {
+          if (statusText && originalStatus) statusText.innerHTML = originalStatus;
+        }, 3000);
+      } catch (error: unknown) {
+        console.error("Upload error:", error);
+        if (statusText) {
+          const message =
+            error instanceof Error ? error.message : "Error en la subida";
+          statusText.textContent = "ERROR: " + message;
+          statusText.classList.add("text-red-500");
+        }
+      } finally {
+        fileInput.disabled = false;
+      }
+    });
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeCategoryImageUpload);
+  } else {
+    initializeCategoryImageUpload();
+  }
+
+  document.addEventListener("astro:page-load", initializeCategoryImageUpload);
 </script>

@@ -46,6 +46,14 @@ const requiredNumber = (formData: FormData, key: string): number => {
   return value;
 };
 
+const requiredNonNegativeInteger = (formData: FormData, key: string): number => {
+  const value = Number(requiredString(formData, key));
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${key} must be a non-negative integer`);
+  }
+  return value;
+};
+
 const parseProductStatus = (formData: FormData): ProductStatus => {
   const status = requiredString(formData, "status");
   if (!Object.values(ProductStatus).includes(status as ProductStatus)) {
@@ -74,7 +82,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
         categoryId: requiredString(formData, "categoryId"),
         collectionId: requiredString(formData, "collectionId"),
         material: "",
-        stock: 0,
+        stock: requiredNonNegativeInteger(formData, "stock"),
         status: parseProductStatus(formData),
       });
 
@@ -96,7 +104,7 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
         categoryId: requiredString(formData, "categoryId"),
         collectionId: requiredString(formData, "collectionId"),
         material: "",
-        stock: 0,
+        stock: requiredNonNegativeInteger(formData, "stock"),
         status: parseProductStatus(formData),
       });
 

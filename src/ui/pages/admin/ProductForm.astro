@@ -156,6 +156,29 @@ const statusOptions = [
           />
         </div>
 
+        <!-- Stock -->
+        <div class="space-y-2">
+          <label
+            for="stock"
+            class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
+            >Cantidad disponible</label
+          >
+          <input
+            type="number"
+            id="stock"
+            name="stock"
+            value={(product?.stock ?? 0).toString()}
+            min="0"
+            step="1"
+            required
+            placeholder="0"
+            class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
+          />
+          <p class="text-[10px] text-zinc-600">
+            Si está en 0, el catálogo mostrará el producto como agotado.
+          </p>
+        </div>
+
         <div class="space-y-2">
           <div class="flex justify-between items-center">
             <label

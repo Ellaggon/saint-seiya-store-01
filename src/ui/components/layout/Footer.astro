@@ -4,6 +4,135 @@
  * Functional: Structured site information and links.
  * UI: Dark, minimal, uppercase headings, gold hover states.
  */
+import { CatalogQueryService } from "@/application/services/CatalogQueryService";
+import { PrismaCatalogQueryRepository } from "@/infrastructure/database/PrismaCatalogQueryRepository";
+
+type ExploreLink = {
+  label: string;
+  href: string;
+};
+
+type FilterOption = {
+  name: string;
+  slug: string;
+  count: number;
+};
+
+const normalize = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const matchesPreferred = (item: FilterOption, needles: string[]) => {
+  const name = normalize(item.name);
+  const slug = normalize(item.slug);
+  return needles.some(
+    (needle) => name.includes(needle) || slug.includes(needle.replace(/\s+/g, "-")),
+  );
+};
+
+const toCollectionHref = (slug: string) => `/catalog?collection=${encodeURIComponent(slug)}`;
+const toCategoryHref = (slug: string) => `/catalog?category=${encodeURIComponent(slug)}`;
+
+const queryService = new CatalogQueryService(new PrismaCatalogQueryRepository());
+const metadata = await queryService.getCatalogMetadata();
+
+const liveCollections = (metadata.collections || []).filter((item) => item.count > 0);
+const liveCategories = (metadata.categories || []).filter((item) => item.count > 0);
+
+const preferredFilters: { needles: string[]; kind: "collection" | "category" | "any" }[] = [
+  { needles: ["myth cloth ex", "myth-cloth-ex"], kind: "collection" },
+  { needles: ["soul of gold", "soul-of-gold"], kind: "any" },
+  { needles: ["vintage", "vintage 80", "vintage-80", "80s", "classic"], kind: "any" },
+];
+
+const usedKeys = new Set<string>();
+const filterLinks: ExploreLink[] = [];
+
+const markUsed = (kind: "collection" | "category", slug: string) => {
+  usedKeys.add(`${kind}:${slug}`);
+};
+
+const isUsed = (kind: "collection" | "category", slug: string) =>
+  usedKeys.has(`${kind}:${slug}`);
+
+for (const preferred of preferredFilters) {
+  const collectionMatch =
+    preferred.kind === "category"
+      ? undefined
+      : liveCollections.find(
+          (item) =>
+            !isUsed("collection", item.slug) &&
+            matchesPreferred(item, preferred.needles),
+        );
+  const categoryMatch =
+    preferred.kind === "collection"
+      ? undefined
+      : liveCategories.find(
+          (item) =>
+            !isUsed("category", item.slug) &&
+            matchesPreferred(item, preferred.needles),
+        );
+
+  const match =
+    preferred.kind === "collection"
+      ? collectionMatch
+        ? { item: collectionMatch, kind: "collection" as const }
+        : null
+      : preferred.kind === "category"
+        ? categoryMatch
+          ? { item: categoryMatch, kind: "category" as const }
+          : null
+        : collectionMatch
+          ? { item: collectionMatch, kind: "collection" as const }
+          : categoryMatch
+            ? { item: categoryMatch, kind: "category" as const }
+            : null;
+
+  if (!match) continue;
+
+  markUsed(match.kind, match.item.slug);
+  filterLinks.push({
+    label: match.item.name,
+    href:
+      match.kind === "collection"
+        ? toCollectionHref(match.item.slug)
+        : toCategoryHref(match.item.slug),
+  });
+}
+
+// Fill with provider-created filters if preferred ones are missing.
+const fallbackPool: { item: FilterOption; kind: "collection" | "category" }[] = [
+  ...liveCollections.map((item) => ({
+    item,
+    kind: "collection" as const,
+  })),
+  ...liveCategories.map((item) => ({
+    item,
+    kind: "category" as const,
+  })),
+];
+
+for (const candidate of fallbackPool) {
+  if (filterLinks.length >= 3) break;
+  if (isUsed(candidate.kind, candidate.item.slug)) continue;
+  markUsed(candidate.kind, candidate.item.slug);
+  filterLinks.push({
+    label: candidate.item.name,
+    href:
+      candidate.kind === "collection"
+        ? toCollectionHref(candidate.item.slug)
+        : toCategoryHref(candidate.item.slug),
+  });
+}
+
+const exploreLinks: ExploreLink[] = [
+  { label: "Catálogo completo", href: "/catalog" },
+  ...filterLinks,
+  { label: "Próximos lanzamientos", href: "/preorders" },
+];
 ---
 
 <footer class="bg-black border-t border-zinc-900 py-24 mt-24">
@@ -23,13 +152,35 @@
       </p>
       <div class="flex gap-4">
         {
-          ["TW", "IG", "FB", "YT"].map((social) => (
+          [
+            {
+              label: "Instagram",
+              href: "#",
+              className:
+                "border-[#E1306C]/40 bg-[#E1306C]/10 text-[#F77737] hover:border-[#E1306C] hover:bg-[#E1306C]/20 hover:text-[#F56040]",
+              icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FCAF45"/><stop offset="40%" stop-color="#E1306C"/><stop offset="100%" stop-color="#833AB4"/></linearGradient></defs><rect width="20" height="20" x="2" y="2" rx="5" ry="5" fill="none" stroke="url(#ig-grad)" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="url(#ig-grad)" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="url(#ig-grad)"/></svg>`,
+            },
+            {
+              label: "Facebook",
+              href: "#",
+              className:
+                "border-[#1877F2]/40 bg-[#1877F2]/10 text-[#1877F2] hover:border-[#1877F2] hover:bg-[#1877F2]/20 hover:text-[#4b9aff]",
+              icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#1877F2" aria-hidden="true"><path d="M14 13.5h2.5l1-4H14v-2c0-1.03 0-2 2-2h1.5V2.14c-.326-.043-1.557-.14-2.857-.14C11.928 2 10 3.657 10 6.7v2.8H7v4h3V22h4z"/></svg>`,
+            },
+            {
+              label: "TikTok",
+              href: "#",
+              className:
+                "border-[#25F4EE]/35 bg-[#25F4EE]/10 text-[#FE2C55] hover:border-[#FE2C55]/70 hover:bg-[#FE2C55]/15",
+              icon: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#25F4EE" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15.8a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.87a8.2 8.2 0 0 0 4.76 1.52V6.94a4.85 4.85 0 0 1-1-.25z" transform="translate(0.7 0.5)"/><path fill="#FE2C55" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15.8a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.87a8.2 8.2 0 0 0 4.76 1.52V6.94a4.85 4.85 0 0 1-1-.25z" transform="translate(-0.7 -0.5)"/><path fill="#FFFFFF" d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15.8a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.87a8.2 8.2 0 0 0 4.76 1.52V6.94a4.85 4.85 0 0 1-1-.25z"/></svg>`,
+            },
+          ].map((social) => (
             <a
-              href="#"
-              class="w-8 h-8 border border-zinc-800 flex items-center justify-center text-zinc-500 text-[10px] font-bold hover:border-amber-500 hover:text-white transition-all duration-300"
-            >
-              {social}
-            </a>
+              href={social.href}
+              aria-label={social.label}
+              class={`flex h-9 w-9 items-center justify-center rounded-md border transition-all duration-300 ${social.className}`}
+              set:html={social.icon}
+            />
           ))
         }
       </div>
@@ -44,19 +195,13 @@
       </h4>
       <ul class="flex flex-col gap-3">
         {
-          [
-            "CATÁLOGO COMPLETO",
-            "MYTH CLOTH EX",
-            "SOUL OF GOLD",
-            "VINTAGE 80S",
-            "PRÓXIMOS LANZAMIENTOS",
-          ].map((link) => (
+          exploreLinks.map((link) => (
             <li>
               <a
-                href="#"
+                href={link.href}
                 class="text-white text-[11px] font-bold uppercase tracking-widest hover:text-amber-500 transition-colors duration-200"
               >
-                {link}
+                {link.label}
               </a>
             </li>
           ))

@@ -168,6 +168,7 @@ export const parsePreorderListQuery = (
     scope === "public"
       ? parsePublicPreorderStatus(params.get("status"))
       : parsePreorderStatus(params.get("status")),
+  q: params.get("q")?.trim() || undefined,
   category: params.get("category") || undefined,
   collection: params.get("collection") || undefined,
   character: params.get("character") || undefined,

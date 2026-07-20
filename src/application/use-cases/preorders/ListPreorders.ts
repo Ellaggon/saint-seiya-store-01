@@ -16,6 +16,7 @@ import type {
 
 export interface ListPreordersInput {
   status?: PreorderCampaignStatus;
+  q?: string;
   category?: string;
   collection?: string;
   character?: string;
@@ -39,6 +40,7 @@ export class ListPreorders {
   ): Promise<PaginatedResultDTO<PreorderListItemDTO>> {
     const result = await this.preorderRepository.listCampaignsWithProducts({
       status: input.status,
+      q: input.q,
       category: input.category,
       collection: input.collection,
       character: input.character,

@@ -7,27 +7,35 @@
 interface Props {
   title: string;
   subtitle?: string;
+  eyebrow?: string;
   fullHeight?: boolean;
   compact?: boolean;
   backgroundImage?: string;
+  backgroundPosition?: string;
   htmlId?: string;
   defaultTitle?: string;
   defaultSubtitle?: string;
   inheritedBackground?: boolean;
   hideArchitecturalLines?: boolean;
+  ctaLabel?: string;
+  ctaHref?: string;
 }
 
 const {
   title,
   subtitle,
+  eyebrow,
   fullHeight = false,
   compact = false,
   backgroundImage,
+  backgroundPosition = "center",
   htmlId,
   defaultTitle,
   defaultSubtitle,
   inheritedBackground = false,
   hideArchitecturalLines = false,
+  ctaLabel = "DESCUBRIR COLECCIÓN",
+  ctaHref = "/catalog",
 } = Astro.props;
 
 const heightClass = fullHeight
@@ -35,12 +43,13 @@ const heightClass = fullHeight
   : compact
     ? "min-h-[180px] md:min-h-[220px]"
     : "min-h-[60vh] md:min-h-[70vh]";
-const bgStyle = backgroundImage && !inheritedBackground
-  ? `background-image: url('${backgroundImage}')`
-  : "";
+const bgStyle =
+  backgroundImage && !inheritedBackground
+    ? `background-image: url('${backgroundImage}'); background-position: ${backgroundPosition};`
+    : "";
 const backgroundClass = inheritedBackground
   ? "bg-transparent"
-  : "bg-black bg-cover bg-center";
+  : "bg-black bg-cover bg-no-repeat";
 ---
 
 <header
@@ -52,13 +61,19 @@ const backgroundClass = inheritedBackground
 >
   {
     !inheritedBackground && (
-      <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/80 z-10">
+      <div
+        class={`absolute inset-0 z-10 ${
+          backgroundImage
+            ? "bg-gradient-to-t from-black via-black/55 to-black/70"
+            : "bg-gradient-to-t from-black via-black/40 to-black/80"
+        }`}
+      >
       </div>
     )
   }
 
   {
-    !hideArchitecturalLines && (
+    !hideArchitecturalLines && !backgroundImage && (
       <div class="absolute inset-0 z-0 pointer-events-none opacity-20">
         <div class="absolute left-1/4 top-0 w-px h-full bg-zinc-800"></div>
         <div class="absolute right-1/4 top-0 w-px h-full bg-zinc-800"></div>
@@ -68,50 +83,60 @@ const backgroundClass = inheritedBackground
   }
 
   <div
-    class="relative z-20 max-w-[1280px] w-full mx-auto px-6 text-center animate-fade-in-up"
+    class="relative z-20 mx-auto w-full max-w-[1280px] px-6 text-center animate-fade-in-up"
   >
-    <div class={`flex flex-col items-center ${compact ? "gap-4" : "gap-6"}`}>
-      <div class={`w-10 h-[1px] bg-amber-500 ${compact ? "" : "mb-2"}`}></div>
+    <div class={`flex flex-col items-center ${compact ? "gap-4" : "gap-5 md:gap-6"}`}>
+      <div class={`h-px w-10 bg-amber-500 ${compact ? "" : "mb-1"}`}></div>
 
       <h1
         data-hero-title
-        class={`font-black text-white tracking-tight leading-[0.95] ${compact ? "text-4xl md:text-5xl mb-1" : "text-5xl md:text-8xl lg:text-9xl mb-4"}`}
+        class={`font-black tracking-tight text-white leading-[0.95] ${compact ? "mb-1 text-4xl md:text-5xl" : "mb-2 text-5xl md:text-7xl lg:text-8xl"}`}
       >
         {title}
       </h1>
 
       {
-        subtitle && (
-          <p class={`text-zinc-400 font-medium max-w-2xl leading-relaxed opacity-80 ${compact ? "text-sm md:text-base" : "text-sm md:text-lg tracking-[0.4em] uppercase"}`}>
-            <span data-hero-subtitle>
-            {subtitle}
-            </span>
+        eyebrow && (
+          <p class="max-w-3xl text-sm font-medium uppercase tracking-[0.18em] text-zinc-200 md:text-base md:tracking-[0.22em]">
+            {eyebrow}
           </p>
         )
       }
 
       {
-        !compact && (
-          <div class="mt-12 group cursor-pointer inline-flex items-center gap-4 border border-zinc-800 py-4 px-8 hover:border-amber-500 transition-all duration-300">
-            <span class="text-white text-[11px] font-black uppercase tracking-widest">
-              DESCUBRIR COLECCIÓN
-            </span>
+        subtitle && (
+          <p
+            class={`max-w-2xl font-medium leading-relaxed text-zinc-400 opacity-90 ${compact ? "text-sm md:text-base" : "text-xs uppercase tracking-[0.28em] md:text-sm md:tracking-[0.35em]"}`}
+          >
+            <span data-hero-subtitle>{subtitle}</span>
+          </p>
+        )
+      }
+
+      {
+        !compact && ctaLabel && ctaHref && (
+          <a
+            href={ctaHref}
+            class="group mt-8 inline-flex items-center gap-3 border-b border-amber-500/70 pb-2 text-[11px] font-black uppercase tracking-[0.28em] text-white transition-colors hover:border-white hover:text-amber-400 md:mt-10"
+          >
+            {ctaLabel}
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
+              width="14"
+              height="14"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              stroke-width="3"
+              stroke-width="2.5"
               stroke-linecap="square"
               stroke-linejoin="round"
-              class="text-amber-500 group-hover:translate-x-1 transition-transform"
+              class="text-amber-500 transition-transform group-hover:translate-x-1"
+              aria-hidden="true"
             >
-              <line x1="5" y1="12" x2="19" y2="12" />
-              <polyline points="12 5 19 12 12 19" />
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
             </svg>
-          </div>
+          </a>
         )
       }
     </div>

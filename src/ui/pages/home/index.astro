@@ -11,51 +11,93 @@ import Section from "../../components/layout/Section.astro";
 
 <MainLayout title="INICIO">
   <GlobalHeroWrapper
-    title="Soul of Gold"
-    subtitle="LA ARMADURA DIVINA DEFINITIVA. DISPONIBLE AHORA EN EL SANTUARIO."
+    title="Poseidon"
+    eyebrow="Sea Emperor Poseidon Royal Mantle"
+    subtitle="Disponible ahora en el Santuario."
     fullHeight={true}
+    backgroundImage="/assets/home/poseidon-hero.jpg"
+    backgroundPosition="center 35%"
+    hideArchitecturalLines={true}
+    ctaLabel="Ver preventa"
+    ctaHref="/preorders"
   />
 
-  <Section variant="dark" withBorder={false}>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
-      <div class="space-y-8">
-        <h2
-          class="text-white text-5xl font-black uppercase tracking-tighter leading-none"
-        >
-          PRECISIÓN <br /> AL ESTILO <br />
-          <span class="text-amber-500">TAMASHII</span>
-        </h2>
-        <p
-          class="text-zinc-500 text-sm font-bold uppercase tracking-widest leading-relaxed"
-        >
-          Cada figura es una obra maestra de ingeniería. En THE SANCTUARY,
-          seleccionamos únicamente las líneas más exclusivas para los
-          coleccionistas más exigentes del cosmos.
-        </p>
-        <div class="pt-4">
+  <Section variant="black" withBorder={false}>
+    <div class="py-20 md:py-28 lg:py-32">
+      <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-16 xl:gap-20">
+        <div class="flex flex-col gap-6 lg:col-span-5 lg:gap-8">
+          <div class="space-y-5">
+            <p class="text-[10px] font-black uppercase tracking-[0.35em] text-amber-500">
+              Tamashii Nations
+            </p>
+            <h2 class="max-w-[12ch] text-4xl font-black uppercase leading-[0.92] tracking-tight text-white md:text-5xl lg:text-6xl">
+              Precisión al estilo
+              <span class="text-amber-500"> Tamashii</span>
+            </h2>
+            <p class="max-w-md text-sm leading-relaxed text-zinc-400 md:text-[15px] md:leading-7">
+              Cada figura combina ingeniería y escultura. En Sanctuary curamos
+              las líneas más exigentes para coleccionistas que buscan piezas
+              dignas de vitrina.
+            </p>
+          </div>
+
           <a
             href="/catalog"
-            class="text-white text-xs font-black uppercase tracking-[0.3em] border-amber-500 pb-2 hover:text-amber-500 hover:border-white transition-all"
+            class="group inline-flex w-fit items-center gap-3 border-b border-amber-500/70 pb-2 text-[11px] font-black uppercase tracking-[0.28em] text-white transition-colors hover:border-white hover:text-amber-400"
           >
-            VER TODAS LAS LÍNEAS
+            Ver catálogo
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="square"
+              stroke-linejoin="round"
+              class="text-amber-500 transition-transform group-hover:translate-x-1"
+              aria-hidden="true"
+            >
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
           </a>
         </div>
-      </div>
-      <div
-        class="relative aspect-square overflow-hidden bg-black shadow-[0_30px_90px_rgba(0,0,0,0.45)]"
-      >
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(245,158,11,0.18),transparent_38%)]"></div>
-        <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black via-black/45 to-transparent"></div>
-        <div class="relative z-10 mx-auto h-full max-h-full w-[80%] md:w-[76%]">
-          <img
-            src="/assets/home/tamashii-myth-cloth-ex-pegasus.jpg"
-            alt="Figura Saint Cloth Myth EX Pegasus Seiya de Tamashii Nations"
-            class="h-full w-full object-contain py-8 md:py-10"
-            loading="lazy"
-          />
-          <span class="absolute bottom-10 right-4 max-w-[calc(100%-1.5rem)] whitespace-nowrap px-2.5 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-amber-500 md:bottom-12 md:right-5">
-            Myth Cloth EX
-          </span>
+
+        <div class="lg:col-span-7">
+          <figure class="relative">
+            <div
+              class="relative aspect-[4/5] overflow-hidden bg-zinc-950 sm:aspect-[5/4] lg:aspect-[16/11]"
+            >
+              <div
+                class="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_50%_30%,rgba(245,158,11,0.08),transparent_42%)]"
+              >
+              </div>
+              <div
+                class="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-1/3 bg-gradient-to-t from-black via-black/40 to-transparent"
+              >
+              </div>
+              <div
+                class="pointer-events-none absolute inset-y-0 left-0 z-[1] w-16 bg-gradient-to-r from-black/50 to-transparent md:w-24"
+              >
+              </div>
+              <img
+                src="/assets/home/tamashii-myth-cloth-ex-pegasus.jpg"
+                alt="Saint Cloth Myth EX Pegasus Seiya de Tamashii Nations"
+                class="h-full w-full object-cover object-[50%_18%] opacity-95 transition-opacity duration-500 hover:opacity-100"
+                loading="lazy"
+              />
+            </div>
+            <figcaption class="mt-4 flex items-center justify-between gap-4">
+              <span class="text-[10px] font-black uppercase tracking-[0.28em] text-zinc-500">
+                Myth Cloth EX
+              </span>
+              <span class="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-600">
+                Pegasus Seiya
+              </span>
+            </figcaption>
+          </figure>
         </div>
       </div>
     </div>
@@ -75,14 +117,32 @@ import Section from "../../components/layout/Section.astro";
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       {
-        ["MYTH CLOTH EX", "SOUL OF GOLD", "VINTAGE 80S"].map((cat) => (
+        [
+          {
+            name: "MYTH CLOTH EX",
+            image: "/assets/home/collection-myth-cloth-ex.jpg",
+          },
+          {
+            name: "SOUL OF GOLD",
+            image: "/assets/home/collection-soul-of-gold.jpg",
+          },
+          {
+            name: "VINTAGE 80S",
+            image: "/assets/home/collection-vintage-80s.jpg",
+          },
+        ].map((cat) => (
           <div class="group relative aspect-[3/4] bg-zinc-950 border border-zinc-900 overflow-hidden cursor-pointer hover:border-amber-500 transition-all duration-300">
             <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 z-10 transition-opacity group-hover:opacity-60" />
-            <div class="absolute inset-0 z-0 bg-zinc-900 animate-pulse" />
+            <img
+              src={cat.image}
+              alt={cat.name}
+              class="absolute inset-0 z-0 h-full w-full object-cover object-center"
+              loading="lazy"
+            />
 
             <div class="absolute inset-0 flex flex-col items-center justify-end p-8 z-20 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
               <h4 class="text-white text-xl font-black uppercase tracking-tight mb-2">
-                {cat}
+                {cat.name}
               </h4>
               <span class="text-amber-500 text-[10px] font-black uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                 EXPLORAR →

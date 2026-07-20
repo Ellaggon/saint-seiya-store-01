@@ -384,7 +384,7 @@ class CatalogFilters {
     const subtitle =
       activeCard.dataset.categorySubtitle ||
       hero.dataset.defaultSubtitle ||
-      "Figuras disponibles y preventas seleccionadas.";
+      "Figuras disponibles.";
     const image = activeCard.dataset.categoryImage || "";
     const titleElement = hero.querySelector("[data-hero-title]");
     const subtitleElement = hero.querySelector("[data-hero-subtitle]");

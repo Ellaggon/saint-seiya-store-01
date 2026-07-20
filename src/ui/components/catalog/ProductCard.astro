@@ -45,19 +45,19 @@ const availabilityDotClass = availability.canPurchase
 
 <a
   href={`/product/${product.id}`}
-  class="group grid grid-cols-[112px_minmax(0,1fr)] gap-4 cursor-pointer sm:grid-cols-[150px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)] lg:flex lg:flex-col lg:gap-5"
+  class="group grid h-[188px] grid-cols-[112px_minmax(0,1fr)] items-stretch gap-3 overflow-hidden sm:h-[204px] sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-4 md:h-[220px] md:grid-cols-[180px_minmax(0,1fr)] lg:flex lg:h-auto lg:flex-col lg:gap-5 lg:overflow-visible"
   data-conversion-event="catalog_product_click"
   data-product-id={product.id}
   data-product-name={product.name}
   data-product-availability={availability.code}
 >
   <div
-    class="relative aspect-square w-full overflow-hidden rounded-[14px] bg-zinc-950 border border-zinc-900 group-hover:border-zinc-700 transition-colors duration-300 lg:aspect-[4/5] lg:rounded-[18px]"
+    class="relative h-full min-h-0 overflow-hidden rounded-[14px] border border-zinc-900 bg-zinc-950 transition-colors duration-300 group-hover:border-zinc-700 lg:aspect-[4/5] lg:h-auto lg:w-full lg:rounded-[18px]"
   >
     <img
       src={product.image}
       alt={product.name}
-      class="h-full w-full rounded-[inherit] object-cover opacity-90 transition-opacity duration-300 group-hover:opacity-100"
+      class="absolute inset-0 h-full w-full object-cover opacity-90 transition-opacity duration-300 group-hover:opacity-100"
       loading="lazy"
     />
 
@@ -88,49 +88,81 @@ const availabilityDotClass = availability.canPurchase
     </div>
   </div>
 
-  <div class="flex min-w-0 flex-col justify-between gap-3 py-0.5 lg:py-0">
-    <div class="space-y-1">
-      <p class="truncate text-xs font-medium text-zinc-500 lg:text-sm">{product.line}</p>
-      <h3 class="text-base font-semibold leading-snug text-white lg:text-lg">
+  <div class="flex min-h-0 min-w-0 flex-col justify-between gap-2 overflow-hidden py-0.5 lg:gap-3 lg:overflow-visible lg:py-0">
+    <div class="min-h-0 space-y-1">
+      <p class="h-4 truncate text-xs font-medium leading-4 text-zinc-500 lg:h-auto lg:text-sm lg:leading-normal">
+        {product.line || "\u00A0"}
+      </p>
+      <h3 class="line-clamp-2 h-[2.75rem] text-base font-semibold leading-snug text-white lg:h-auto lg:line-clamp-none lg:text-lg">
         {product.name}
       </h3>
-      <p class="truncate text-xs text-zinc-400 lg:text-sm">{product.character}</p>
+      <p class="h-4 truncate text-xs leading-4 text-zinc-400 lg:h-auto lg:text-sm lg:leading-normal">
+        {product.character || "\u00A0"}
+      </p>
     </div>
 
-    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+    <div class="flex min-h-[1.25rem] flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <span class="text-sm font-semibold text-white lg:text-base">
         {formatPrice(product.price)}
       </span>
-      <span class="text-[9px] font-black uppercase tracking-[0.14em] text-zinc-600 lg:text-[10px] lg:tracking-[0.18em]">
+      <span class="truncate text-[9px] font-black uppercase tracking-[0.14em] text-zinc-600 lg:text-[10px] lg:tracking-[0.18em]">
         {availability.label}
       </span>
     </div>
 
     {
       preorder && (
-        <div class="mt-1 flex flex-col gap-2 border-t border-zinc-900 pt-3 lg:mt-2 lg:gap-3 lg:pt-4">
-          <PreorderEta etaLabel={preorder.etaLabel} />
-          <PreorderAvailabilityMeter
-            availableUnits={preorder.availableUnits}
-            totalUnits={preorder.totalUnits}
-          />
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-zinc-500">Abono</span>
-            <span class="text-amber-500 font-semibold">
+        <>
+          <div class="flex min-h-5 items-center justify-between gap-2 border-t border-zinc-900/80 pt-2 lg:hidden">
+            <span class="truncate text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500">
+              {preorder.etaLabel || "Preventa"}
+            </span>
+            <span class="shrink-0 text-xs font-semibold text-amber-500">
               {formatPrice(preorder.depositAmount)}
             </span>
           </div>
-        </div>
+          <div class="mt-1 hidden flex-col gap-2 border-t border-zinc-900 pt-3 lg:mt-2 lg:flex lg:gap-3 lg:pt-4">
+            <PreorderEta etaLabel={preorder.etaLabel} />
+            <PreorderAvailabilityMeter
+              availableUnits={preorder.availableUnits}
+              totalUnits={preorder.totalUnits}
+            />
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-zinc-500">Abono</span>
+              <span class="text-amber-500 font-semibold">
+                {formatPrice(preorder.depositAmount)}
+              </span>
+            </div>
+          </div>
+        </>
       )
     }
     <span
-      class={`inline-flex items-center justify-center rounded-md px-3 py-2.5 text-xs font-semibold transition-colors lg:mt-2 lg:px-4 lg:py-3 lg:text-sm ${
+      class={`inline-flex shrink-0 items-center gap-1.5 self-start text-[11px] font-semibold tracking-wide transition-colors lg:mt-1 lg:text-xs ${
         isSoldOut
-          ? "text-zinc-500 bg-zinc-950 border border-zinc-900"
-          : "text-black bg-white group-hover:bg-zinc-200"
+          ? "text-zinc-600"
+          : "text-zinc-300 group-hover:text-white"
       }`}
     >
       {ctaLabel}
+      {
+        !isSoldOut && (
+          <svg
+            class="h-3 w-3 transition-transform group-hover:translate-x-0.5"
+            viewBox="0 0 12 12"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M4.5 2.5L8 6L4.5 9.5"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        )
+      }
     </span>
   </div>
 </a>

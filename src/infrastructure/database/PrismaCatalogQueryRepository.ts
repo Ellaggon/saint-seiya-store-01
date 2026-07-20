@@ -97,9 +97,9 @@ const toPrismaProductStatus = (
   status: ProductStatus,
 ): PrismaProductStatus => status;
 
+/** Catalog only lists in-stock inventory; preventas live on /preorders. */
 const publishedCatalogStatuses = [
   toPrismaProductStatus(ProductStatus.PUBLISHED),
-  toPrismaProductStatus(ProductStatus.PRE_ORDER),
 ];
 
 const activeReservationStatuses: PrismaPreorderReservationStatus[] = [
@@ -128,7 +128,6 @@ const resolveSort = (sort?: string): CatalogSort => {
     "price-asc",
     "price-desc",
     "name-asc",
-    "eta-asc",
   ];
   return allowed.includes(sort as CatalogSort)
     ? (sort as CatalogSort)
@@ -184,14 +183,9 @@ const buildWhereClause = (
   if (availability === "available") {
     whereClause.status = toPrismaProductStatus(ProductStatus.PUBLISHED);
     whereClause.stock = { gt: 0 };
-    whereClause.preorderCampaigns = {
-      none: buildOpenCampaignWhere(new Date()),
-    };
   } else if (availability === "preorder-open") {
-    whereClause.status = toPrismaProductStatus(ProductStatus.PRE_ORDER);
-    whereClause.preorderCampaigns = {
-      some: buildOpenCampaignWhere(new Date()),
-    };
+    // Preventas are listed on /preorders, never in catalog.
+    whereClause.id = { in: [] };
   } else if (availability === "out-of-stock") {
     whereClause.OR = [
       { status: toPrismaProductStatus(ProductStatus.OUT_OF_STOCK) },
@@ -205,15 +199,10 @@ const buildWhereClause = (
   if (
     !availability &&
     filters?.status &&
-    Object.values(ProductStatus).includes(filters.status as ProductStatus)
+    Object.values(ProductStatus).includes(filters.status as ProductStatus) &&
+    filters.status !== ProductStatus.PRE_ORDER
   ) {
     whereClause.status = toPrismaProductStatus(filters.status as ProductStatus);
-  }
-
-  if (!availability && (filters?.openPreorders || filters?.sort === "eta-asc")) {
-    whereClause.preorderCampaigns = {
-      some: buildOpenCampaignWhere(new Date()),
-    };
   }
 
   const search = filters?.q?.trim();
@@ -275,7 +264,6 @@ const buildWhereClause = (
 
 const buildRawWhereClause = (
   filters?: ProductFilters,
-  now: Date = new Date(),
 ): Prisma.Sql => {
   const conditions: Prisma.Sql[] = [
     Prisma.sql`p."deletedAt" IS NULL`,
@@ -290,29 +278,10 @@ const buildRawWhereClause = (
     conditions.push(
       Prisma.sql`p.status = ${toPrismaProductStatus(ProductStatus.PUBLISHED)}::"ProductStatus"`,
       Prisma.sql`p.stock > 0`,
-      Prisma.sql`NOT EXISTS (
-        SELECT 1
-        FROM "PreorderCampaign" availability_campaign
-        WHERE availability_campaign."productId" = p.id
-          AND availability_campaign."deletedAt" IS NULL
-          AND availability_campaign.status = 'ACTIVE'::"PreorderCampaignStatus"
-          AND (availability_campaign."opensAt" IS NULL OR availability_campaign."opensAt" <= ${now})
-          AND (availability_campaign."closesAt" IS NULL OR availability_campaign."closesAt" >= ${now})
-      )`,
     );
   } else if (availability === "preorder-open") {
-    conditions.push(
-      Prisma.sql`p.status = ${toPrismaProductStatus(ProductStatus.PRE_ORDER)}::"ProductStatus"`,
-      Prisma.sql`EXISTS (
-        SELECT 1
-        FROM "PreorderCampaign" availability_campaign
-        WHERE availability_campaign."productId" = p.id
-          AND availability_campaign."deletedAt" IS NULL
-          AND availability_campaign.status = 'ACTIVE'::"PreorderCampaignStatus"
-          AND (availability_campaign."opensAt" IS NULL OR availability_campaign."opensAt" <= ${now})
-          AND (availability_campaign."closesAt" IS NULL OR availability_campaign."closesAt" >= ${now})
-      )`,
-    );
+    // Preventas are listed on /preorders, never in catalog.
+    conditions.push(Prisma.sql`FALSE`);
   } else if (availability === "out-of-stock") {
     conditions.push(
       Prisma.sql`(
@@ -323,35 +292,20 @@ const buildRawWhereClause = (
         )
       )`,
     );
+  } else if (
+    filters?.status &&
+    Object.values(ProductStatus).includes(filters.status as ProductStatus) &&
+    filters.status !== ProductStatus.PRE_ORDER
+  ) {
+    conditions.push(
+      Prisma.sql`p.status = ${toPrismaProductStatus(filters.status as ProductStatus)}::"ProductStatus"`,
+    );
   } else {
-    if (
-      filters?.status &&
-      Object.values(ProductStatus).includes(filters.status as ProductStatus)
-    ) {
-      conditions.push(
-        Prisma.sql`p.status = ${toPrismaProductStatus(filters.status as ProductStatus)}::"ProductStatus"`,
-      );
-    } else {
-      conditions.push(
-        Prisma.sql`p.status IN (${Prisma.join(
-          baseStatuses.map((status) => Prisma.sql`${status}::"ProductStatus"`),
-        )})`,
-      );
-    }
-
-    if (filters?.openPreorders || filters?.sort === "eta-asc") {
-      conditions.push(
-        Prisma.sql`EXISTS (
-          SELECT 1
-          FROM "PreorderCampaign" availability_campaign
-          WHERE availability_campaign."productId" = p.id
-            AND availability_campaign."deletedAt" IS NULL
-            AND availability_campaign.status = 'ACTIVE'::"PreorderCampaignStatus"
-            AND (availability_campaign."opensAt" IS NULL OR availability_campaign."opensAt" <= ${now})
-            AND (availability_campaign."closesAt" IS NULL OR availability_campaign."closesAt" >= ${now})
-        )`,
-      );
-    }
+    conditions.push(
+      Prisma.sql`p.status IN (${Prisma.join(
+        baseStatuses.map((status) => Prisma.sql`${status}::"ProductStatus"`),
+      )})`,
+    );
   }
 
   const search = filters?.q?.trim();
@@ -763,7 +717,7 @@ export class PrismaCatalogQueryRepository implements CatalogQueryRepository {
     }
 
     const requestedSkip = (page - 1) * pageSize;
-    const rawWhereClause = buildRawWhereClause(filters, now);
+    const rawWhereClause = buildRawWhereClause(filters);
     const rows = await listCatalogProductRows(
       rawWhereClause,
       sort,

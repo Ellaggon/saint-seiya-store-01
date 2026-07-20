@@ -218,13 +218,14 @@ export class PrismaProductRepository implements ProductRepository {
     const whereClause: any = {
       deletedAt: null,
       status: {
-        in: [ProductStatus.PUBLISHED, ProductStatus.PRE_ORDER],
+        in: [ProductStatus.PUBLISHED],
       },
     };
 
     if (
       filters?.status &&
-      Object.values(ProductStatus).includes(filters.status as ProductStatus)
+      Object.values(ProductStatus).includes(filters.status as ProductStatus) &&
+      filters.status !== ProductStatus.PRE_ORDER
     ) {
       whereClause.status = filters.status;
     }
@@ -286,7 +287,7 @@ export class PrismaProductRepository implements ProductRepository {
     const baseWhere: any = {
       deletedAt: null,
       status: {
-        in: [ProductStatus.PUBLISHED, ProductStatus.PRE_ORDER],
+        in: [ProductStatus.PUBLISHED],
       },
     };
 

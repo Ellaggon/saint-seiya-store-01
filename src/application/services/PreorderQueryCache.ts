@@ -24,6 +24,7 @@ const toCacheKey = (input: ListPreordersInput): string | null => {
   const pageSize = input.pageSize ?? CACHEABLE_PAGE_SIZE;
   if (page !== CACHEABLE_PAGE || pageSize !== CACHEABLE_PAGE_SIZE) return null;
   if (
+    input.q?.trim() ||
     input.etaFrom ||
     input.etaTo ||
     input.minPrice !== undefined ||

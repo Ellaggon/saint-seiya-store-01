@@ -22,6 +22,7 @@ export type PreorderSort =
 export interface PreorderCampaignFilters {
   productId?: string;
   status?: PreorderCampaignStatus;
+  q?: string;
   category?: string;
   collection?: string;
   character?: string;

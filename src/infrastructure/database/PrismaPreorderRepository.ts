@@ -143,6 +143,26 @@ const productWhere = (
     };
   }
 
+  const search = filters?.q?.trim();
+  if (search) {
+    where.AND = [
+      {
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { collection: { name: { contains: search, mode: "insensitive" } } },
+          { category: { name: { contains: search, mode: "insensitive" } } },
+          {
+            characters: {
+              some: {
+                character: { name: { contains: search, mode: "insensitive" } },
+              },
+            },
+          },
+        ],
+      },
+    ];
+  }
+
   return Object.keys(where).length > 0 ? where : undefined;
 };
 

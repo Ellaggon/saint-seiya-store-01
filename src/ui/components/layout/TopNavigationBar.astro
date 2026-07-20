@@ -451,7 +451,7 @@ const adminItems = [
   </nav>
 </section>
 
-<!-- Catalog Search Modal -->
+<!-- Global Search Modal -->
 <div
   id="catalog-search-modal-overlay"
   class="fixed inset-0 z-[60] hidden bg-black/80 opacity-0 backdrop-blur-sm transition-opacity duration-300"
@@ -459,7 +459,7 @@ const adminItems = [
 </div>
 <section
   id="catalog-search-modal"
-  class="fixed left-1/2 top-1/2 z-[70] hidden w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 border border-zinc-800 bg-black shadow-[0_24px_80px_rgba(0,0,0,0.75)] opacity-0 transition-opacity duration-300"
+  class="fixed left-1/2 top-[12vh] z-[70] hidden w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 border border-zinc-800 bg-black shadow-[0_24px_80px_rgba(0,0,0,0.75)] opacity-0 transition-opacity duration-300 md:top-1/2 md:-translate-y-1/2"
   role="dialog"
   aria-modal="true"
   aria-labelledby="catalog-search-modal-title"
@@ -470,7 +470,7 @@ const adminItems = [
     <div class="flex items-start justify-between gap-6">
       <div class="space-y-2">
         <p class="text-amber-500 text-[10px] font-black uppercase tracking-[0.35em]">
-          Buscar en catálogo
+          Búsqueda
         </p>
         <h2
           id="catalog-search-modal-title"
@@ -508,13 +508,39 @@ const adminItems = [
     <label class="sr-only" for="navbar-catalog-search-input">
       Buscar productos
     </label>
+
+    <div
+      class="mb-4 flex flex-wrap gap-2"
+      role="radiogroup"
+      aria-label="Alcance de búsqueda"
+    >
+      <label class="cursor-pointer">
+        <input type="radio" name="searchScope" value="all" class="peer sr-only" checked />
+        <span class="inline-flex rounded-md border border-zinc-800 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500 transition-colors peer-checked:border-amber-500 peer-checked:bg-amber-500 peer-checked:text-black">
+          Todo
+        </span>
+      </label>
+      <label class="cursor-pointer">
+        <input type="radio" name="searchScope" value="catalog" class="peer sr-only" />
+        <span class="inline-flex rounded-md border border-zinc-800 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500 transition-colors peer-checked:border-emerald-500 peer-checked:bg-emerald-500 peer-checked:text-black">
+          Catálogo
+        </span>
+      </label>
+      <label class="cursor-pointer">
+        <input type="radio" name="searchScope" value="preorders" class="peer sr-only" />
+        <span class="inline-flex rounded-md border border-zinc-800 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500 transition-colors peer-checked:border-amber-500 peer-checked:bg-amber-500 peer-checked:text-black">
+          Preventas
+        </span>
+      </label>
+    </div>
+
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
       <input
         id="navbar-catalog-search-input"
         name="q"
         type="search"
         autocomplete="off"
-        placeholder="Buscar por producto o colección"
+        placeholder="Buscar por producto, colección o personaje"
         class="w-full border border-zinc-800 bg-black px-4 py-4 text-sm font-bold text-white placeholder:text-zinc-600 focus:border-amber-500 focus:outline-none"
       />
       <button
@@ -524,8 +550,33 @@ const adminItems = [
         Buscar
       </button>
     </div>
+
+    <p
+      id="global-search-status"
+      class="mt-3 text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-600"
+      aria-live="polite"
+    >
+      Escribe al menos 2 caracteres.
+    </p>
+
+    <div
+      id="global-search-results"
+      class="mt-3 hidden max-h-[40vh] overflow-y-auto border border-zinc-900"
+      role="listbox"
+      aria-label="Sugerencias de productos"
+    >
+    </div>
+
+    <div
+      id="global-search-empty"
+      class="mt-3 hidden border border-dashed border-zinc-900 px-4 py-4 text-center text-sm text-zinc-500"
+    >
+      Sin coincidencias en el alcance elegido.
+    </div>
   </form>
 </section>
+
+<script src="../../scripts/globalSearch.ts"></script>
 
 <script>
   (() => {
@@ -706,6 +757,7 @@ const adminItems = [
             const currentUrl = new URL(window.location.href);
             searchInput.value = currentUrl.searchParams.get("q") || "";
           }
+          searchInput.dispatchEvent(new Event("input", { bubbles: true }));
         }
 
         document.body.style.overflow = "hidden";
@@ -732,36 +784,6 @@ const adminItems = [
 
         document.body.style.overflow = "";
       };
-
-      searchForm?.addEventListener("submit", (event) => {
-        event.preventDefault();
-
-        if (!(searchInput instanceof HTMLInputElement)) return;
-
-        const query = searchInput.value.trim();
-        const catalogSearchForm = document.getElementById("catalog-search-form");
-        const catalogSearchInput = document.getElementById(
-          "catalog-search-input",
-        );
-
-        if (
-          window.location.pathname === "/catalog" &&
-          catalogSearchForm instanceof HTMLFormElement &&
-          catalogSearchInput instanceof HTMLInputElement
-        ) {
-          catalogSearchInput.value = query;
-          closeSearchModal();
-          catalogSearchForm.requestSubmit();
-          return;
-        }
-
-        const catalogUrl = new URL("/catalog", window.location.origin);
-        if (query) {
-          catalogUrl.searchParams.set("q", query);
-        }
-
-        window.location.href = `${catalogUrl.pathname}${catalogUrl.search}`;
-      });
 
       setScrollState();
       window.addEventListener(

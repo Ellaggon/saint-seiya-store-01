@@ -45,14 +45,14 @@ const availabilityDotClass = availability.canPurchase
 
 <a
   href={`/product/${product.id}`}
-  class="group flex flex-col gap-5 cursor-pointer block"
+  class="group grid grid-cols-[112px_minmax(0,1fr)] gap-4 cursor-pointer sm:grid-cols-[150px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)] lg:flex lg:flex-col lg:gap-5"
   data-conversion-event="catalog_product_click"
   data-product-id={product.id}
   data-product-name={product.name}
   data-product-availability={availability.code}
 >
   <div
-    class="relative w-full aspect-[4/5] overflow-hidden rounded-[18px] bg-zinc-950 border border-zinc-900 group-hover:border-zinc-700 transition-colors duration-300"
+    class="relative aspect-square w-full overflow-hidden rounded-[14px] bg-zinc-950 border border-zinc-900 group-hover:border-zinc-700 transition-colors duration-300 lg:aspect-[4/5] lg:rounded-[18px]"
   >
     <img
       src={product.image}
@@ -61,20 +61,20 @@ const availabilityDotClass = availability.canPurchase
       loading="lazy"
     />
 
-    <div class="absolute top-3 left-3 flex flex-col gap-2 z-10">
+    <div class="absolute top-2 left-2 z-10 flex max-w-[calc(100%-1rem)] flex-col gap-2 lg:top-3 lg:left-3">
       {
         preorder ? (
           <PreorderBadge isOpen={preorder.isOpen} isSoldOut={isPreorderSoldOut} />
         ) : (
           <span
-            class={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] shadow-[0_10px_30px_rgba(0,0,0,0.32)] backdrop-blur ${availabilityBadgeClass}`}
+            class={`inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1.5 text-[8px] font-black uppercase tracking-[0.12em] shadow-[0_10px_30px_rgba(0,0,0,0.32)] backdrop-blur lg:gap-2 lg:px-3 lg:py-2 lg:text-[10px] lg:tracking-[0.18em] ${availabilityBadgeClass}`}
           >
             <span
               class={`h-1.5 w-1.5 rounded-full ${availabilityDotClass}`}
               aria-hidden="true"
             >
             </span>
-            <span>{availability.label}</span>
+            <span class="truncate">{availability.label}</span>
           </span>
         )
       }
@@ -88,27 +88,27 @@ const availabilityDotClass = availability.canPurchase
     </div>
   </div>
 
-  <div class="flex flex-col gap-3">
+  <div class="flex min-w-0 flex-col justify-between gap-3 py-0.5 lg:py-0">
     <div class="space-y-1">
-      <p class="text-zinc-500 text-sm font-medium">{product.line}</p>
-      <h3 class="text-white text-lg font-semibold leading-snug">
+      <p class="truncate text-xs font-medium text-zinc-500 lg:text-sm">{product.line}</p>
+      <h3 class="text-base font-semibold leading-snug text-white lg:text-lg">
         {product.name}
       </h3>
-      <p class="text-zinc-400 text-sm">{product.character}</p>
+      <p class="truncate text-xs text-zinc-400 lg:text-sm">{product.character}</p>
     </div>
 
-    <div class="flex items-center justify-between gap-4">
-      <span class="text-white text-base font-semibold">
+    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <span class="text-sm font-semibold text-white lg:text-base">
         {formatPrice(product.price)}
       </span>
-      <span class="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-600">
+      <span class="text-[9px] font-black uppercase tracking-[0.14em] text-zinc-600 lg:text-[10px] lg:tracking-[0.18em]">
         {availability.label}
       </span>
     </div>
 
     {
       preorder && (
-        <div class="mt-2 flex flex-col gap-3 border-t border-zinc-900 pt-4">
+        <div class="mt-1 flex flex-col gap-2 border-t border-zinc-900 pt-3 lg:mt-2 lg:gap-3 lg:pt-4">
           <PreorderEta etaLabel={preorder.etaLabel} />
           <PreorderAvailabilityMeter
             availableUnits={preorder.availableUnits}
@@ -124,7 +124,7 @@ const availabilityDotClass = availability.canPurchase
       )
     }
     <span
-      class={`mt-2 inline-flex items-center justify-center rounded-md px-4 py-3 text-sm font-semibold transition-colors ${
+      class={`inline-flex items-center justify-center rounded-md px-3 py-2.5 text-xs font-semibold transition-colors lg:mt-2 lg:px-4 lg:py-3 lg:text-sm ${
         isSoldOut
           ? "text-zinc-500 bg-zinc-950 border border-zinc-900"
           : "text-black bg-white group-hover:bg-zinc-200"

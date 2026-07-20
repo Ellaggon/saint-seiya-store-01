@@ -189,12 +189,12 @@ const catalogVisualHeaderStyle = activeCategory?.imageUrl
   <!-- Skeleton Template for AJAX loading (Step 8) -->
   <template id="catalog-skeleton-template">
     <div
-      class="catalog-skeleton-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 md:gap-10"
+      class="catalog-skeleton-grid grid grid-cols-1 gap-5 md:gap-6 lg:grid-cols-2 xl:grid-cols-3 xl:gap-10 2xl:grid-cols-4"
     >
       {
         Array.from({ length: 8 }).map(() => (
-          <div class="flex flex-col gap-4 animate-pulse">
-            <div class="w-full aspect-[4/5] bg-zinc-950 border border-zinc-900" />
+          <div class="grid grid-cols-[112px_minmax(0,1fr)] gap-4 animate-pulse sm:grid-cols-[150px_minmax(0,1fr)] md:grid-cols-[180px_minmax(0,1fr)] lg:flex lg:flex-col">
+            <div class="w-full aspect-square rounded-[14px] bg-zinc-950 border border-zinc-900 lg:aspect-[4/5] lg:rounded-[18px]" />
             <div class="flex flex-col gap-2">
               <div class="h-3 bg-zinc-900 w-1/3 mt-1" />
               <div class="h-4 bg-zinc-800 w-full mt-1" />
@@ -273,25 +273,5 @@ const catalogVisualHeaderStyle = activeCategory?.imageUrl
       }
     }
 
-    @media (min-width: 1024px) {
-      :global(#catalog-marketplace .catalog-products-grid),
-      :global(#catalog-marketplace .catalog-skeleton-grid) {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-      }
-
-      :global(#catalog-marketplace[data-sidebar-collapsed="true"] .catalog-products-grid),
-      :global(#catalog-marketplace[data-sidebar-collapsed="true"] .catalog-skeleton-grid) {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-      }
-    }
-
-    @media (min-width: 1536px) {
-      :global(#catalog-marketplace .catalog-products-grid),
-      :global(#catalog-marketplace .catalog-skeleton-grid),
-      :global(#catalog-marketplace[data-sidebar-collapsed="true"] .catalog-products-grid),
-      :global(#catalog-marketplace[data-sidebar-collapsed="true"] .catalog-skeleton-grid) {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-    }
   </style>
 </MainLayout>

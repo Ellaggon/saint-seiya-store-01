@@ -20,6 +20,34 @@ const isRecoverableStorageConfigError = (error: unknown): boolean => {
   );
 };
 
+const uploadErrorMessage = (error: unknown): string => {
+  const record =
+    typeof error === "object" && error !== null
+      ? (error as { Code?: string; name?: string; message?: string })
+      : null;
+  const message = record?.message ?? "";
+  const code = record?.Code ?? record?.name ?? "";
+
+  if (code === "NoSuchBucket" || message.includes("specified bucket")) {
+    return "El bucket de R2 configurado no existe. Revisa R2_BUCKET o R2_BUCKET_NAME en el entorno de Vercel.";
+  }
+
+  if (
+    code === "EPROTO" ||
+    message.includes("SSL") ||
+    message.includes("TLS") ||
+    message.includes("handshake")
+  ) {
+    return "No se pudo conectar por TLS con R2. Revisa que R2_ENDPOINT sea la URL HTTPS completa del endpoint S3 de Cloudflare R2.";
+  }
+
+  if (message.includes("Missing required environment variable")) {
+    return message;
+  }
+
+  return message || "Unexpected error";
+};
+
 export const POST: APIRoute = async ({ request }) => {
   try {
     const formData = await request.formData();
@@ -58,7 +86,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
   } catch (error: unknown) {
     console.error("[Category Upload API Error]:", error);
-    const message = error instanceof Error ? error.message : "Unexpected error";
+    const message = uploadErrorMessage(error);
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

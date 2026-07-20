@@ -270,8 +270,15 @@ const { category, isEditing = false } = Astro.props;
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Error en la subida");
+          const responseText = await response.text();
+          let message = responseText || "Error en la subida";
+          try {
+            const error = JSON.parse(responseText) as { error?: string };
+            message = error.error || message;
+          } catch {
+            // The server can return plain text before our JSON endpoint runs.
+          }
+          throw new Error(message);
         }
 
         const data = await response.json();

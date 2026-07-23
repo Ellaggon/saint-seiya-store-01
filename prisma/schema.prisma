@@ -76,6 +76,14 @@ model HomeContent {
   updatedBy String?
 }
 
+/// Singleton store contact settings (footer socials + cart WhatsApp).
+model StoreSettings {
+  id        String   @id @default("store")
+  content   Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
 model Product {
   id                String             @id @default(uuid())
   name              String

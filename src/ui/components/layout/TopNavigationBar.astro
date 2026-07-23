@@ -18,6 +18,7 @@ const adminItems = [
   { label: "Preventas", href: "/admin/preorders", icon: "calendar" },
   { label: "Colecciones", href: "/admin/collections", icon: "collection" },
   { label: "Categorías", href: "/admin/categories", icon: "category" },
+  { label: "Redes sociales", href: "/admin/social", icon: "social" },
 ];
 ---
 
@@ -416,6 +417,26 @@ const adminItems = [
                       <rect x="14" y="3" width="7" height="7" rx="1" />
                       <rect x="14" y="14" width="7" height="7" rx="1" />
                       <rect x="3" y="14" width="7" height="7" rx="1" />
+                    </svg>
+                  )}
+                  {item.icon === "social" && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="17"
+                      height="17"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="square"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="18" cy="5" r="3" />
+                      <circle cx="6" cy="12" r="3" />
+                      <circle cx="18" cy="19" r="3" />
+                      <path d="m8.59 13.51 6.83 3.98" />
+                      <path d="M15.41 6.51 8.59 10.49" />
                     </svg>
                   )}
                 </span>

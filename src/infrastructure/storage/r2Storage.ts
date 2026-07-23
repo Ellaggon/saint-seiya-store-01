@@ -40,6 +40,7 @@ export class R2Storage implements StorageService {
       Key: fileName,
       Body: file.data,
       ContentType: file.type,
+      CacheControl: "public, max-age=31536000, immutable",
     });
 
     await this.client.send(command);

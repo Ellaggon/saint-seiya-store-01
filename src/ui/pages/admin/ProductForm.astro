@@ -406,6 +406,8 @@ const statusOptions = [
 </MainLayout>
 
 <script>
+  import { compressImageFile } from "@/ui/scripts/compressImage";
+
   const fileInput = document.getElementById("image-upload") as HTMLInputElement;
   const statusText = document.getElementById("upload-status");
   const imageUrlInput = document.getElementById("imageUrl") as HTMLInputElement;
@@ -419,16 +421,29 @@ const statusOptions = [
     const file = fileInput.files?.[0];
     if (!file) return;
 
+    if (file.size > 5 * 1024 * 1024) {
+      if (statusText) {
+        statusText.textContent = "LA IMAGEN SUPERA 5MB";
+        statusText.classList.add("text-red-500");
+      }
+      fileInput.value = "";
+      return;
+    }
+
     // Visual feedback
     const originalStatus = statusText?.innerHTML;
     if (statusText)
-      statusText.textContent = "CONSIGNANDO AL SANTUARIO (SUBIENDO)...";
+      statusText.textContent = "OPTIMIZANDO Y CONSIGNANDO AL SANTUARIO...";
     fileInput.disabled = true;
 
-    const formData = new FormData();
-    formData.append("file", file);
-
     try {
+      const compressed = await compressImageFile(file, {
+        maxEdge: 1600,
+        quality: 0.78,
+      });
+      const formData = new FormData();
+      formData.append("file", compressed);
+
       const response = await fetch("/api/upload-product-image", {
         method: "POST",
         body: formData,

@@ -2,24 +2,50 @@
 import MainLayout from "../../layouts/MainLayout.astro";
 import GlobalHeroWrapper from "../../components/layout/GlobalHeroWrapper.astro";
 import Section from "../../components/layout/Section.astro";
+import { getHomeContent } from "@/application/services/HomeContentService";
+import { prisma } from "@/infrastructure/database/prisma";
 
-/**
- * HOME PAGE
- * Demonstrating the Master Layout System.
- */
+const content = await getHomeContent();
+const collectionRows = await prisma.collection.findMany({
+  where: {
+    deletedAt: null,
+    slug: {
+      in: content.featuredCollections.map((card) => card.collectionSlug),
+    },
+  },
+  select: { name: true, slug: true },
+});
+const collectionBySlug = new Map(
+  collectionRows.map((collection) => [collection.slug, collection.name]),
+);
+const featuredCards = content.featuredCollections.map((card) => ({
+  ...card,
+  name: collectionBySlug.get(card.collectionSlug) ?? card.collectionSlug,
+  href: `/catalog?collection=${encodeURIComponent(card.collectionSlug)}`,
+}));
+
+Astro.response.headers.set(
+  "Cache-Control",
+  "public, max-age=0, s-maxage=120, stale-while-revalidate=300",
+);
+Astro.response.headers.set(
+  "CDN-Cache-Control",
+  "public, max-age=120, stale-while-revalidate=300",
+);
 ---
 
-<MainLayout title="INICIO">
+<MainLayout title="INICIO" preloadImage={content.hero.backgroundImageUrl}>
   <GlobalHeroWrapper
-    title="Poseidon"
-    eyebrow="Sea Emperor Poseidon Royal Mantle"
-    subtitle="Disponible ahora en el Santuario."
+    title={content.hero.title}
+    eyebrow={content.hero.secondaryTitle}
+    subtitle={content.hero.subtitle}
     fullHeight={true}
-    backgroundImage="/assets/home/poseidon-hero.jpg"
-    backgroundPosition="center 35%"
+    backgroundImage={content.hero.backgroundImageUrl}
+    backgroundPosition={content.hero.backgroundPosition || "center 35%"}
     hideArchitecturalLines={true}
-    ctaLabel="Ver preventa"
-    ctaHref="/preorders"
+    ctaLabel={content.hero.ctaLabel || "Ver preventa"}
+    ctaHref={content.hero.ctaHref || "/preorders"}
+    prioritizeImage={true}
   />
 
   <Section variant="black" withBorder={false}>
@@ -83,18 +109,18 @@ import Section from "../../components/layout/Section.astro";
               >
               </div>
               <img
-                src="/assets/home/tamashii-myth-cloth-ex-pegasus.jpg"
-                alt="Saint Cloth Myth EX Pegasus Seiya de Tamashii Nations"
+                src={content.feature.imageUrl}
+                alt={`${content.feature.collectionLabel} ${content.feature.name}`}
                 class="h-full w-full object-cover object-[50%_18%] opacity-95 transition-opacity duration-500 hover:opacity-100"
                 loading="lazy"
               />
             </div>
             <figcaption class="mt-4 flex items-center justify-between gap-4">
               <span class="text-[10px] font-black uppercase tracking-[0.28em] text-zinc-500">
-                Myth Cloth EX
+                {content.feature.collectionLabel}
               </span>
               <span class="text-[10px] font-medium uppercase tracking-[0.2em] text-zinc-600">
-                Pegasus Seiya
+                {content.feature.name}
               </span>
             </figcaption>
           </figure>
@@ -117,24 +143,14 @@ import Section from "../../components/layout/Section.astro";
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       {
-        [
-          {
-            name: "MYTH CLOTH EX",
-            image: "/assets/home/collection-myth-cloth-ex.jpg",
-          },
-          {
-            name: "SOUL OF GOLD",
-            image: "/assets/home/collection-soul-of-gold.jpg",
-          },
-          {
-            name: "VINTAGE 80S",
-            image: "/assets/home/collection-vintage-80s.jpg",
-          },
-        ].map((cat) => (
-          <div class="group relative aspect-[3/4] bg-zinc-950 border border-zinc-900 overflow-hidden cursor-pointer hover:border-amber-500 transition-all duration-300">
+        featuredCards.map((cat) => (
+          <a
+            href={cat.href}
+            class="group relative aspect-[3/4] bg-zinc-950 border border-zinc-900 overflow-hidden hover:border-amber-500 transition-all duration-300"
+          >
             <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 z-10 transition-opacity group-hover:opacity-60" />
             <img
-              src={cat.image}
+              src={cat.imageUrl}
               alt={cat.name}
               class="absolute inset-0 z-0 h-full w-full object-cover object-center"
               loading="lazy"
@@ -148,7 +164,7 @@ import Section from "../../components/layout/Section.astro";
                 EXPLORAR →
               </span>
             </div>
-          </div>
+          </a>
         ))
       }
     </div>

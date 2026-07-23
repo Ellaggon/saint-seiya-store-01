@@ -229,6 +229,8 @@ const { category, isEditing = false } = Astro.props;
 </MainLayout>
 
 <script>
+  import { compressImageFile } from "@/ui/scripts/compressImage";
+
   const initializeCategoryImageUpload = () => {
     const fileInput = document.getElementById(
       "image-upload",
@@ -253,17 +255,30 @@ const { category, isEditing = false } = Astro.props;
 
       if (!file) return;
 
+      if (file.size > 5 * 1024 * 1024) {
+        if (statusText) {
+          statusText.textContent = "LA IMAGEN SUPERA 5MB";
+          statusText.classList.add("text-red-500");
+        }
+        fileInput.value = "";
+        return;
+      }
+
       const originalStatus = statusText?.innerHTML;
       if (statusText) {
-        statusText.textContent = "COPIANDO AL ARCHIVO... (SUBIENDO)";
+        statusText.textContent = "OPTIMIZANDO Y COPIANDO AL ARCHIVO...";
         statusText.classList.remove("text-red-500");
       }
       fileInput.disabled = true;
 
-      const formData = new FormData();
-      formData.append("file", file);
-
       try {
+        const compressed = await compressImageFile(file, {
+          maxEdge: 1920,
+          quality: 0.78,
+        });
+        const formData = new FormData();
+        formData.append("file", compressed);
+
         const response = await fetch("/api/upload-category-image", {
           method: "POST",
           body: formData,

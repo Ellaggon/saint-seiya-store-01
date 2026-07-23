@@ -53,7 +53,6 @@ export interface CollectionData {
   id: string;
   name: string;
   slug: string;
-  description?: string | null;
   deletedAt?: Date | null;
 }
 

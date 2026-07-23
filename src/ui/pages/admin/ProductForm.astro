@@ -36,6 +36,7 @@ const statusOptions = [
     <!-- Back Button -->
     <a
       href="/admin/products"
+      data-astro-prefetch="hover"
       class="inline-flex items-center text-zinc-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest mb-8"
     >
       <svg
@@ -99,23 +100,10 @@ const statusOptions = [
             placeholder="Ej: Seiya de Pegaso V3"
             class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
           />
-        </div>
-
-        <!-- Slug -->
-        <div class="space-y-2">
-          <label
-            for="slug"
-            class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
-            >URL Personalizada {isEditing ? "" : "(Opcional)"}</label
-          >
-          <input
-            type="text"
-            id="slug"
-            name="slug"
-            value={product?.slug || ""}
-            placeholder="seiya-pegaso-v3-ex"
-            class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
-          />
+          <p class="text-[10px] uppercase tracking-widest text-zinc-600">
+            La URL se genera sola desde el nombre (si ya existe, se añade un
+            número).
+          </p>
         </div>
 
         <!-- Price -->
@@ -188,7 +176,7 @@ const statusOptions = [
             >
             <button
               type="button"
-              data-create-popup="/admin/categories/new?popup=true"
+              id="open-category-modal"
               class="text-[8px] font-black text-zinc-500 hover:text-amber-500 uppercase tracking-widest transition-colors cursor-pointer"
               >+ Crear nueva saga</button
             >
@@ -224,7 +212,7 @@ const statusOptions = [
             >
             <button
               type="button"
-              data-create-popup="/admin/collections/new?popup=true"
+              id="open-collection-modal"
               class="text-[8px] font-black text-zinc-500 hover:text-amber-500 uppercase tracking-widest transition-colors cursor-pointer"
               >+ Crear nueva línea</button
             >
@@ -403,124 +391,839 @@ const statusOptions = [
       </div>
     </form>
   </div>
+
+  <!-- Create category (saga) modal -->
+  <div
+    id="category-modal-overlay"
+    class="fixed inset-0 z-[80] hidden bg-black/80 opacity-0 backdrop-blur-sm transition-opacity duration-300"
+    aria-hidden="true"
+  >
+  </div>
+  <section
+    id="category-modal"
+    class="fixed left-1/2 top-[8vh] z-[90] hidden w-[calc(100%-1.5rem)] max-w-xl -translate-x-1/2 border border-zinc-800 bg-black shadow-[0_28px_90px_rgba(0,0,0,0.8)] opacity-0 transition-all duration-300 md:top-[12vh]"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="category-modal-title"
+    aria-hidden="true"
+    inert
+  >
+    <div
+      class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/70 to-transparent"
+      aria-hidden="true"
+    >
+    </div>
+    <div class="border-b border-zinc-900 px-6 py-5">
+      <div class="flex items-start justify-between gap-6">
+        <div class="space-y-2">
+          <p class="text-[10px] font-black uppercase tracking-[0.35em] text-amber-500">
+            Santuario · Catálogo
+          </p>
+          <h2
+            id="category-modal-title"
+            class="text-xl font-black uppercase tracking-[0.08em] text-white"
+          >
+            Nueva saga
+          </h2>
+          <p class="max-w-sm text-xs leading-5 text-zinc-500">
+            Crea una saga sin salir del formulario. Quedará seleccionada
+            automáticamente.
+          </p>
+        </div>
+        <button
+          type="button"
+          id="category-modal-close"
+          class="p-2 text-zinc-500 transition-colors hover:text-amber-500"
+          aria-label="Cerrar modal"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="square"
+            stroke-linejoin="round"
+            ><line x1="18" y1="6" x2="6" y2="18"></line><line
+              x1="6"
+              y1="6"
+              x2="18"
+              y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <form id="category-modal-form" class="space-y-5 px-6 py-6">
+      <div
+        id="category-modal-error"
+        class="hidden border border-red-500/40 bg-red-500/10 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-red-400"
+        role="alert"
+      >
+      </div>
+
+      <div class="space-y-2">
+        <label
+          for="modal-category-name"
+          class="block text-[10px] font-black uppercase tracking-widest text-amber-500"
+        >
+          Nombre de la saga
+        </label>
+        <input
+          type="text"
+          id="modal-category-name"
+          name="name"
+          required
+          maxlength="120"
+          placeholder="Ej: Saint Seiya Classic"
+          class="w-full border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-amber-500"
+        />
+        <p class="text-[10px] uppercase tracking-widest text-zinc-600">
+          El slug se genera solo. Si el nombre ya existe, se añade un número.
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <label
+          class="block text-[10px] font-black uppercase tracking-widest text-amber-500"
+        >
+          Imagen de cabecera (Hero Image)
+        </label>
+
+        <div class="flex flex-col gap-4">
+          <div class="relative group">
+            <input
+              type="file"
+              id="modal-category-image-upload"
+              accept="image/jpeg,image/png,image/webp"
+              class="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+            />
+            <div
+              class="w-full border border-dashed border-zinc-800 bg-zinc-950 px-4 py-8 text-center transition-colors group-hover:border-amber-500"
+            >
+              <span
+                id="modal-category-upload-status"
+                class="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="square"
+                  stroke-linejoin="round"
+                  ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                  ></path><polyline points="17 8 12 3 7 8"></polyline><line
+                    x1="12"
+                    x2="12"
+                    y1="3"
+                    y2="15"></line>
+                </svg>
+                Seleccionar Banner (Max 5MB)
+              </span>
+            </div>
+          </div>
+
+          <input type="hidden" id="modal-category-imageUrl" name="imageUrl" value="" />
+
+          <div id="modal-category-image-preview-container" class="hidden space-y-2">
+            <p class="text-[9px] font-bold uppercase tracking-widest text-zinc-500">
+              Previsualización de Capítulo:
+            </p>
+            <div
+              class="flex items-center gap-3 border border-zinc-800 bg-zinc-900/50 p-3"
+            >
+              <div
+                class="h-16 w-24 flex-shrink-0 overflow-hidden border border-zinc-700 bg-black"
+              >
+                <img
+                  id="modal-category-image-preview"
+                  src=""
+                  alt=""
+                  class="h-full w-full object-cover"
+                />
+              </div>
+              <div class="flex min-w-0 flex-col">
+                <span
+                  id="modal-category-image-url-text"
+                  class="truncate font-mono text-[10px] text-zinc-400"
+                >
+                </span>
+                <span class="text-[8px] font-black uppercase text-amber-500/50">
+                  Activo en el Archivo Sacro
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <label class="flex items-center gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          id="modal-category-active"
+          name="isActive"
+          value="true"
+          checked
+          class="sr-only peer"
+        />
+        <span
+          class="relative h-6 w-11 rounded-full bg-zinc-800 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-zinc-400 after:transition-all peer-checked:bg-amber-500 peer-checked:after:translate-x-full peer-checked:after:bg-white"
+          aria-hidden="true"
+        ></span>
+        <span class="text-[10px] font-black uppercase tracking-widest text-amber-500">
+          Estado activo
+        </span>
+      </label>
+
+      <div class="flex flex-col gap-3 border-t border-zinc-900 pt-5 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          id="category-modal-cancel"
+          class="border border-zinc-800 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          id="category-modal-submit"
+          class="bg-amber-500 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+        >
+          Crear saga
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Create collection modal -->
+  <div
+    id="collection-modal-overlay"
+    class="fixed inset-0 z-[80] hidden bg-black/80 opacity-0 backdrop-blur-sm transition-opacity duration-300"
+    aria-hidden="true"
+  >
+  </div>
+  <section
+    id="collection-modal"
+    class="fixed left-1/2 top-[8vh] z-[90] hidden w-[calc(100%-1.5rem)] max-w-lg -translate-x-1/2 border border-zinc-800 bg-black shadow-[0_28px_90px_rgba(0,0,0,0.8)] opacity-0 transition-all duration-300 md:top-[12vh]"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="collection-modal-title"
+    aria-hidden="true"
+    inert
+  >
+    <div
+      class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/70 to-transparent"
+      aria-hidden="true"
+    >
+    </div>
+    <div class="border-b border-zinc-900 px-6 py-5">
+      <div class="flex items-start justify-between gap-6">
+        <div class="space-y-2">
+          <p class="text-[10px] font-black uppercase tracking-[0.35em] text-amber-500">
+            Santuario · Catálogo
+          </p>
+          <h2
+            id="collection-modal-title"
+            class="text-xl font-black uppercase tracking-[0.08em] text-white"
+          >
+            Nueva línea
+          </h2>
+          <p class="max-w-sm text-xs leading-5 text-zinc-500">
+            Crea una línea de producto sin salir del formulario. Quedará
+            seleccionada automáticamente.
+          </p>
+        </div>
+        <button
+          type="button"
+          id="collection-modal-close"
+          class="p-2 text-zinc-500 transition-colors hover:text-amber-500"
+          aria-label="Cerrar modal"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="square"
+            stroke-linejoin="round"
+            ><line x1="18" y1="6" x2="6" y2="18"></line><line
+              x1="6"
+              y1="6"
+              x2="18"
+              y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <form id="collection-modal-form" class="space-y-5 px-6 py-6">
+      <div
+        id="collection-modal-error"
+        class="hidden border border-red-500/40 bg-red-500/10 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-red-400"
+        role="alert"
+      >
+      </div>
+
+      <div class="space-y-2">
+        <label
+          for="modal-collection-name"
+          class="block text-[10px] font-black uppercase tracking-widest text-amber-500"
+        >
+          Nombre de la línea
+        </label>
+        <input
+          type="text"
+          id="modal-collection-name"
+          name="name"
+          required
+          maxlength="120"
+          placeholder="Ej: Myth Cloth EX"
+          class="w-full border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-white outline-none transition-colors focus:border-amber-500"
+        />
+        <p class="text-[10px] uppercase tracking-widest text-zinc-600">
+          El slug se genera solo. Si el nombre ya existe, se añade un número.
+        </p>
+      </div>
+
+      <label class="flex items-center gap-3 cursor-pointer">
+        <input
+          type="checkbox"
+          id="modal-collection-active"
+          name="isActive"
+          value="true"
+          checked
+          class="sr-only peer"
+        />
+        <span
+          class="relative h-6 w-11 rounded-full bg-zinc-800 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-zinc-400 after:transition-all peer-checked:bg-amber-500 peer-checked:after:translate-x-full peer-checked:after:bg-white"
+          aria-hidden="true"
+        ></span>
+        <span class="text-[10px] font-black uppercase tracking-widest text-amber-500">
+          Estado activo
+        </span>
+      </label>
+
+      <div class="flex flex-col gap-3 border-t border-zinc-900 pt-5 sm:flex-row sm:justify-end">
+        <button
+          type="button"
+          id="collection-modal-cancel"
+          class="border border-zinc-800 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          id="collection-modal-submit"
+          class="bg-amber-500 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+        >
+          Crear línea
+        </button>
+      </div>
+    </form>
+  </section>
 </MainLayout>
 
 <script>
   import { compressImageFile } from "@/ui/scripts/compressImage";
 
-  const fileInput = document.getElementById("image-upload") as HTMLInputElement;
-  const statusText = document.getElementById("upload-status");
-  const imageUrlInput = document.getElementById("imageUrl") as HTMLInputElement;
-  const previewContainer = document.getElementById("image-preview-container");
-  const previewImg = document.getElementById(
-    "image-preview",
-  ) as HTMLImageElement;
-  const urlText = document.getElementById("image-url-text");
-
-  fileInput?.addEventListener("change", async () => {
-    const file = fileInput.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      if (statusText) {
-        statusText.textContent = "LA IMAGEN SUPERA 5MB";
-        statusText.classList.add("text-red-500");
-      }
-      fileInput.value = "";
-      return;
+  // Shared helpers for create modals (saga + línea)
+  const selectCreatedOption = (
+    selectId: string,
+    created: { id: string; name: string },
+  ) => {
+    const select = document.getElementById(selectId) as HTMLSelectElement | null;
+    if (!select) return;
+    const existing = [...select.options].find(
+      (option) => option.value === created.id,
+    );
+    if (existing) {
+      existing.selected = true;
+      existing.textContent = created.name;
+    } else {
+      const option = document.createElement("option");
+      option.value = created.id;
+      option.textContent = created.name;
+      option.selected = true;
+      select.appendChild(option);
     }
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  };
 
-    // Visual feedback
-    const originalStatus = statusText?.innerHTML;
-    if (statusText)
-      statusText.textContent = "OPTIMIZANDO Y CONSIGNANDO AL SANTUARIO...";
-    fileInput.disabled = true;
+  type CreateModalConfig = {
+    kind: "category" | "collection";
+    overlayId: string;
+    modalId: string;
+    openBtnId: string;
+    closeBtnId: string;
+    cancelBtnId: string;
+    formId: string;
+    nameInputId: string;
+    activeInputId: string;
+    errorId: string;
+    submitBtnId: string;
+    selectId: string;
+    endpoint: string;
+    submitLabel: string;
+    creatingLabel: string;
+    buildBody: (name: string) => FormData;
+  };
 
-    try {
-      const compressed = await compressImageFile(file, {
-        maxEdge: 1600,
-        quality: 0.78,
-      });
-      const formData = new FormData();
-      formData.append("file", compressed);
+  const bindCreateModal = (config: CreateModalConfig) => {
+    const overlay = document.getElementById(config.overlayId);
+    const modal = document.getElementById(config.modalId);
+    const openBtn = document.getElementById(config.openBtnId);
+    const closeBtn = document.getElementById(config.closeBtnId);
+    const cancelBtn = document.getElementById(config.cancelBtnId);
+    const form = document.getElementById(
+      config.formId,
+    ) as HTMLFormElement | null;
+    const nameInput = document.getElementById(
+      config.nameInputId,
+    ) as HTMLInputElement | null;
+    const errorEl = document.getElementById(config.errorId);
+    const submitBtn = document.getElementById(
+      config.submitBtnId,
+    ) as HTMLButtonElement | null;
 
-      const response = await fetch("/api/upload-product-image", {
-        method: "POST",
-        body: formData,
-      });
+    if (!openBtn || openBtn.dataset.bound === "1") return;
+    openBtn.dataset.bound = "1";
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Error en la subida");
+    let lastFocused: HTMLElement | null = null;
+
+    const setModalError = (message: string | null) => {
+      if (!errorEl) return;
+      if (!message) {
+        errorEl.classList.add("hidden");
+        errorEl.textContent = "";
+        return;
       }
+      errorEl.textContent = message;
+      errorEl.classList.remove("hidden");
+    };
 
-      const data = await response.json();
+    const openModal = () => {
+      if (!overlay || !modal || !form) return;
+      lastFocused = document.activeElement as HTMLElement | null;
+      form.reset();
+      setModalError(null);
+      const active = document.getElementById(
+        config.activeInputId,
+      ) as HTMLInputElement | null;
+      if (active) active.checked = true;
 
-      // Update hidden input
-      if (imageUrlInput) {
-        imageUrlInput.value = data.url;
-      }
-
-      // Update preview
-      if (previewImg) previewImg.src = data.url;
-      if (urlText) urlText.textContent = data.url;
-      if (previewContainer) previewContainer.classList.remove("hidden");
-      if (statusText)
-        statusText.textContent = "¡ARMADURA REGISTRADA CON ÉXITO!";
-
-      setTimeout(() => {
-        if (statusText && originalStatus) statusText.innerHTML = originalStatus;
-      }, 3000);
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      if (statusText) {
-        statusText.textContent = "ERROR EN EL REGISTRO: " + error.message;
-        statusText.classList.add("text-red-500");
-      }
-    } finally {
-      fileInput.disabled = false;
-    }
-  });
-
-  // Popup Management
-  document.querySelectorAll("[data-create-popup]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const url = btn.getAttribute("data-create-popup");
-      if (url) {
-        window.open(
-          url,
-          "createPopup",
-          "width=600,height=700,resizable=yes,scrollbars=yes"
+      if (config.kind === "category") {
+        const imageUrl = document.getElementById(
+          "modal-category-imageUrl",
+        ) as HTMLInputElement | null;
+        const previewContainer = document.getElementById(
+          "modal-category-image-preview-container",
         );
+        const previewImg = document.getElementById(
+          "modal-category-image-preview",
+        ) as HTMLImageElement | null;
+        const urlText = document.getElementById(
+          "modal-category-image-url-text",
+        );
+        const statusText = document.getElementById(
+          "modal-category-upload-status",
+        );
+        const fileInput = document.getElementById(
+          "modal-category-image-upload",
+        ) as HTMLInputElement | null;
+
+        if (imageUrl) imageUrl.value = "";
+        if (fileInput) fileInput.value = "";
+        if (previewContainer) previewContainer.classList.add("hidden");
+        if (previewImg) {
+          previewImg.removeAttribute("src");
+          previewImg.alt = "";
+        }
+        if (urlText) urlText.textContent = "";
+        if (statusText) {
+          statusText.classList.remove("text-red-500");
+          statusText.innerHTML = `
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="square"
+                  stroke-linejoin="round"
+                  ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                  ></path><polyline points="17 8 12 3 7 8"></polyline><line
+                    x1="12"
+                    x2="12"
+                    y1="3"
+                    y2="15"></line>
+                </svg>
+                Seleccionar Banner (Max 5MB)
+              `;
+        }
+      }
+
+      overlay.classList.remove("hidden");
+      modal.classList.remove("hidden");
+      modal.removeAttribute("inert");
+      modal.setAttribute("aria-hidden", "false");
+      overlay.setAttribute("aria-hidden", "false");
+      document.body.classList.add("overflow-hidden");
+
+      requestAnimationFrame(() => {
+        overlay.classList.remove("opacity-0");
+        modal.classList.remove("opacity-0");
+        nameInput?.focus();
+      });
+    };
+
+    const closeModal = () => {
+      if (!overlay || !modal) return;
+      overlay.classList.add("opacity-0");
+      modal.classList.add("opacity-0");
+      modal.setAttribute("aria-hidden", "true");
+      overlay.setAttribute("aria-hidden", "true");
+      modal.setAttribute("inert", "");
+      document.body.classList.remove("overflow-hidden");
+
+      window.setTimeout(() => {
+        overlay.classList.add("hidden");
+        modal.classList.add("hidden");
+        lastFocused?.focus?.();
+      }, 280);
+    };
+
+    openBtn.addEventListener("click", openModal);
+    closeBtn?.addEventListener("click", closeModal);
+    cancelBtn?.addEventListener("click", closeModal);
+    overlay?.addEventListener("click", closeModal);
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (!modal || modal.classList.contains("hidden")) return;
+      if (!document.body.contains(modal)) return;
+      closeModal();
+    });
+
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!form || !nameInput) return;
+
+      const name = nameInput.value.trim();
+      if (!name) {
+        setModalError("El nombre es obligatorio.");
+        return;
+      }
+
+      setModalError(null);
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = config.creatingLabel;
+      }
+
+      try {
+        const body = config.buildBody(name);
+        const response = await fetch(config.endpoint, {
+          method: "POST",
+          headers: { Accept: "application/json" },
+          body,
+          credentials: "same-origin",
+        });
+
+        const payload = (await response.json().catch(() => null)) as {
+          data?: { id: string; name: string };
+          error?: string;
+        } | null;
+
+        if (!response.ok) {
+          throw new Error(
+            payload?.error ||
+              `No se pudo crear la ${config.kind === "category" ? "saga" : "línea"}`,
+          );
+        }
+
+        const created = payload?.data;
+        if (!created?.id || !created?.name) {
+          throw new Error("Respuesta inválida del servidor");
+        }
+
+        selectCreatedOption(config.selectId, created);
+        closeModal();
+      } catch (error) {
+        setModalError(
+          error instanceof Error
+            ? error.message
+            : `Error al crear la ${config.kind === "category" ? "saga" : "línea"}`,
+        );
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = config.submitLabel;
+        }
       }
     });
-  });
+  };
 
-  window.addEventListener("message", (event) => {
-    if (event.data.type === "category-created") {
-      const { id, name } = event.data.category;
-      const select = document.getElementById("categoryId") as HTMLSelectElement;
-      if (select) {
-        const option = document.createElement("option");
-        option.value = id;
-        option.textContent = name;
-        option.selected = true;
-        select.appendChild(option);
-      }
-    }
+  const bindImageUpload = () => {
+    const fileInput = document.getElementById(
+      "image-upload",
+    ) as HTMLInputElement | null;
+    if (!fileInput || fileInput.dataset.bound === "1") return;
+    fileInput.dataset.bound = "1";
 
-    if (event.data.type === "collection-created") {
-      const { id, name } = event.data.collection;
-      const select = document.getElementById(
-        "collectionId"
-      ) as HTMLSelectElement;
-      if (select) {
-        const option = document.createElement("option");
-        option.value = id;
-        option.textContent = name;
-        option.selected = true;
-        select.appendChild(option);
+    const statusText = document.getElementById("upload-status");
+    const imageUrlInput = document.getElementById(
+      "imageUrl",
+    ) as HTMLInputElement | null;
+    const previewContainer = document.getElementById("image-preview-container");
+    const previewImg = document.getElementById(
+      "image-preview",
+    ) as HTMLImageElement | null;
+    const urlText = document.getElementById("image-url-text");
+
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+
+      if (file.size > 5 * 1024 * 1024) {
+        if (statusText) {
+          statusText.textContent = "LA IMAGEN SUPERA 5MB";
+          statusText.classList.add("text-red-500");
+        }
+        fileInput.value = "";
+        return;
       }
-    }
-  });
+
+      const originalStatus = statusText?.innerHTML;
+      if (statusText)
+        statusText.textContent = "OPTIMIZANDO Y CONSIGNANDO AL SANTUARIO...";
+      fileInput.disabled = true;
+
+      try {
+        const compressed = await compressImageFile(file, {
+          maxEdge: 1600,
+          quality: 0.78,
+        });
+        const formData = new FormData();
+        formData.append("file", compressed);
+
+        const response = await fetch("/api/upload-product-image", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Error en la subida");
+        }
+
+        const data = await response.json();
+
+        if (imageUrlInput) {
+          imageUrlInput.value = data.url;
+        }
+
+        if (previewImg) previewImg.src = data.url;
+        if (urlText) urlText.textContent = data.url;
+        if (previewContainer) previewContainer.classList.remove("hidden");
+        if (statusText)
+          statusText.textContent = "¡ARMADURA REGISTRADA CON ÉXITO!";
+
+        setTimeout(() => {
+          if (statusText && originalStatus) statusText.innerHTML = originalStatus;
+        }, 3000);
+      } catch (error: unknown) {
+        console.error("Upload error:", error);
+        if (statusText) {
+          const message =
+            error instanceof Error ? error.message : "Error en la subida";
+          statusText.textContent = "ERROR EN EL REGISTRO: " + message;
+          statusText.classList.add("text-red-500");
+        }
+      } finally {
+        fileInput.disabled = false;
+      }
+    });
+  };
+
+  const bindCategoryModalImageUpload = () => {
+    const fileInput = document.getElementById(
+      "modal-category-image-upload",
+    ) as HTMLInputElement | null;
+    if (!fileInput || fileInput.dataset.bound === "1") return;
+    fileInput.dataset.bound = "1";
+
+    fileInput.addEventListener("change", async () => {
+      const statusText = document.getElementById(
+        "modal-category-upload-status",
+      );
+      const imageUrlInput = document.getElementById(
+        "modal-category-imageUrl",
+      ) as HTMLInputElement | null;
+      const previewContainer = document.getElementById(
+        "modal-category-image-preview-container",
+      );
+      const previewImg = document.getElementById(
+        "modal-category-image-preview",
+      ) as HTMLImageElement | null;
+      const urlText = document.getElementById(
+        "modal-category-image-url-text",
+      );
+      const file = fileInput.files?.[0];
+
+      if (!file) return;
+
+      if (file.size > 5 * 1024 * 1024) {
+        if (statusText) {
+          statusText.textContent = "LA IMAGEN SUPERA 5MB";
+          statusText.classList.add("text-red-500");
+        }
+        fileInput.value = "";
+        return;
+      }
+
+      const originalStatus = statusText?.innerHTML;
+      if (statusText) {
+        statusText.textContent = "OPTIMIZANDO Y COPIANDO AL ARCHIVO...";
+        statusText.classList.remove("text-red-500");
+      }
+      fileInput.disabled = true;
+
+      try {
+        const compressed = await compressImageFile(file, {
+          maxEdge: 1920,
+          quality: 0.78,
+        });
+        const formData = new FormData();
+        formData.append("file", compressed);
+
+        const response = await fetch("/api/upload-category-image", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const responseText = await response.text();
+          let message = responseText || "Error en la subida";
+          try {
+            const error = JSON.parse(responseText) as { error?: string };
+            message = error.error || message;
+          } catch {
+            // The server can return plain text before our JSON endpoint runs.
+          }
+          throw new Error(message);
+        }
+
+        const data = (await response.json()) as { url: string };
+
+        if (imageUrlInput) imageUrlInput.value = data.url;
+        if (previewImg) {
+          previewImg.src = data.url;
+          previewImg.alt = "Vista previa del banner de la saga";
+        }
+        if (urlText) urlText.textContent = data.url;
+        if (previewContainer) previewContainer.classList.remove("hidden");
+        if (statusText) statusText.textContent = "¡BANNER VINCULADO!";
+
+        setTimeout(() => {
+          if (statusText && originalStatus) statusText.innerHTML = originalStatus;
+        }, 3000);
+      } catch (error: unknown) {
+        console.error("Category modal upload error:", error);
+        if (statusText) {
+          const message =
+            error instanceof Error ? error.message : "Error en la subida";
+          statusText.textContent = "ERROR: " + message;
+          statusText.classList.add("text-red-500");
+        }
+      } finally {
+        fileInput.disabled = false;
+      }
+    });
+  };
+
+  const initializeProductForm = () => {
+    if (!document.getElementById("open-category-modal")) return;
+
+    bindImageUpload();
+    bindCategoryModalImageUpload();
+
+    bindCreateModal({
+      kind: "category",
+      overlayId: "category-modal-overlay",
+      modalId: "category-modal",
+      openBtnId: "open-category-modal",
+      closeBtnId: "category-modal-close",
+      cancelBtnId: "category-modal-cancel",
+      formId: "category-modal-form",
+      nameInputId: "modal-category-name",
+      activeInputId: "modal-category-active",
+      errorId: "category-modal-error",
+      submitBtnId: "category-modal-submit",
+      selectId: "categoryId",
+      endpoint: "/api/admin/categories/actions",
+      submitLabel: "Crear saga",
+      creatingLabel: "Creando...",
+      buildBody: (name) => {
+        const body = new FormData();
+        body.set("_action", "create");
+        body.set("responseFormat", "json");
+        body.set("name", name);
+        body.set(
+          "imageUrl",
+          (
+            document.getElementById(
+              "modal-category-imageUrl",
+            ) as HTMLInputElement | null
+          )?.value.trim() || "",
+        );
+        const active = document.getElementById(
+          "modal-category-active",
+        ) as HTMLInputElement | null;
+        if (active?.checked) body.set("isActive", "true");
+        return body;
+      },
+    });
+
+    bindCreateModal({
+      kind: "collection",
+      overlayId: "collection-modal-overlay",
+      modalId: "collection-modal",
+      openBtnId: "open-collection-modal",
+      closeBtnId: "collection-modal-close",
+      cancelBtnId: "collection-modal-cancel",
+      formId: "collection-modal-form",
+      nameInputId: "modal-collection-name",
+      activeInputId: "modal-collection-active",
+      errorId: "collection-modal-error",
+      submitBtnId: "collection-modal-submit",
+      selectId: "collectionId",
+      endpoint: "/api/admin/collections/actions",
+      submitLabel: "Crear línea",
+      creatingLabel: "Creando...",
+      buildBody: (name) => {
+        const body = new FormData();
+        body.set("_action", "create");
+        body.set("responseFormat", "json");
+        body.set("name", name);
+        const active = document.getElementById(
+          "modal-collection-active",
+        ) as HTMLInputElement | null;
+        if (active?.checked) body.set("isActive", "true");
+        return body;
+      },
+    });
+  };
+
+  initializeProductForm();
+  document.addEventListener("astro:page-load", initializeProductForm);
 </script>

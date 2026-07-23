@@ -43,10 +43,11 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
   const _action = formData.get("_action");
   const id = (formData.get("id") as string) || randomUUID();
   const name = formData.get("name") as string;
-  const slug = formData.get("slug") as string;
-  const description = formData.get("description") as string;
   const isActive = formData.get("isActive") === "true";
   const isPopup = formData.get("isPopup") === "true";
+  const wantsJson =
+    formData.get("responseFormat") === "json" ||
+    (request.headers.get("Accept") || "").includes("application/json");
 
   const repo = new PrismaProductRepository();
 
@@ -56,10 +57,29 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
       await saveUseCase.execute({
         id,
         name,
-        slug,
-        description,
+        slug: "",
         deletedAt: isActive ? null : new Date(),
       });
+
+      invalidateCatalogCache();
+      invalidatePreorderCache();
+
+      if (wantsJson && _action === "create") {
+        const saved = await repo.findCollectionById(id);
+        return new Response(
+          JSON.stringify({
+            data: {
+              id,
+              name,
+              slug: saved?.slug ?? "",
+            },
+          }),
+          {
+            status: 201,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
 
       if (isPopup && _action === "create") {
         return redirect(
@@ -92,6 +112,16 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
     invalidatePreorderCache();
     return redirect("/admin/collections");
   } catch (error: unknown) {
+    if (wantsJson) {
+      return new Response(
+        JSON.stringify({ error: friendlyErrorMessage(error) }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
     return redirectWithError(
       redirect,
       "/admin/collections",

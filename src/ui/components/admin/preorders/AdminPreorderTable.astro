@@ -120,12 +120,14 @@ const mobileStatus = (item: PreorderListItemDTO) => {
                 </div>
                 <a
                   href={`/admin/preorders/${item.campaign.id}`}
+                  data-astro-prefetch="hover"
                   class="inline-flex w-full items-center justify-center border border-zinc-800 bg-zinc-950 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-white transition-colors hover:border-amber-500 hover:text-amber-500"
                 >
                   Editar
                 </a>
                 <a
                   href={`/admin/preorders/${item.campaign.id}/reservations`}
+                  data-astro-prefetch="hover"
                   class="inline-flex w-full items-center justify-center border border-zinc-800 bg-zinc-950 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-white transition-colors hover:border-amber-500 hover:text-amber-500"
                 >
                   Reservas
@@ -266,12 +268,14 @@ const mobileStatus = (item: PreorderListItemDTO) => {
                   <div class="flex justify-end items-center gap-3">
                     <a
                       href={`/admin/preorders/${item.campaign.id}`}
+                      data-astro-prefetch="hover"
                       class="text-[10px] font-black text-white hover:text-amber-500 uppercase transition-colors"
                     >
                       Editar
                     </a>
                     <a
                       href={`/admin/preorders/${item.campaign.id}/reservations`}
+                      data-astro-prefetch="hover"
                       class="text-[10px] font-black text-white hover:text-amber-500 uppercase transition-colors"
                     >
                       Reservas

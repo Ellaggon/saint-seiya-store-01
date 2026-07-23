@@ -74,7 +74,6 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       const useCase = new CreateProductUseCase(repository);
       await useCase.execute({
         name: requiredString(formData, "name"),
-        slug: optionalString(formData, "slug"),
         description: requiredString(formData, "description"),
         price: requiredNumber(formData, "price"),
         height: requiredNumber(formData, "height"),
@@ -96,7 +95,6 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       await useCase.execute({
         id: requiredString(formData, "id"),
         name: requiredString(formData, "name"),
-        slug: optionalString(formData, "slug"),
         description: requiredString(formData, "description"),
         price: requiredNumber(formData, "price"),
         height: requiredNumber(formData, "height"),

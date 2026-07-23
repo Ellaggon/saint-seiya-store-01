@@ -50,14 +50,13 @@ model Category {
 }
 
 model Collection {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  slug        String    @unique
-  description String?
-  createdAt   DateTime  @default(now())
-  deletedAt   DateTime?
-  updatedAt   DateTime  @updatedAt
-  products    Product[]
+  id        String    @id @default(uuid())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  updatedAt DateTime  @updatedAt
+  products  Product[]
 }
 
 model Character {

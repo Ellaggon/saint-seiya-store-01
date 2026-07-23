@@ -65,42 +65,32 @@ const { category, isEditing = false } = Astro.props;
       )}
       {isEditing && <input type="hidden" name="id" value={category.id} />}
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <!-- Name -->
-        <div class="space-y-2">
-          <label
-            for="name"
-            class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
-            >Nombre de la Categoría</label
-          >
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={category?.name || ""}
-            required
-            placeholder="Ej: Saga del Santuario"
-            class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
-          />
-        </div>
-
-        <!-- Slug -->
-        <div class="space-y-2">
-          <label
-            for="slug"
-            class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
-            >Slug (URL)</label
-          >
-          <input
-            type="text"
-            id="slug"
-            name="slug"
-            value={category?.slug || ""}
-            required
-            placeholder="saga-santuario"
-            class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
-          />
-        </div>
+      <div class="space-y-2">
+        <label
+          for="name"
+          class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
+          >Nombre de la Categoría</label
+        >
+        <input
+          type="text"
+          id="name"
+          name="name"
+          value={category?.name || ""}
+          required
+          placeholder="Ej: Saga del Santuario"
+          class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
+        />
+        <p class="text-[10px] uppercase tracking-widest text-zinc-600">
+          El slug se genera solo desde el nombre. Si ya existe, se añade un
+          número.
+          {
+            category?.slug ? (
+              <span class="mt-1 block text-zinc-500"
+                >Actual: {category.slug}</span
+              >
+            ) : null
+          }
+        </p>
       </div>
 
       <!-- Image Upload Section -->

@@ -4,6 +4,7 @@ import {
   createCreatePreorderCampaignUseCase,
   createListPreordersUseCase,
 } from "@/infrastructure/preorders/PreorderUseCaseFactory";
+import { getCachedAdminPreorderList } from "@/application/services/AdminQueryCache";
 import { invalidateCatalogCache } from "@/application/services/CatalogQueryService";
 import { invalidatePreorderCache } from "@/application/services/PreorderQueryCache";
 import { failure, success } from "@/endpoints/api/shared/api-response";
@@ -24,7 +25,10 @@ export const GET: APIRoute = async ({ url, locals }) => {
   try {
     requireAdmin(locals);
     const useCase = createListPreordersUseCase();
-    const data = await useCase.execute(parsePreorderListQuery(url.searchParams, "admin"));
+    const input = parsePreorderListQuery(url.searchParams, "admin");
+    const data = await getCachedAdminPreorderList(input, () =>
+      useCase.execute(input),
+    );
     return success(data);
   } catch (error) {
     return failure(error);

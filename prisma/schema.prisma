@@ -66,6 +66,14 @@ model Character {
   products  ProductCharacter[]
 }
 
+/// Singleton CMS row for the public homepage marketing sections.
+model HomeContent {
+  id        String   @id @default("home")
+  content   Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
 model Product {
   id                String             @id @default(uuid())
   name              String

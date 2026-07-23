@@ -6,13 +6,14 @@
  * Refactored: Centered desktop links and improved mobile interactions.
  */
 const navItems = [
-  { label: "HOME", href: "/" },
+  { label: "HOME", href: "/", prefetch: "hover" },
   { label: "CATÁLOGO", href: "/catalog", prefetch: "viewport" },
   { label: "PREVENTAS", href: "/preorders", prefetch: "hover" },
   { label: "EXCLUSIVOS", href: "/exclusive" },
 ];
 
 const adminItems = [
+  { label: "Inicio", href: "/admin/home", icon: "home" },
   { label: "Gestión del Catálogo", href: "/admin/products", icon: "catalog" },
   { label: "Preventas", href: "/admin/preorders", icon: "calendar" },
   { label: "Colecciones", href: "/admin/collections", icon: "collection" },
@@ -29,7 +30,7 @@ const adminItems = [
   >
     <!-- Left: Logo -->
     <div class="flex-1 flex justify-start">
-      <a href="/" class="flex-shrink-0">
+      <a href="/" data-astro-prefetch="hover" class="flex-shrink-0">
         <span
           class="text-white text-xl md:text-2xl font-black uppercase tracking-[0.2em]"
           >SANCTUARY</span
@@ -320,6 +321,23 @@ const adminItems = [
             >
               <span class="flex min-w-0 items-center gap-3">
                 <span class="flex h-9 w-9 flex-none items-center justify-center border border-zinc-800 bg-black text-zinc-500 transition-colors group-hover:border-amber-500/60 group-hover:text-amber-500 md:h-8 md:w-8">
+                  {item.icon === "home" && (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="17"
+                      height="17"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="square"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M3 10.5 12 3l9 7.5" />
+                      <path d="M5 9.5V21h14V9.5" />
+                    </svg>
+                  )}
                   {item.icon === "catalog" && (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"

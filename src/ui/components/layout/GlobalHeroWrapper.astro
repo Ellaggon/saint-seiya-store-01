@@ -19,6 +19,8 @@ interface Props {
   hideArchitecturalLines?: boolean;
   ctaLabel?: string;
   ctaHref?: string;
+  /** Prefer high fetch priority for LCP heroes (home). */
+  prioritizeImage?: boolean;
 }
 
 const {
@@ -36,6 +38,7 @@ const {
   hideArchitecturalLines = false,
   ctaLabel = "DESCUBRIR COLECCIÓN",
   ctaHref = "/catalog",
+  prioritizeImage = false,
 } = Astro.props;
 
 const heightClass = fullHeight
@@ -43,10 +46,6 @@ const heightClass = fullHeight
   : compact
     ? "min-h-[180px] md:min-h-[220px]"
     : "min-h-[60vh] md:min-h-[70vh]";
-const bgStyle =
-  backgroundImage && !inheritedBackground
-    ? `background-image: url('${backgroundImage}'); background-position: ${backgroundPosition};`
-    : "";
 const backgroundClass = inheritedBackground
   ? "bg-transparent"
   : "bg-black bg-cover bg-no-repeat";
@@ -57,8 +56,23 @@ const backgroundClass = inheritedBackground
   data-default-title={defaultTitle}
   data-default-subtitle={defaultSubtitle}
   class={`relative flex items-center justify-center overflow-hidden ${backgroundClass} ${heightClass}`}
-  style={bgStyle}
 >
+  {
+    backgroundImage && !inheritedBackground && (
+      <img
+        src={backgroundImage}
+        alt=""
+        class="absolute inset-0 z-0 h-full w-full object-cover"
+        style={`object-position: ${backgroundPosition};`}
+        width="1600"
+        height="1067"
+        decoding="async"
+        fetchpriority={prioritizeImage ? "high" : "auto"}
+        loading={prioritizeImage ? "eager" : "lazy"}
+      />
+    )
+  }
+
   {
     !inheritedBackground && (
       <div

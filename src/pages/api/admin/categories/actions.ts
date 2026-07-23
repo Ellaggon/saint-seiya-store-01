@@ -43,10 +43,12 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
   const _action = formData.get("_action");
   const id = (formData.get("id") as string) || randomUUID();
   const name = formData.get("name") as string;
-  const slug = formData.get("slug") as string;
-  const imageUrl = formData.get("imageUrl") as string;
+  const imageUrl = (formData.get("imageUrl") as string) || "";
   const isActive = formData.get("isActive") === "true";
   const isPopup = formData.get("isPopup") === "true";
+  const wantsJson =
+    formData.get("responseFormat") === "json" ||
+    (request.headers.get("Accept") || "").includes("application/json");
 
   const repo = new PrismaProductRepository();
 
@@ -56,14 +58,35 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
       await saveUseCase.execute({
         id,
         name,
-        slug,
+        slug: "",
         imageUrl,
         deletedAt: isActive ? null : new Date(),
       });
 
+      invalidateCatalogCache();
+      invalidatePreorderCache();
+
+      if (wantsJson && _action === "create") {
+        const saved = await repo.findCategoryById(id);
+        return new Response(
+          JSON.stringify({
+            data: {
+              id,
+              name,
+              slug: saved?.slug ?? "",
+              imageUrl,
+            },
+          }),
+          {
+            status: 201,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+
       if (isPopup && _action === "create") {
         return redirect(
-          `/admin/success?type=category&value=${id}&label=${encodeURIComponent(name)}`
+          `/admin/success?type=category&value=${id}&label=${encodeURIComponent(name)}`,
         );
       }
     } else if (_action === "archive" || _action === "deactivate") {
@@ -92,6 +115,16 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
     invalidatePreorderCache();
     return redirect("/admin/categories");
   } catch (error: unknown) {
+    if (wantsJson) {
+      return new Response(
+        JSON.stringify({ error: friendlyErrorMessage(error) }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
     return redirectWithError(
       redirect,
       "/admin/categories",

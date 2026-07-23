@@ -1,4 +1,5 @@
 import { supabase } from "../../lib/supabaseClient";
+import { syncCartWithServer } from "@/ui/scripts/cartSync";
 
 const cleanPasswordFromUrl = () => {
   const currentUrl = new URL(window.location.href);
@@ -65,6 +66,12 @@ const initializeLoginForm = () => {
       });
 
       if (error) throw error;
+
+      try {
+        await syncCartWithServer("merge");
+      } catch (syncError) {
+        console.warn("Cart sync after login failed:", syncError);
+      }
 
       window.location.assign(returnTo);
     } catch (error) {

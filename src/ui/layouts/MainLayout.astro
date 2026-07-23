@@ -12,12 +12,14 @@ interface Props {
   title: string;
   description?: string;
   structuredData?: Record<string, unknown> | Record<string, unknown>[];
+  preloadImage?: string;
 }
 
 const {
   title,
   description = "Saint Seiya Store - Figuras coleccionables y preventas premium",
   structuredData,
+  preloadImage,
 } = Astro.props;
 const structuredDataJson = structuredData
   ? JSON.stringify(structuredData).replace(/</g, "\\u003c")
@@ -42,6 +44,16 @@ const structuredDataJson = structuredData
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap"
       rel="stylesheet"
     />
+    {
+      preloadImage && (
+        <link
+          rel="preload"
+          as="image"
+          href={preloadImage}
+          fetchpriority="high"
+        />
+      )
+    }
     <title>{title} | Saint Seiya Store</title>
     <ClientRouter fallback="animate" />
     {
@@ -84,6 +96,22 @@ const structuredDataJson = structuredData
       ) {
         window.location.href = `/reset-password${window.location.hash}`;
       }
+    </script>
+
+    <script>
+      import {
+        CART_UPDATED_EVENT,
+        initCartStorageSync,
+        syncCartBadge,
+      } from "@/ui/scripts/cart";
+      import { initCartServerSync } from "@/ui/scripts/cartSync";
+
+      const bootCartBadge = () => syncCartBadge();
+      initCartStorageSync();
+      initCartServerSync();
+      bootCartBadge();
+      document.addEventListener("astro:page-load", bootCartBadge);
+      window.addEventListener(CART_UPDATED_EVENT, bootCartBadge);
     </script>
 
     <script>

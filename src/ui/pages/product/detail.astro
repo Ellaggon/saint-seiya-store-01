@@ -6,6 +6,7 @@ import PreorderBadge from "../../components/preorders/PreorderBadge.astro";
 import PreorderCTA from "../../components/preorders/PreorderCTA.astro";
 import PreorderEta from "../../components/preorders/PreorderEta.astro";
 import PreorderPriceSummary from "../../components/preorders/PreorderPriceSummary.astro";
+import ProductPurchaseCTA from "../../components/product/ProductPurchaseCTA.astro";
 import { formatPrice } from "@/lib/utils";
 import { resolveDisplayAvailability } from "@/shared/catalog/displayAvailability";
 import { siteOrigin } from "@/lib/siteUrl";
@@ -185,6 +186,16 @@ const charactersLabel =
                 ))}
               </dl>
             </section>
+
+            <ProductPurchaseCTA
+              productId={product.id}
+              productName={product.name}
+              price={product.price}
+              imageUrl={product.imageUrl}
+              stock={product.stock}
+              canPurchase={Boolean(displayAvailability?.canPurchase)}
+              availabilityLabel={displayAvailability?.label ?? "No disponible"}
+            />
 
             {
               preorder && (

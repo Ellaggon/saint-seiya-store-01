@@ -4,6 +4,7 @@ import {
   PreorderDepositType,
   ProductStatus,
 } from "@prisma/client";
+import { DEFAULT_HOME_CONTENT } from "../src/application/dto/homeContent.dto";
 
 const prisma = new PrismaClient();
 
@@ -331,6 +332,8 @@ async function upsertCategory(category: (typeof categories)[number]) {
     where: { slug: category.slug },
     update: {
       name: category.name,
+      imageUrl: category.imageUrl,
+      deletedAt: null,
     },
     create: category,
   });
@@ -342,6 +345,7 @@ async function upsertCollection(collection: (typeof collections)[number]) {
     update: {
       name: collection.name,
       description: collection.description,
+      deletedAt: null,
     },
     create: collection,
   });
@@ -441,6 +445,15 @@ async function main() {
     await upsertCollection(collection);
   }
 
+  await prisma.homeContent.upsert({
+    where: { id: "home" },
+    create: {
+      id: "home",
+      content: DEFAULT_HOME_CONTENT,
+    },
+    update: {},
+  });
+
   const seededCatalogProducts = [];
   for (const product of catalogProducts) {
     const savedProduct = await upsertProduct(product);
@@ -502,6 +515,7 @@ async function main() {
           collections: collections.length,
           catalogProducts: seededCatalogProducts.length,
           preorderProducts: seededPreorders.length,
+          homeContent: true,
           mode: "idempotent-upsert",
         },
         catalogProducts: seededCatalogProducts,

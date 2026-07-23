@@ -1,0 +1,27 @@
+---
+import HomeEditor from "@/ui/pages/admin/HomeEditor.astro";
+import { getHomeContent } from "@/application/services/HomeContentService";
+import { prisma } from "@/infrastructure/database/prisma";
+
+const user = Astro.locals.user;
+if (!user || user.role !== "ADMIN") {
+  return Astro.redirect("/login");
+}
+
+const content = await getHomeContent();
+const collections = await prisma.collection.findMany({
+  where: { deletedAt: null },
+  orderBy: { name: "asc" },
+  select: { name: true, slug: true },
+});
+
+const saved = Astro.url.searchParams.get("saved") === "1";
+const error = Astro.url.searchParams.get("error");
+---
+
+<HomeEditor
+  content={content}
+  collections={collections}
+  saved={saved}
+  error={error}
+/>

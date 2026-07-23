@@ -1,0 +1,15 @@
+---
+import SocialSettingsEditor from "@/ui/pages/admin/SocialSettingsEditor.astro";
+import { getStoreSettings } from "@/application/services/StoreSettingsService";
+
+const user = Astro.locals.user;
+if (!user || user.role !== "ADMIN") {
+  return Astro.redirect("/login");
+}
+
+const settings = await getStoreSettings();
+const saved = Astro.url.searchParams.get("saved") === "1";
+const error = Astro.url.searchParams.get("error");
+---
+
+<SocialSettingsEditor settings={settings} saved={saved} error={error} />

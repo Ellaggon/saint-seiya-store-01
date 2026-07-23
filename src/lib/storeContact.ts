@@ -1,12 +1,14 @@
 import { absoluteSiteUrl } from "@/lib/siteUrl";
 
 /**
- * Store contact channels for checkout and footer social links.
- * Configure via PUBLIC_* env vars so the same values work in browser and SSR.
+ * Store contact helpers for checkout and footer social links.
+ * Prefer DB-backed settings (passed as overrides); PUBLIC_* env remains fallback.
  */
-const trim = (value: string | undefined): string => value?.trim() ?? "";
+const trim = (value: string | undefined | null): string => value?.trim() ?? "";
 
-/** Digits-only WhatsApp number, e.g. 59170000000 */
+const digitsOnly = (value: string): string => value.replace(/\D/g, "");
+
+/** Digits-only WhatsApp number from env, e.g. 59170000000 */
 export const storeWhatsAppNumber = trim(
   import.meta.env.PUBLIC_WHATSAPP_NUMBER,
 );
@@ -14,14 +16,25 @@ export const storeWhatsAppNumber = trim(
 /** Full Messenger deep link, e.g. https://m.me/sanctuary */
 export const storeMessengerUrl = trim(import.meta.env.PUBLIC_MESSENGER_URL);
 
-/** Optional Facebook page URL for footer */
+/** Optional Facebook page URL for footer (env fallback) */
 export const storeFacebookUrl =
   trim(import.meta.env.PUBLIC_FACEBOOK_URL) || storeMessengerUrl;
 
-export const isWhatsAppConfigured = (): boolean =>
-  Boolean(trim(import.meta.env.PUBLIC_WHATSAPP_URL) || storeWhatsAppNumber);
+export const isWhatsAppConfigured = (number?: string | null): boolean => {
+  if (trim(number)) return digitsOnly(trim(number)).length > 0;
+  return Boolean(trim(import.meta.env.PUBLIC_WHATSAPP_URL) || storeWhatsAppNumber);
+};
 
-export const buildWhatsAppUrl = (message?: string): string => {
+export const buildWhatsAppUrl = (
+  message?: string,
+  number?: string | null,
+): string => {
+  const override = digitsOnly(trim(number));
+  if (override) {
+    const base = `https://wa.me/${override}`;
+    return message ? `${base}?text=${encodeURIComponent(message)}` : base;
+  }
+
   const configured = trim(import.meta.env.PUBLIC_WHATSAPP_URL);
   if (configured) {
     if (!message) return configured;

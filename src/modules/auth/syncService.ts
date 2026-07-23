@@ -1,4 +1,5 @@
 import { prisma } from "@/infrastructure/database/prisma";
+import type { User } from "@prisma/client";
 
 interface SyncUserInput {
   id: string;
@@ -6,13 +7,30 @@ interface SyncUserInput {
   name?: string;
 }
 
+interface CacheEntry {
+  value: User;
+  expires: number;
+}
+
+const USER_CACHE_TTL_MS = 60_000;
+const userCache = new Map<string, CacheEntry>();
+
 export class AuthSyncService {
   static async findOrCreateUser(input: SyncUserInput) {
+    const cached = userCache.get(input.id);
+    if (cached && cached.expires > Date.now()) {
+      return cached.value;
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: { id: input.id },
     });
 
     if (existingUser) {
+      userCache.set(input.id, {
+        value: existingUser,
+        expires: Date.now() + USER_CACHE_TTL_MS,
+      });
       return existingUser;
     }
 
@@ -22,12 +40,16 @@ export class AuthSyncService {
       });
 
       if (existingUserByEmail) {
+        userCache.set(input.id, {
+          value: existingUserByEmail,
+          expires: Date.now() + USER_CACHE_TTL_MS,
+        });
         return existingUserByEmail;
       }
     }
 
     try {
-      return await prisma.user.create({
+      const created = await prisma.user.create({
         data: {
           id: input.id,
           email: input.email ?? "",
@@ -36,6 +58,11 @@ export class AuthSyncService {
           status: "ACTIVE",
         },
       });
+      userCache.set(input.id, {
+        value: created,
+        expires: Date.now() + USER_CACHE_TTL_MS,
+      });
+      return created;
     } catch (error) {
       if (!input.email) throw error;
 
@@ -44,6 +71,10 @@ export class AuthSyncService {
       });
 
       if (existingUserByEmail) {
+        userCache.set(input.id, {
+          value: existingUserByEmail,
+          expires: Date.now() + USER_CACHE_TTL_MS,
+        });
         return existingUserByEmail;
       }
 
@@ -51,39 +82,3 @@ export class AuthSyncService {
     }
   }
 }
-
-// import { prisma } from "@/infrastructure/database/prisma";
-
-// export class AuthSyncService {
-//   static async syncUser(supabaseUser: {
-//     id: string;
-//     email?: string;
-//     name?: string;
-//   }) {
-//     if (!supabaseUser.email) return null;
-
-//     const user = await prisma.user.upsert({
-//       where: { email: supabaseUser.email },
-//       update: {
-//         // Update name if it changed or was empty
-//         name: supabaseUser.name || undefined,
-//       },
-//       create: {
-//         id: supabaseUser.id, // We can use Supabase ID or let Prisma generate one.
-//         // Using Supabase ID is better for consistency if we want to link them easily.
-//         email: supabaseUser.email,
-//         name: supabaseUser.name || "",
-//         role: "CUSTOMER",
-//         status: "ACTIVE",
-//       },
-//     });
-
-//     return user;
-//   }
-
-//   static async getUserById(id: string) {
-//     return prisma.user.findUnique({
-//       where: { id },
-//     });
-//   }
-// }

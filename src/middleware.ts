@@ -18,6 +18,13 @@ const resolvesUser = (pathname: string): boolean =>
 const requiresLogin = (pathname: string): boolean =>
   pathname.startsWith("/account");
 
+/** Mutations and APIs should re-validate with Auth; HTML navigations can use the local session JWT. */
+const requiresAuthNetworkCheck = (pathname: string, method: string): boolean => {
+  if (pathname.startsWith("/api/")) return true;
+  if (method !== "GET" && method !== "HEAD") return true;
+  return false;
+};
+
 export const onRequest = defineMiddleware(async (context, next) => {
   // Public storefront pages don't read locals.user — skip Supabase/Prisma round-trips.
   if (!resolvesUser(context.url.pathname)) {
@@ -47,19 +54,37 @@ export const onRequest = defineMiddleware(async (context, next) => {
     },
   );
 
-  const {
-    data: { user: sbUser },
-    error,
-  } = await supabase.auth.getUser();
+  let sbUser: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null =
+    null;
 
-  if (error || !sbUser) {
+  if (requiresAuthNetworkCheck(context.url.pathname, context.request.method)) {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    if (!error && user) sbUser = user;
+  } else {
+    // Local JWT/session read — avoids an Auth network hop on every admin page click.
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    sbUser = session?.user ?? null;
+  }
+
+  if (!sbUser) {
     context.locals.user = null;
   } else {
     try {
       const prismaUser = await AuthSyncService.findOrCreateUser({
         id: sbUser.id,
-        email: sbUser.email,
-        name: sbUser.user_metadata?.full_name || sbUser.user_metadata?.name,
+        email: sbUser.email ?? undefined,
+        name:
+          (typeof sbUser.user_metadata?.full_name === "string"
+            ? sbUser.user_metadata.full_name
+            : undefined) ||
+          (typeof sbUser.user_metadata?.name === "string"
+            ? sbUser.user_metadata.name
+            : undefined),
       });
 
       context.locals.user = prismaUser;

@@ -35,6 +35,10 @@ interface ImportMetaEnv {
   readonly R2_ENDPOINT: string;
   readonly R2_PUBLIC_URL: string;
   readonly R2_PUBLIC_BASE_URL: string;
+  readonly PUBLIC_WHATSAPP_NUMBER: string;
+  readonly PUBLIC_WHATSAPP_URL: string;
+  readonly PUBLIC_MESSENGER_URL: string;
+  readonly PUBLIC_FACEBOOK_URL: string;
 }
 
 interface ImportMeta {

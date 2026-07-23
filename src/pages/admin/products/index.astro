@@ -1,9 +1,9 @@
 ---
 import ProductList from "@/ui/pages/admin/ProductList.astro";
+import { getCachedAdminProductList } from "@/application/services/AdminQueryCache";
 import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
 import { ListAdminProductsUseCase } from "@/application/use-cases/admin/products/ListAdminProductsUseCase";
 
-// Protect route (middleware should handle this, but for safety inside the template too)
 const user = Astro.locals.user;
 if (!user || user.role !== "ADMIN") {
   return Astro.redirect("/login");
@@ -11,7 +11,7 @@ if (!user || user.role !== "ADMIN") {
 
 const productRepository = new PrismaProductRepository();
 const listProducts = new ListAdminProductsUseCase(productRepository);
-const products = await listProducts.execute();
+const products = await getCachedAdminProductList(() => listProducts.execute());
 ---
 
 <ProductList products={products} />

@@ -5,6 +5,8 @@ import type { PreorderReservationDTO } from "@/application/dto/preorder.dto";
 
 export interface ListPreorderReservationsInput {
   preorderId: string;
+  /** When false, skip the campaign existence query (caller already loaded it). */
+  ensureCampaign?: boolean;
 }
 
 export class ListPreorderReservations {
@@ -13,11 +15,13 @@ export class ListPreorderReservations {
   async execute(
     input: ListPreorderReservationsInput,
   ): Promise<PreorderReservationDTO[]> {
-    const campaign = await this.preorderRepository.findCampaignById(
-      input.preorderId,
-    );
-    if (!campaign) {
-      throw ApplicationError.invalidPreorderState("Preorder not found");
+    if (input.ensureCampaign !== false) {
+      const campaign = await this.preorderRepository.findCampaignById(
+        input.preorderId,
+      );
+      if (!campaign) {
+        throw ApplicationError.invalidPreorderState("Preorder not found");
+      }
     }
 
     const reservations = await this.preorderRepository.listReservationsByCampaign(

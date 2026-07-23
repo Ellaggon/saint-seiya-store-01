@@ -9,7 +9,7 @@ if (!user || user.role !== "ADMIN") {
 }
 
 const error = Astro.url.searchParams.get("error");
-const products = await listProductsForPreorderAdmin(Astro.url.origin);
+const products = await listProductsForPreorderAdmin();
 ---
 
 <MainLayout title="Admin - Nueva Preventa">

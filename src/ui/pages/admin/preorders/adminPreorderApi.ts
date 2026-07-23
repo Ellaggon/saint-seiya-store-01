@@ -3,8 +3,11 @@ import type {
   PaginatedResultDTO,
   PreorderDetailDTO,
   PreorderListItemDTO,
+  PreorderProductSummaryDTO,
   PreorderReservationDTO,
 } from "@/application/dto/preorder.dto";
+import { ProductStatus } from "@/domain/entities/Product";
+import { getProducts } from "@/endpoints/api/products/getProducts";
 
 interface ApiSuccess<T> {
   data: T;
@@ -71,6 +74,30 @@ export const listAdminPreorderReservations = (
 ): Promise<PreorderReservationDTO[]> =>
   adminGet(origin, cookie, `/api/admin/preorders/${id}/reservations`);
 
-export const listProductsForPreorderAdmin = (
-  origin: string,
-): Promise<ProductDTO[]> => adminGet(origin, null, "/api/products");
+export const listProductsForPreorderAdmin = (): Promise<ProductDTO[]> =>
+  getProducts();
+
+/** Minimal product option for edit forms where the product cannot change. */
+export const toEditableProductOption = (
+  product: PreorderProductSummaryDTO,
+): ProductDTO => {
+  const status = Object.values(ProductStatus).includes(
+    product.status as ProductStatus,
+  )
+    ? (product.status as ProductStatus)
+    : ProductStatus.PRE_ORDER;
+
+  return {
+    id: product.id,
+    name: product.name,
+    description: "",
+    price: product.price,
+    categoryId: product.category?.id ?? "",
+    collectionId: product.collection?.id ?? "",
+    height: 0,
+    material: "",
+    imageUrl: product.imageUrl ?? "",
+    stock: 0,
+    status,
+  };
+};

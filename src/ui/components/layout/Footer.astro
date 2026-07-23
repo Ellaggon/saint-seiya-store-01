@@ -41,16 +41,20 @@ const matchesPreferred = (item: FilterOption, needles: string[]) => {
 const toCollectionHref = (slug: string) => `/catalog?collection=${encodeURIComponent(slug)}`;
 const toCategoryHref = (slug: string) => `/catalog?category=${encodeURIComponent(slug)}`;
 
-const queryService = new CatalogQueryService(new PrismaCatalogQueryRepository());
-let metadata: CatalogMetadataDTO = {
-  collections: [],
-  categories: [],
-  characters: [],
-};
-try {
-  metadata = await queryService.getCatalogMetadata();
-} catch (error) {
-  console.error("Footer catalog metadata failed:", error);
+// Admin pages share MainLayout but don't need live catalog facets — skip the
+// remote metadata query (often ~1s+) so panel navigations stay snappy.
+const isAdminRoute = Astro.url.pathname.startsWith("/admin");
+
+let metadata: CatalogMetadataDTO | null = null;
+if (!isAdminRoute) {
+  const queryService = new CatalogQueryService(
+    new PrismaCatalogQueryRepository(),
+  );
+  try {
+    metadata = await queryService.getCatalogMetadata();
+  } catch (error) {
+    console.error("Footer catalog metadata failed:", error);
+  }
 }
 
 const liveCollections = (metadata.collections || []).filter((item) => item.count > 0);

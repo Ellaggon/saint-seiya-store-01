@@ -1,23 +1,20 @@
 ---
 import ProductForm from "@/ui/pages/admin/ProductForm.astro";
+import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
+import { loadAdminProductFormOptions } from "@/ui/pages/admin/loadAdminProductFormOptions";
 
-// Protect route
 const user = Astro.locals.user;
 if (!user || user.role !== "ADMIN") {
   return Astro.redirect("/login");
 }
 
-// Fetch data from endpoints
-const categoriesResponse = await fetch(
-  new URL("/api/categories", Astro.url.origin),
-);
-const categories = await categoriesResponse.json();
-
-const collectionsResponse = await fetch(
-  new URL("/api/collections", Astro.url.origin),
-);
-const collections = await collectionsResponse.json();
+const productRepository = new PrismaProductRepository();
+const formOptions = await loadAdminProductFormOptions(productRepository);
 const returnTo = Astro.url.searchParams.get("returnTo") || "/admin/products";
 ---
 
-<ProductForm categories={categories} collections={collections} returnTo={returnTo} />
+<ProductForm
+  categories={formOptions.categories}
+  collections={formOptions.collections}
+  returnTo={returnTo}
+/>

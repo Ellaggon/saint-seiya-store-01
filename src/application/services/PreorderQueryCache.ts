@@ -3,6 +3,7 @@ import type {
   PreorderListItemDTO,
 } from "@/application/dto/preorder.dto";
 import type { ListPreordersInput } from "@/application/use-cases/preorders/ListPreorders";
+import { invalidateAdminCache } from "@/application/services/AdminQueryCache";
 
 type PreorderListResult = PaginatedResultDTO<PreorderListItemDTO>;
 
@@ -59,6 +60,8 @@ const remember = (key: string, value: PreorderListResult) => {
 export const invalidatePreorderCache = (): void => {
   preorderListCache.clear();
   preorderListInFlight.clear();
+  // Admin lists/details share the same underlying campaigns/reservations.
+  invalidateAdminCache();
 };
 
 export const getCachedPreorderList = (

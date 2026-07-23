@@ -47,26 +47,18 @@ const collections = [
   {
     name: "Myth Cloth EX",
     slug: "myth-cloth-ex",
-    description:
-      "Línea premium con cuerpos articulados, armaduras metálicas y acabados de exhibición para coleccionistas.",
   },
   {
     name: "Myth Cloth Classic",
     slug: "myth-cloth-classic",
-    description:
-      "Formato clásico de Saint Cloth Myth con equilibrio entre nostalgia, accesorios y presencia de vitrina.",
   },
   {
     name: "Crown",
     slug: "crown",
-    description:
-      "Piezas de gran formato para exhibiciones protagonistas y colecciones de alto impacto visual.",
   },
   {
     name: "D.D. Panoramation",
     slug: "dd-panoramation",
-    description:
-      "Figuras compactas con escenarios modulares inspirados en momentos clave del anime.",
   },
 ];
 
@@ -344,7 +336,6 @@ async function upsertCollection(collection: (typeof collections)[number]) {
     where: { slug: collection.slug },
     update: {
       name: collection.name,
-      description: collection.description,
       deletedAt: null,
     },
     create: collection,

@@ -65,59 +65,32 @@ const { collection, isEditing = false } = Astro.props;
       )}
       {isEditing && <input type="hidden" name="id" value={collection.id} />}
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <!-- Name -->
-        <div class="space-y-2">
-          <label
-            for="name"
-            class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
-            >Nombre de la Colección</label
-          >
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={collection?.name || ""}
-            required
-            placeholder="Ej: Myth Cloth EX"
-            class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
-          />
-        </div>
-
-        <!-- Slug -->
-        <div class="space-y-2">
-          <label
-            for="slug"
-            class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
-            >Slug (URL)</label
-          >
-          <input
-            type="text"
-            id="slug"
-            name="slug"
-            value={collection?.slug || ""}
-            required
-            placeholder="myth-cloth-ex"
-            class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
-          />
-        </div>
-      </div>
-
-      <!-- Description -->
       <div class="space-y-2">
         <label
-          for="description"
+          for="name"
           class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
-          >Descripción</label
+          >Nombre de la Colección</label
         >
-        <textarea
-          id="description"
-          name="description"
-          rows="4"
-          placeholder="Detalles sobre esta línea de productos..."
-          class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors resize-none"
-          >{collection?.description || ""}</textarea
-        >
+        <input
+          type="text"
+          id="name"
+          name="name"
+          value={collection?.name || ""}
+          required
+          placeholder="Ej: Myth Cloth EX"
+          class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
+        />
+        <p class="text-[10px] uppercase tracking-widest text-zinc-600">
+          El slug se genera solo desde el nombre. Si ya existe, se añade un
+          número.
+          {
+            collection?.slug ? (
+              <span class="mt-1 block text-zinc-500"
+                >Actual: {collection.slug}</span
+              >
+            ) : null
+          }
+        </p>
       </div>
 
       <!-- IsActive (Soft Delete Toggle) -->

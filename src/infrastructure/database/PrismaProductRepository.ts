@@ -6,6 +6,11 @@ import type {
   AdminProductInput,
   ProductRepository,
 } from "../../domain/repositories/ProductRepository";
+import {
+  allocateCategorySlug,
+  allocateCollectionSlug,
+  allocateProductSlug,
+} from "@/lib/uniqueSlug";
 
 const productStatusToPrisma: Record<ProductStatus, PrismaProductStatus> = {
   [ProductStatus.DRAFT]: "DRAFT",
@@ -16,25 +21,7 @@ const productStatusToPrisma: Record<ProductStatus, PrismaProductStatus> = {
 };
 
 export class PrismaProductRepository implements ProductRepository {
-  private toSlug(value: string): string {
-    return value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-  }
-
-  private async buildUniqueSlug(baseValue: string): Promise<string> {
-    const baseSlug = this.toSlug(baseValue);
-    let slug = baseSlug;
-    let counter = 1;
-
-    while (await prisma.product.findUnique({ where: { slug } })) {
-      counter++;
-      slug = `${baseSlug}-${counter}`;
-    }
-
-    return slug;
-  }
+  // slug helpers live in @/lib/uniqueSlug
 
   private toAdminProductData(product: {
     id: string;
@@ -414,7 +401,7 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async createAdminProduct(input: AdminProductInput): Promise<AdminProductData> {
-    const slug = await this.buildUniqueSlug(input.slug || input.name);
+    const slug = await allocateProductSlug(input.name);
 
     const product = await prisma.product.create({
       data: {
@@ -447,11 +434,13 @@ export class PrismaProductRepository implements ProductRepository {
   async updateAdminProduct(
     input: AdminProductInput & { id: string },
   ): Promise<AdminProductData> {
+    const slug = await allocateProductSlug(input.name, input.id);
+
     const product = await prisma.product.update({
       where: { id: input.id },
       data: {
         name: input.name,
-        slug: input.slug || this.toSlug(input.name),
+        slug,
         description: input.description,
         price: input.price,
         categoryId: input.categoryId,
@@ -505,19 +494,19 @@ export class PrismaProductRepository implements ProductRepository {
   async saveCollection(
     collection: import("../../domain/repositories/ProductRepository").CollectionData,
   ): Promise<void> {
+    const slug = await allocateCollectionSlug(collection.name, collection.id);
+
     await prisma.collection.upsert({
       where: { id: collection.id },
       update: {
         name: collection.name,
-        slug: collection.slug,
-        description: collection.description,
+        slug,
         deletedAt: collection.deletedAt,
       },
       create: {
         id: collection.id,
         name: collection.name,
-        slug: collection.slug,
-        description: collection.description,
+        slug,
         deletedAt: collection.deletedAt,
       },
     });
@@ -558,18 +547,20 @@ export class PrismaProductRepository implements ProductRepository {
   async saveCategory(
     category: import("../../domain/repositories/ProductRepository").CategoryData,
   ): Promise<void> {
+    const slug = await allocateCategorySlug(category.name, category.id);
+
     await prisma.category.upsert({
       where: { id: category.id },
       update: {
         name: category.name,
-        slug: category.slug,
+        slug,
         imageUrl: category.imageUrl,
         deletedAt: category.deletedAt,
       },
       create: {
         id: category.id,
         name: category.name,
-        slug: category.slug,
+        slug,
         imageUrl: category.imageUrl,
         deletedAt: category.deletedAt,
       },

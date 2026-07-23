@@ -99,6 +99,22 @@ const structuredDataJson = structuredData
     </script>
 
     <script>
+      import {
+        CART_UPDATED_EVENT,
+        initCartStorageSync,
+        syncCartBadge,
+      } from "@/ui/scripts/cart";
+      import { initCartServerSync } from "@/ui/scripts/cartSync";
+
+      const bootCartBadge = () => syncCartBadge();
+      initCartStorageSync();
+      initCartServerSync();
+      bootCartBadge();
+      document.addEventListener("astro:page-load", bootCartBadge);
+      window.addEventListener(CART_UPDATED_EVENT, bootCartBadge);
+    </script>
+
+    <script>
       window.addEventListener("click", (event) => {
         const target = event.target;
         if (!(target instanceof Element)) return;

@@ -27,6 +27,8 @@ model User {
   createdAt            DateTime              @default(now())
   address              String?
   name                 String?
+  // Guest carts live in localStorage; logged-in carts mirror here as [{productId, quantity}].
+  cartJson             Json?
   deletedAt            DateTime?
   updatedAt            DateTime              @updatedAt
   orders               Order[]

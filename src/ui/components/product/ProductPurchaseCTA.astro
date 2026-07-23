@@ -1,0 +1,415 @@
+---
+interface Props {
+  productId: string;
+  productName: string;
+  price: number;
+  imageUrl: string;
+  stock: number;
+  canPurchase: boolean;
+  availabilityLabel: string;
+}
+
+const {
+  productId,
+  productName,
+  price,
+  imageUrl,
+  stock,
+  canPurchase,
+  availabilityLabel,
+} = Astro.props;
+
+const maxStock = Math.max(0, Math.floor(stock));
+---
+
+<section class="space-y-4" aria-label="Acciones de compra">
+  <div class="space-y-2">
+    <p class="text-[10px] font-black uppercase tracking-[0.28em] text-amber-500">
+      Adquisición
+    </p>
+    <h2 class="text-sm font-black uppercase tracking-[0.18em] text-white">
+      Lleva esta figura
+    </h2>
+    <p class="max-w-md text-xs leading-6 text-zinc-500">
+      Añádela al carrito para seguir explorando, o compra ahora para cerrar la
+      adquisición.
+    </p>
+  </div>
+
+  {
+    canPurchase ? (
+      <div class="space-y-3">
+        <div class="flex flex-wrap items-center gap-4">
+          <p class="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500">
+            Cantidad
+          </p>
+          <div
+            id="product-qty-group"
+            class="inline-flex items-center border border-zinc-800"
+            role="group"
+            aria-label="Cantidad a añadir"
+          >
+            <button
+              type="button"
+              id="product-qty-decrement"
+              class="flex h-10 w-10 items-center justify-center text-sm font-black text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-amber-500 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-300"
+              aria-label="Disminuir cantidad"
+            >
+              −
+            </button>
+            <span
+              id="product-qty-value"
+              class="min-w-[2.75rem] text-center text-xs font-black tabular-nums text-white"
+              aria-live="polite"
+            >
+              1
+            </span>
+            <button
+              type="button"
+              id="product-qty-increment"
+              class="flex h-10 w-10 items-center justify-center text-sm font-black text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-amber-500 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-300"
+              aria-label="Aumentar cantidad"
+            >
+              +
+            </button>
+          </div>
+          <p class="text-[10px] uppercase tracking-widest text-zinc-600">
+            Stock: {maxStock}
+          </p>
+        </div>
+        <p
+          id="product-qty-hint"
+          class="hidden text-[10px] font-black uppercase tracking-widest text-amber-400"
+          role="status"
+          aria-live="polite"
+        >
+        </p>
+
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            id="product-add-to-cart"
+            class="group relative overflow-hidden rounded-xl border border-zinc-700 bg-[linear-gradient(135deg,rgba(255,255,255,0.06),rgba(0,0,0,0.55))] px-5 py-5 text-left transition-all duration-300 hover:border-amber-500/60 hover:bg-[linear-gradient(135deg,rgba(245,158,11,0.12),rgba(0,0,0,0.45))]"
+            data-product-id={productId}
+            data-product-name={productName}
+            data-product-price={String(price)}
+            data-product-image={imageUrl}
+            data-product-stock={String(maxStock)}
+          >
+            <div
+              class="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-amber-500/10 blur-2xl opacity-0 transition-opacity group-hover:opacity-100"
+              aria-hidden="true"
+            />
+            <div class="relative flex items-center gap-4">
+              <span
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-zinc-700 bg-black/50 text-zinc-300 transition-colors group-hover:border-amber-500/50 group-hover:text-amber-500"
+                aria-hidden="true"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="square"
+                  stroke-linejoin="round"
+                >
+                  <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <path d="M16 10a4 4 0 0 1-8 0"></path>
+                </svg>
+              </span>
+              <span class="min-w-0 flex-1">
+                <span
+                  data-add-label
+                  class="block text-[11px] font-black uppercase tracking-[0.2em] text-white"
+                >
+                  Añadir al carrito
+                </span>
+                <span class="mt-1 block text-[10px] uppercase tracking-[0.16em] text-zinc-500 group-hover:text-amber-500/90">
+                  Guardar para después
+                </span>
+              </span>
+              <span
+                class="text-zinc-500 transition-all duration-300 group-hover:translate-x-1 group-hover:text-amber-500"
+                aria-hidden="true"
+              >
+                +
+              </span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            id="product-buy-now"
+            class="group relative overflow-hidden rounded-xl border border-amber-500/40 bg-[linear-gradient(135deg,rgba(245,158,11,0.92),rgba(180,83,9,0.95))] px-5 py-5 text-left text-black transition-all duration-300 hover:border-amber-300 hover:brightness-110"
+            data-product-id={productId}
+            data-product-name={productName}
+            data-product-price={String(price)}
+            data-product-image={imageUrl}
+            data-product-stock={String(maxStock)}
+          >
+            <div
+              class="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-white/20 blur-2xl"
+              aria-hidden="true"
+            />
+            <div class="relative flex items-center gap-4">
+              <span
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-black/20 bg-black/15"
+                aria-hidden="true"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.25"
+                  stroke-linecap="square"
+                  stroke-linejoin="round"
+                >
+                  <path d="M5 12h14"></path>
+                  <path d="m13 6 6 6-6 6"></path>
+                </svg>
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block text-[11px] font-black uppercase tracking-[0.2em]">
+                  Comprar ahora
+                </span>
+                <span class="mt-1 block text-[10px] uppercase tracking-[0.16em] text-black/70">
+                  Ir al checkout
+                </span>
+              </span>
+              <span
+                class="transition-transform duration-300 group-hover:translate-x-1"
+                aria-hidden="true"
+              >
+                →
+              </span>
+            </div>
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div class="rounded-xl border border-zinc-800 bg-zinc-950/70 px-5 py-5">
+        <p class="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-500">
+          Compra no disponible
+        </p>
+        <p class="mt-2 text-xs uppercase tracking-[0.14em] text-zinc-600">
+          Estado actual: {availabilityLabel}
+        </p>
+      </div>
+    )
+  }
+</section>
+
+{
+  canPurchase && (
+    <script>
+      import {
+        CART_UPDATED_EVENT,
+        addToCart,
+        readCart,
+        syncCartBadge,
+      } from "@/ui/scripts/cart";
+
+      let selectedQty = 1;
+      let maxStock = 1;
+      let boundProductId = "";
+      let purchaseAbort: AbortController | null = null;
+
+      const readProductPayload = (button: HTMLButtonElement) => ({
+        productId: button.dataset.productId || "",
+        name: button.dataset.productName || "",
+        price: Number(button.dataset.productPrice || 0),
+        imageUrl: button.dataset.productImage || "",
+        stock: Number(button.dataset.productStock || 0),
+      });
+
+      const setHint = (message: string | null) => {
+        const hint = document.getElementById("product-qty-hint");
+        if (!hint) return;
+        if (!message) {
+          hint.classList.add("hidden");
+          hint.textContent = "";
+          return;
+        }
+        hint.textContent = message;
+        hint.classList.remove("hidden");
+      };
+
+      const syncQtyUi = () => {
+        const valueEl = document.getElementById("product-qty-value");
+        const dec = document.getElementById(
+          "product-qty-decrement",
+        ) as HTMLButtonElement | null;
+        const inc = document.getElementById(
+          "product-qty-increment",
+        ) as HTMLButtonElement | null;
+        if (valueEl) valueEl.textContent = String(selectedQty);
+        if (dec) dec.disabled = selectedQty <= 1;
+        if (inc) inc.disabled = selectedQty >= maxStock;
+      };
+
+      const remainingForProduct = (productId: string, stock: number): number => {
+        const inCart =
+          readCart().find((entry) => entry.productId === productId)?.quantity ??
+          0;
+        return Math.max(0, stock - inCart);
+      };
+
+      const bindPurchaseActions = () => {
+        const addButton = document.getElementById(
+          "product-add-to-cart",
+        ) as HTMLButtonElement | null;
+        const buyButton = document.getElementById(
+          "product-buy-now",
+        ) as HTMLButtonElement | null;
+        const dec = document.getElementById("product-qty-decrement");
+        const inc = document.getElementById("product-qty-increment");
+        if (!addButton) return;
+
+        const productId = addButton.dataset.productId || "";
+        maxStock = Math.max(1, Number(addButton.dataset.productStock || 1));
+
+        // Always reset qty when landing on a product (View Transitions keep module state).
+        selectedQty = 1;
+        setHint(null);
+        syncQtyUi();
+
+        // Same product already bound — keep qty reset, skip re-attaching listeners.
+        if (
+          boundProductId === productId &&
+          addButton.dataset.bound === productId
+        ) {
+          return;
+        }
+
+        purchaseAbort?.abort();
+        purchaseAbort = new AbortController();
+        const { signal } = purchaseAbort;
+
+        boundProductId = productId;
+        addButton.dataset.bound = productId;
+
+        const label = addButton.querySelector<HTMLElement>("[data-add-label]");
+
+        dec?.addEventListener(
+          "click",
+          () => {
+            selectedQty = Math.max(1, selectedQty - 1);
+            setHint(null);
+            syncQtyUi();
+          },
+          { signal },
+        );
+
+        inc?.addEventListener(
+          "click",
+          () => {
+            if (selectedQty >= maxStock) {
+              setHint(`Solo hay ${maxStock} unidades disponibles.`);
+              syncQtyUi();
+              return;
+            }
+            selectedQty = Math.min(maxStock, selectedQty + 1);
+            setHint(null);
+            syncQtyUi();
+          },
+          { signal },
+        );
+
+        addButton.addEventListener(
+          "click",
+          () => {
+            const payload = readProductPayload(addButton);
+            if (!payload.productId) return;
+
+            const remaining = remainingForProduct(
+              payload.productId,
+              payload.stock,
+            );
+            if (remaining <= 0) {
+              setHint(`Ya tienes el máximo en el carrito (${payload.stock}).`);
+              return;
+            }
+
+            const result = addToCart({
+              ...payload,
+              quantity: Math.min(selectedQty, remaining),
+            });
+            syncCartBadge();
+
+            if (result.capped || selectedQty > remaining) {
+              setHint(
+                `Solo se añadieron ${result.quantityApplied} (stock ${payload.stock}).`,
+              );
+            } else {
+              setHint(null);
+            }
+
+            if (label) {
+              const previous = label.textContent || "Añadir al carrito";
+              label.textContent =
+                result.quantityApplied > 1
+                  ? `Añadidos ×${result.quantityApplied}`
+                  : result.quantityApplied === 1
+                    ? "Añadido"
+                    : "Sin stock";
+              window.setTimeout(() => {
+                label.textContent = previous;
+              }, 1400);
+            }
+
+            selectedQty = 1;
+            syncQtyUi();
+          },
+          { signal },
+        );
+
+        buyButton?.addEventListener(
+          "click",
+          () => {
+            const payload = readProductPayload(buyButton);
+            if (!payload.productId) return;
+
+            const remaining = remainingForProduct(
+              payload.productId,
+              payload.stock,
+            );
+            if (remaining <= 0) {
+              setHint(`Ya tienes el máximo en el carrito (${payload.stock}).`);
+              return;
+            }
+
+            const result = addToCart({
+              ...payload,
+              quantity: Math.min(selectedQty, remaining),
+            });
+            syncCartBadge();
+            if (result.quantityApplied <= 0) {
+              setHint(`Stock insuficiente (máx. ${payload.stock}).`);
+              return;
+            }
+            window.location.href = "/cart";
+          },
+          { signal },
+        );
+      };
+
+      const bootPurchase = () => bindPurchaseActions();
+      bootPurchase();
+
+      const w = window as Window & { __sanctuaryPurchasePageLoad?: boolean };
+      if (!w.__sanctuaryPurchasePageLoad) {
+        w.__sanctuaryPurchasePageLoad = true;
+        document.addEventListener("astro:page-load", bootPurchase);
+        window.addEventListener(CART_UPDATED_EVENT, syncCartBadge);
+      }
+      syncCartBadge();
+    </script>
+  )
+}

@@ -1,0 +1,48 @@
+---
+interface Props {
+  sheetId: string;
+  title: string;
+  statusLabel: string;
+  statusClass: string;
+  editHref: string;
+  editLabel?: string;
+}
+
+const {
+  sheetId,
+  title,
+  statusLabel,
+  statusClass,
+  editHref,
+  editLabel = "Editar",
+} = Astro.props;
+---
+
+<div
+  class="flex items-center gap-3 border border-zinc-900 bg-zinc-950 px-4 py-4"
+>
+  <button
+    type="button"
+    data-admin-sheet-open={sheetId}
+    class="min-w-0 flex-1 text-left"
+    aria-label={`Abrir acciones de ${title}`}
+  >
+    <div class="flex items-center gap-3">
+      <slot name="leading" />
+      <span class="min-w-0 flex-1 truncate text-sm font-bold uppercase tracking-tight text-white">
+        {title}
+      </span>
+      <span
+        class={`shrink-0 text-[9px] font-black uppercase tracking-tighter border px-2 py-1 ${statusClass}`}
+      >
+        {statusLabel}
+      </span>
+    </div>
+  </button>
+  <a
+    href={editHref}
+    class="shrink-0 text-[10px] font-black uppercase text-white transition-colors hover:text-amber-500"
+  >
+    {editLabel}
+  </a>
+</div>

@@ -1,5 +1,8 @@
 ---
 import MainLayout from "../../layouts/MainLayout.astro";
+import AdminItemSheet from "./AdminItemSheet.astro";
+import AdminItemSheetsInit from "./AdminItemSheetsInit.astro";
+import AdminMobileListRow from "./AdminMobileListRow.astro";
 
 interface Props {
   collections: any[];
@@ -18,6 +21,11 @@ const actionConfirm = (deletedAt?: Date | string | null): string =>
   deletedAt
     ? "¿Activar esta colección?"
     : "¿Desactivar esta colección? No se eliminará, solo dejará de estar activa.";
+
+const statusClass = (deletedAt?: Date | string | null): string =>
+  !deletedAt
+    ? "text-green-500 border-green-500/30 bg-green-500/5"
+    : "text-zinc-500 border-zinc-800 bg-zinc-900";
 ---
 
 <MainLayout title="Admin - Gestión de Colecciones">
@@ -54,118 +62,187 @@ const actionConfirm = (deletedAt?: Date | string | null): string =>
       )
     }
 
-    <!-- Table Section -->
-    <div class="bg-zinc-950 border border-zinc-900 overflow-x-auto">
-      <table class="w-full text-left border-collapse">
-        <thead class="bg-black border-b border-zinc-900">
-          <tr>
-            <th
-              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest"
-              >Nombre</th
-            >
-            <th
-              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest"
-              >Slug</th
-            >
-            <th
-              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest"
-              >Estado</th
-            >
-            <th
-              class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest text-right"
-              >Acciones</th
-            >
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-zinc-900">
-          {
-            collections.length === 0 ? (
-              <tr>
-                <td
-                  colspan="4"
-                  class="px-6 py-12 text-center text-zinc-500 text-xs uppercase tracking-widest italic"
-                >
-                  No hay colecciones registradas todavía.
-                </td>
-              </tr>
-            ) : (
-              collections.map((coll) => (
-                <tr class="hover:bg-zinc-900/50 transition-colors group">
-                  <td class="px-6 py-5">
-                    <span class="text-white font-bold text-sm uppercase tracking-tight">
-                      {coll.name}
-                    </span>
-                  </td>
-                  <td class="px-6 py-5">
-                    <span class="text-zinc-600 text-[10px] tracking-widest uppercase">
-                      {coll.slug}
-                    </span>
-                  </td>
-                  <td class="px-6 py-5">
-                    <span
-                      class={`text-[9px] font-black uppercase px-2 py-1 tracking-tighter border ${
-                        !coll.deletedAt
-                          ? "text-green-500 border-green-500/30 bg-green-500/5"
-                          : "text-zinc-500 border-zinc-800 bg-zinc-900"
-                      }`}
+    {
+      collections.length === 0 ? (
+        <div class="border border-zinc-900 bg-zinc-950 px-6 py-12 text-center text-zinc-500 text-xs uppercase tracking-widest italic">
+          No hay colecciones registradas todavía.
+        </div>
+      ) : (
+        <>
+          <!-- Mobile: compact rows + action sheet -->
+          <div class="space-y-2 md:hidden">
+            {collections.map((coll) => {
+              const sheetId = `collection-sheet-${coll.id}`;
+              return (
+                <>
+                  <AdminMobileListRow
+                    sheetId={sheetId}
+                    title={coll.name}
+                    statusLabel={!coll.deletedAt ? "ACTIVO" : "DESACTIVADO"}
+                    statusClass={statusClass(coll.deletedAt)}
+                    editHref={`/admin/collections/${coll.id}/edit`}
+                  />
+                  <AdminItemSheet
+                    id={sheetId}
+                    title={coll.name}
+                    subtitle={coll.slug}
+                  >
+                    <div
+                      slot="details"
+                      class="flex items-center justify-between gap-3 border border-zinc-900 bg-zinc-950 px-4 py-3"
                     >
-                      {!coll.deletedAt ? "ACTIVO" : "DESACTIVADO"}
-                    </span>
-                  </td>
-                  <td class="px-6 py-5 text-right">
-                    <div class="flex justify-end items-center gap-3">
-                      <a
-                        href={`/admin/collections/${coll.id}/edit`}
-                        class="text-[10px] font-black text-white hover:text-amber-500 uppercase transition-colors"
+                      <span class="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                        Estado
+                      </span>
+                      <span
+                        class={`text-[9px] font-black uppercase tracking-tighter border px-2 py-1 ${statusClass(coll.deletedAt)}`}
                       >
-                        Editar
-                      </a>
-                      <span class="text-zinc-800">|</span>
-                      <form
-                        action="/api/admin/collections/actions"
-                        method="POST"
-                        onsubmit={`return confirm('${actionConfirm(coll.deletedAt)}')`}
-                      >
-                        <input type="hidden" name="id" value={coll.id} />
-                        <input
-                          type="hidden"
-                          name="_action"
-                          value={actionValue(coll.deletedAt)}
-                        />
-                        <button
-                          type="submit"
-                          class={`text-[10px] font-black uppercase transition-colors ${
-                            coll.deletedAt
-                              ? "text-green-500 hover:text-white"
-                              : "text-zinc-600 hover:text-amber-500"
-                          }`}
-                        >
-                          {actionLabel(coll.deletedAt)}
-                        </button>
-                      </form>
-                      <span class="text-zinc-800">|</span>
-                      <form
-                        action="/api/admin/collections/actions"
-                        method="POST"
-                        onsubmit="return confirm('¿Eliminar definitivamente esta colección? Esta acción no se puede deshacer y fallará si tiene productos asociados.')"
-                      >
-                        <input type="hidden" name="id" value={coll.id} />
-                        <input type="hidden" name="_action" value="delete" />
-                        <button
-                          type="submit"
-                          class="text-[10px] font-black text-red-500 hover:text-red-300 uppercase transition-colors"
-                        >
-                          Eliminar
-                        </button>
-                      </form>
+                        {!coll.deletedAt ? "ACTIVO" : "DESACTIVADO"}
+                      </span>
                     </div>
-                  </td>
+                    <a
+                      href={`/admin/collections/${coll.id}/edit`}
+                      class="inline-flex w-full items-center justify-center border border-zinc-800 bg-zinc-950 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-white transition-colors hover:border-amber-500 hover:text-amber-500"
+                    >
+                      Editar
+                    </a>
+                    <form
+                      action="/api/admin/collections/actions"
+                      method="POST"
+                      onsubmit={`return confirm('${actionConfirm(coll.deletedAt)}')`}
+                    >
+                      <input type="hidden" name="id" value={coll.id} />
+                      <input
+                        type="hidden"
+                        name="_action"
+                        value={actionValue(coll.deletedAt)}
+                      />
+                      <button
+                        type="submit"
+                        class={`inline-flex w-full items-center justify-center border px-4 py-3 text-[11px] font-black uppercase tracking-widest transition-colors ${
+                          coll.deletedAt
+                            ? "border-green-500/30 text-green-500 hover:bg-green-500/10"
+                            : "border-zinc-800 text-zinc-400 hover:border-amber-500 hover:text-amber-500"
+                        }`}
+                      >
+                        {actionLabel(coll.deletedAt)}
+                      </button>
+                    </form>
+                    <form
+                      action="/api/admin/collections/actions"
+                      method="POST"
+                      onsubmit="return confirm('¿Eliminar definitivamente esta colección? Esta acción no se puede deshacer y fallará si tiene productos asociados.')"
+                    >
+                      <input type="hidden" name="id" value={coll.id} />
+                      <input type="hidden" name="_action" value="delete" />
+                      <button
+                        type="submit"
+                        class="inline-flex w-full items-center justify-center border border-red-500/30 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-red-500 transition-colors hover:bg-red-500/10"
+                      >
+                        Eliminar
+                      </button>
+                    </form>
+                  </AdminItemSheet>
+                </>
+              );
+            })}
+          </div>
+
+          <!-- Tablet/desktop: full table -->
+          <div class="hidden md:block bg-zinc-950 border border-zinc-900 overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead class="bg-black border-b border-zinc-900">
+                <tr>
+                  <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">
+                    Nombre
+                  </th>
+                  <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">
+                    Slug
+                  </th>
+                  <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest">
+                    Estado
+                  </th>
+                  <th class="px-6 py-4 text-[10px] font-black text-amber-500 uppercase tracking-widest text-right">
+                    Acciones
+                  </th>
                 </tr>
-              ))
-            )
-          }
-        </tbody>
-      </table>
-    </div>
+              </thead>
+              <tbody class="divide-y divide-zinc-900">
+                {collections.map((coll) => (
+                  <tr class="hover:bg-zinc-900/50 transition-colors group">
+                    <td class="px-6 py-5">
+                      <span class="text-white font-bold text-sm uppercase tracking-tight">
+                        {coll.name}
+                      </span>
+                    </td>
+                    <td class="px-6 py-5">
+                      <span class="text-zinc-600 text-[10px] tracking-widest uppercase">
+                        {coll.slug}
+                      </span>
+                    </td>
+                    <td class="px-6 py-5">
+                      <span
+                        class={`text-[9px] font-black uppercase px-2 py-1 tracking-tighter border ${statusClass(coll.deletedAt)}`}
+                      >
+                        {!coll.deletedAt ? "ACTIVO" : "DESACTIVADO"}
+                      </span>
+                    </td>
+                    <td class="px-6 py-5 text-right">
+                      <div class="flex justify-end items-center gap-3">
+                        <a
+                          href={`/admin/collections/${coll.id}/edit`}
+                          class="text-[10px] font-black text-white hover:text-amber-500 uppercase transition-colors"
+                        >
+                          Editar
+                        </a>
+                        <span class="text-zinc-800">|</span>
+                        <form
+                          action="/api/admin/collections/actions"
+                          method="POST"
+                          onsubmit={`return confirm('${actionConfirm(coll.deletedAt)}')`}
+                        >
+                          <input type="hidden" name="id" value={coll.id} />
+                          <input
+                            type="hidden"
+                            name="_action"
+                            value={actionValue(coll.deletedAt)}
+                          />
+                          <button
+                            type="submit"
+                            class={`text-[10px] font-black uppercase transition-colors ${
+                              coll.deletedAt
+                                ? "text-green-500 hover:text-white"
+                                : "text-zinc-600 hover:text-amber-500"
+                            }`}
+                          >
+                            {actionLabel(coll.deletedAt)}
+                          </button>
+                        </form>
+                        <span class="text-zinc-800">|</span>
+                        <form
+                          action="/api/admin/collections/actions"
+                          method="POST"
+                          onsubmit="return confirm('¿Eliminar definitivamente esta colección? Esta acción no se puede deshacer y fallará si tiene productos asociados.')"
+                        >
+                          <input type="hidden" name="id" value={coll.id} />
+                          <input type="hidden" name="_action" value="delete" />
+                          <button
+                            type="submit"
+                            class="text-[10px] font-black text-red-500 hover:text-red-300 uppercase transition-colors"
+                          >
+                            Eliminar
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )
+    }
+    <AdminItemSheetsInit />
   </div>
 </MainLayout>

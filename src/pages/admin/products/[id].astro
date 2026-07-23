@@ -1,38 +1,34 @@
 ---
 import ProductForm from "@/ui/pages/admin/ProductForm.astro";
+import { getCachedAdminProductDetail } from "@/application/services/AdminQueryCache";
 import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
 import { GetAdminProductUseCase } from "@/application/use-cases/admin/products/GetAdminProductUseCase";
+import { loadAdminProductFormOptions } from "@/ui/pages/admin/loadAdminProductFormOptions";
 
-// Protect route
 const user = Astro.locals.user;
 if (!user || user.role !== "ADMIN") {
   return Astro.redirect("/login");
 }
 
 const { id } = Astro.params;
-
 const productRepository = new PrismaProductRepository();
 const getProduct = new GetAdminProductUseCase(productRepository);
-const product = id ? await getProduct.execute(id) : null;
+
+const [product, formOptions] = await Promise.all([
+  id
+    ? getCachedAdminProductDetail(id, () => getProduct.execute(id))
+    : Promise.resolve(null),
+  loadAdminProductFormOptions(productRepository),
+]);
 
 if (!product || product.deletedAt) {
   return Astro.redirect("/admin/products");
 }
-
-const categoriesResponse = await fetch(
-  new URL("/api/categories", Astro.url.origin),
-);
-const categories = await categoriesResponse.json();
-
-const collectionsResponse = await fetch(
-  new URL("/api/collections", Astro.url.origin),
-);
-const collections = await collectionsResponse.json();
 ---
 
 <ProductForm
   product={product}
-  categories={categories}
-  collections={collections}
+  categories={formOptions.categories}
+  collections={formOptions.collections}
   isEditing={true}
 />

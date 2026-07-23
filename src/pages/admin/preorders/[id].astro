@@ -1,10 +1,10 @@
 ---
 import MainLayout from "@/ui/layouts/MainLayout.astro";
 import AdminPreorderForm from "@/ui/components/admin/preorders/AdminPreorderForm.astro";
-import {
-  getAdminPreorder,
-  listProductsForPreorderAdmin,
-} from "@/ui/pages/admin/preorders/adminPreorderApi";
+import { ApplicationError } from "@/application/errors/ApplicationError";
+import { getCachedAdminPreorderDetail } from "@/application/services/AdminQueryCache";
+import { createGetPreorderDetailUseCase } from "@/infrastructure/preorders/PreorderUseCaseFactory";
+import { toEditableProductOption } from "@/ui/pages/admin/preorders/adminPreorderApi";
 
 const user = Astro.locals.user;
 if (!user || user.role !== "ADMIN") {
@@ -17,16 +17,27 @@ if (!id) {
 }
 
 const error = Astro.url.searchParams.get("error");
-const cookie = Astro.request.headers.get("cookie");
-const [preorder, products] = await Promise.all([
-  getAdminPreorder(Astro.url.origin, cookie, id),
-  listProductsForPreorderAdmin(Astro.url.origin),
-]);
+
+let preorder;
+try {
+  const getPreorderDetail = createGetPreorderDetailUseCase();
+  preorder = await getCachedAdminPreorderDetail(id, () =>
+    getPreorderDetail.execute({ id }),
+  );
+} catch (requestError) {
+  const appError = ApplicationError.normalizeUnknownError(requestError);
+  if (appError.code === "INVALID_PREORDER_STATE") {
+    return Astro.redirect("/admin/preorders");
+  }
+  throw appError;
+}
+
+const products = [toEditableProductOption(preorder.product)];
 ---
 
 <MainLayout title={`Admin - ${preorder.product.name}`}>
   <div class="max-w-[900px] mx-auto px-6 py-12">
-    <a href="/admin/preorders" class="inline-flex items-center text-zinc-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest mb-8">
+    <a href="/admin/preorders" data-astro-prefetch="hover" class="inline-flex items-center text-zinc-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest mb-8">
       Volver a preventas
     </a>
     <div class="space-y-2 mb-12">

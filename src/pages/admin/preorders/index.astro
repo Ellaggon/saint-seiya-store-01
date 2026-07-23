@@ -1,7 +1,9 @@
 ---
 import MainLayout from "@/ui/layouts/MainLayout.astro";
 import AdminPreorderTable from "@/ui/components/admin/preorders/AdminPreorderTable.astro";
-import { listAdminPreorders } from "@/ui/pages/admin/preorders/adminPreorderApi";
+import { getCachedAdminPreorderList } from "@/application/services/AdminQueryCache";
+import { parsePreorderListQuery } from "@/endpoints/api/shared/query";
+import { createListPreordersUseCase } from "@/infrastructure/preorders/PreorderUseCaseFactory";
 
 const user = Astro.locals.user;
 if (!user || user.role !== "ADMIN") {
@@ -9,19 +11,14 @@ if (!user || user.role !== "ADMIN") {
 }
 
 const error = Astro.url.searchParams.get("error");
-const filters = new URLSearchParams();
-["status", "availability", "sort", "page", "pageSize"].forEach((key) => {
-  const value = Astro.url.searchParams.get(key);
-  if (value) filters.set(key, value);
-});
+const listInput = parsePreorderListQuery(Astro.url.searchParams, "admin");
 
 let result;
 let loadError = error;
 try {
-  result = await listAdminPreorders(
-    Astro.url.origin,
-    Astro.request.headers.get("cookie"),
-    filters.toString() ? `?${filters.toString()}` : "",
+  const listPreorders = createListPreordersUseCase();
+  result = await getCachedAdminPreorderList(listInput, () =>
+    listPreorders.execute(listInput),
   );
 } catch (requestError) {
   loadError = requestError instanceof Error ? requestError.message : "No se pudo cargar preventas";
@@ -58,7 +55,7 @@ const pageHref = (page: number): string => {
         <h1 class="text-4xl font-black text-white uppercase tracking-tighter">Preventas</h1>
         <div class="w-12 h-1 bg-amber-500"></div>
       </div>
-      <a href="/admin/preorders/new" class="inline-flex items-center justify-center bg-white text-black text-[11px] font-black uppercase tracking-widest px-8 py-4 hover:bg-amber-500 transition-colors duration-300">
+      <a href="/admin/preorders/new" data-astro-prefetch="hover" class="inline-flex items-center justify-center bg-white text-black text-[11px] font-black uppercase tracking-widest px-8 py-4 hover:bg-amber-500 transition-colors duration-300">
         Crear Preventa
       </a>
     </div>
@@ -110,7 +107,7 @@ const pageHref = (page: number): string => {
       <div class="flex items-center gap-3">
         {
           result.page > 1 ? (
-            <a href={pageHref(result.page - 1)} class="border border-zinc-800 text-zinc-300 text-[10px] font-black uppercase tracking-widest px-4 py-3 hover:border-amber-500 hover:text-white transition-colors">
+            <a href={pageHref(result.page - 1)} data-astro-prefetch="hover" class="border border-zinc-800 text-zinc-300 text-[10px] font-black uppercase tracking-widest px-4 py-3 hover:border-amber-500 hover:text-white transition-colors">
               Anterior
             </a>
           ) : (
@@ -121,7 +118,7 @@ const pageHref = (page: number): string => {
         }
         {
           result.page < result.totalPages ? (
-            <a href={pageHref(result.page + 1)} class="border border-zinc-800 text-zinc-300 text-[10px] font-black uppercase tracking-widest px-4 py-3 hover:border-amber-500 hover:text-white transition-colors">
+            <a href={pageHref(result.page + 1)} data-astro-prefetch="hover" class="border border-zinc-800 text-zinc-300 text-[10px] font-black uppercase tracking-widest px-4 py-3 hover:border-amber-500 hover:text-white transition-colors">
               Siguiente
             </a>
           ) : (

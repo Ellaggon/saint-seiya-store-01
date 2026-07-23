@@ -1,0 +1,40 @@
+---
+/**
+ * Include once per admin list page that uses AdminItemSheet / AdminMobileListRow.
+ */
+---
+
+<script is:inline>
+  (function () {
+    if (window.__adminItemSheetsBound) return;
+    window.__adminItemSheetsBound = true;
+
+    document.addEventListener("click", function (event) {
+      var target = event.target;
+      if (!(target instanceof Element)) return;
+
+      var openTrigger = target.closest("[data-admin-sheet-open]");
+      if (openTrigger) {
+        var sheetId = openTrigger.getAttribute("data-admin-sheet-open");
+        if (!sheetId) return;
+        var sheet = document.getElementById(sheetId);
+        if (sheet instanceof HTMLDialogElement) sheet.showModal();
+        return;
+      }
+
+      var closeTrigger = target.closest(".admin-item-sheet-close");
+      if (closeTrigger) {
+        var closeSheet = closeTrigger.closest("dialog.admin-item-sheet");
+        if (closeSheet instanceof HTMLDialogElement) closeSheet.close();
+        return;
+      }
+
+      if (
+        target instanceof HTMLDialogElement &&
+        target.classList.contains("admin-item-sheet")
+      ) {
+        target.close();
+      }
+    });
+  })();
+</script>

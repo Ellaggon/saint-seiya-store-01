@@ -6,6 +6,7 @@ import {
 import { PreorderRepositoryError } from "@/domain/errors/PreorderRepositoryError";
 import { PreorderCampaignStatus } from "@/domain/entities/PreorderCampaign";
 import {
+  PreorderPaymentProvider,
   PreorderPaymentStatus,
   type PreorderPayment,
 } from "@/domain/entities/PreorderPayment";
@@ -918,6 +919,7 @@ export class PrismaPreorderRepository implements PreorderRepository {
           kind: paymentKindToPrisma[input.paymentKind],
           amount: moneyToDecimal(input.paymentAmount),
           status: paymentStatusToPrisma[PreorderPaymentStatus.PENDING],
+          provider: paymentProviderToPrisma[PreorderPaymentProvider.QR_BANK],
           metadata: input.metadata,
           createdAt: input.paymentCreatedAt,
         },

@@ -384,6 +384,7 @@ enum PreorderPaymentStatus {
 
 enum PreorderPaymentProvider {
   MANUAL
+  QR_BANK
   STRIPE
   MERCADOPAGO
   WEBPAY

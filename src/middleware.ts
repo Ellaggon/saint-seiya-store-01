@@ -11,6 +11,7 @@ const resolvesUser = (pathname: string): boolean =>
   pathname.startsWith("/account") ||
   pathname.startsWith("/checkout") ||
   pathname.startsWith("/orders") ||
+  pathname.startsWith("/preorders/reservations") ||
   pathname.startsWith("/api/admin") ||
   pathname.startsWith("/api/upload-") ||
   pathname.startsWith("/api/cart/sync") ||

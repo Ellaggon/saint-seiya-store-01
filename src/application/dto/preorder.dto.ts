@@ -69,6 +69,9 @@ export interface PreorderReservationDTO {
   canceledAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Latest pending payment proof URL (QR flow), if any */
+  pendingProofUrl?: string | null;
+  pendingPaymentAmount?: number | null;
 }
 
 export interface PreorderPaymentDTO {
@@ -79,6 +82,7 @@ export interface PreorderPaymentDTO {
   status: PreorderPaymentStatus;
   provider?: PreorderPaymentProvider | null;
   providerPaymentId?: string | null;
+  proofUrl?: string | null;
   createdAt: string;
   updatedAt: string;
   paidAt?: string | null;

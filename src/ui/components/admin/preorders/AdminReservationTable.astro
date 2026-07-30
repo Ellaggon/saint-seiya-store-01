@@ -51,6 +51,18 @@ const paymentKeyFor = (reservation: PreorderReservationDTO): string =>
                 <a href={`/admin/users/${reservation.userId}`} class="text-zinc-600 hover:text-amber-500 text-[10px] uppercase tracking-widest">
                   Ver usuario
                 </a>
+                {
+                  reservation.pendingProofUrl && (
+                    <a
+                      href={reservation.pendingProofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="mt-2 block text-[10px] font-black uppercase tracking-widest text-sky-400 hover:text-white"
+                    >
+                      Ver comprobante QR →
+                    </a>
+                  )
+                }
               </td>
               <td class="px-6 py-5 text-white font-black text-sm">{reservation.quantity}</td>
               <td class="px-6 py-5 text-amber-500 font-black text-sm">{formatPrice(reservation.paidAmount)}</td>

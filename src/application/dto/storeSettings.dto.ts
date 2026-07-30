@@ -1,11 +1,17 @@
 export type StoreSettingsContent = {
   /** Digits-only WhatsApp for footer social icon */
   socialWhatsApp: string;
-  /** Digits-only WhatsApp for cart "Pedir por WhatsApp" CTA */
+  /** Digits-only WhatsApp for cart / checkout support CTA */
   cartWhatsApp: string;
   instagramUrl: string;
   facebookUrl: string;
   tiktokUrl: string;
+  /** Public URL of the bank QR image shown at checkout */
+  paymentQrImageUrl: string;
+  /** Bank / account holder label shown under the QR */
+  paymentQrBankName: string;
+  /** Short instructions for the customer (concept/reference tip) */
+  paymentQrInstructions: string;
 };
 
 const trim = (value: string | undefined | null): string =>
@@ -24,6 +30,9 @@ const envDefaults = (): StoreSettingsContent => ({
     trim(import.meta.env.PUBLIC_FACEBOOK_URL) ||
     trim(import.meta.env.PUBLIC_MESSENGER_URL),
   tiktokUrl: "",
+  paymentQrImageUrl: "",
+  paymentQrBankName: "",
+  paymentQrInstructions: "",
 });
 
 export const DEFAULT_STORE_SETTINGS: StoreSettingsContent = {
@@ -32,6 +41,9 @@ export const DEFAULT_STORE_SETTINGS: StoreSettingsContent = {
   instagramUrl: "",
   facebookUrl: "",
   tiktokUrl: "",
+  paymentQrImageUrl: "",
+  paymentQrBankName: "",
+  paymentQrInstructions: "",
 };
 
 const normalizeHandleOrUrl = (
@@ -80,6 +92,9 @@ export const normalizeStoreSettings = (
       asOptionalString(record.tiktokUrl),
       "tiktok",
     ),
+    paymentQrImageUrl: asOptionalString(record.paymentQrImageUrl),
+    paymentQrBankName: asOptionalString(record.paymentQrBankName),
+    paymentQrInstructions: asOptionalString(record.paymentQrInstructions),
   };
 };
 
@@ -94,6 +109,10 @@ export const resolveStoreSettings = (
     instagramUrl: stored.instagramUrl || defaults.instagramUrl,
     facebookUrl: stored.facebookUrl || defaults.facebookUrl,
     tiktokUrl: stored.tiktokUrl || defaults.tiktokUrl,
+    paymentQrImageUrl: stored.paymentQrImageUrl || defaults.paymentQrImageUrl,
+    paymentQrBankName: stored.paymentQrBankName || defaults.paymentQrBankName,
+    paymentQrInstructions:
+      stored.paymentQrInstructions || defaults.paymentQrInstructions,
   };
 };
 
@@ -106,4 +125,7 @@ export const parseStoreSettingsFromForm = (
     instagramUrl: formData.get("instagramUrl"),
     facebookUrl: formData.get("facebookUrl"),
     tiktokUrl: formData.get("tiktokUrl"),
+    paymentQrImageUrl: formData.get("paymentQrImageUrl"),
+    paymentQrBankName: formData.get("paymentQrBankName"),
+    paymentQrInstructions: formData.get("paymentQrInstructions"),
   });

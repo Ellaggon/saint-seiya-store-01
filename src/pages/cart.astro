@@ -77,58 +77,6 @@ const messengerUrl = storeMessengerUrl;
       <ul id="cart-items" class="divide-y divide-zinc-900 overflow-hidden border border-zinc-900 bg-zinc-950">
       </ul>
 
-      <div class="space-y-4 border border-zinc-900 bg-zinc-950 px-4 py-5 sm:px-5">
-        <div>
-          <p class="text-[10px] font-black uppercase tracking-[0.24em] text-amber-500">
-            Datos del pedido
-          </p>
-          <p class="mt-2 text-xs leading-relaxed text-zinc-500">
-            Opcional: nos ayudan a confirmar envío. El pedido se cierra por
-            WhatsApp.
-          </p>
-        </div>
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label class="block space-y-2">
-            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-600">
-              Nombre
-            </span>
-            <input
-              id="checkout-name"
-              type="text"
-              autocomplete="name"
-              maxlength="80"
-              class="w-full border border-zinc-800 bg-black px-3 py-3 text-sm text-white outline-none transition-colors focus:border-amber-500/60"
-              placeholder="Tu nombre"
-            />
-          </label>
-          <label class="block space-y-2">
-            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-600">
-              Ciudad
-            </span>
-            <input
-              id="checkout-city"
-              type="text"
-              autocomplete="address-level2"
-              maxlength="80"
-              class="w-full border border-zinc-800 bg-black px-3 py-3 text-sm text-white outline-none transition-colors focus:border-amber-500/60"
-              placeholder="La Paz, Santa Cruz…"
-            />
-          </label>
-        </div>
-        <label class="block space-y-2">
-          <span class="text-[10px] font-black uppercase tracking-widest text-zinc-600">
-            Nota
-          </span>
-          <textarea
-            id="checkout-note"
-            rows="2"
-            maxlength="240"
-            class="w-full resize-y border border-zinc-800 bg-black px-3 py-3 text-sm text-white outline-none transition-colors focus:border-amber-500/60"
-            placeholder="Preferencia de envío, horario, etc."
-          ></textarea>
-        </label>
-      </div>
-
       <div
         class="sticky bottom-0 z-20 -mx-4 border-t border-zinc-900 bg-black/95 px-4 py-4 backdrop-blur-md sm:static sm:mx-0 sm:border sm:border-zinc-900 sm:bg-black sm:px-5 sm:py-5 sm:backdrop-blur-none"
       >
@@ -145,38 +93,28 @@ const messengerUrl = storeMessengerUrl;
               >
                 Corrige los productos no disponibles para continuar
               </p>
-              {
-                !whatsappReady && (
-                  <p class="mt-2 text-[10px] leading-relaxed uppercase tracking-widest text-amber-400">
-                    Configura el WhatsApp del carrito en Admin → Redes sociales
-                    para activar el checkout
-                  </p>
-                )
-              }
             </div>
           </div>
           <div class="flex w-full flex-col gap-3">
-            <button
-              type="button"
+            <a
               id="cart-checkout"
-              data-whatsapp-ready={whatsappReady ? "true" : "false"}
-              data-whatsapp-number={cartWhatsApp}
-              class="inline-flex w-full min-h-12 items-center justify-center gap-2 bg-[#25D366] px-6 py-3.5 text-[11px] font-black uppercase tracking-widest text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500 disabled:hover:bg-zinc-800 sm:w-auto sm:self-end sm:px-8 sm:py-4"
+              href="/checkout"
+              class="inline-flex w-full min-h-12 items-center justify-center bg-amber-500 px-6 py-3.5 text-[11px] font-black uppercase tracking-widest text-black transition-colors hover:bg-white sm:w-auto sm:self-end sm:px-8 sm:py-4"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"
-                ></path>
-              </svg>
-              Pedir por WhatsApp
-            </button>
+              Continuar al pago
+            </a>
+            {
+              whatsappReady ? (
+                <button
+                  type="button"
+                  id="cart-whatsapp-support"
+                  data-whatsapp-number={cartWhatsApp}
+                  class="inline-flex w-full min-h-11 items-center justify-center gap-2 border border-[#25D366]/40 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-[#25D366] transition-colors hover:bg-[#25D366] hover:text-black sm:w-auto sm:self-end"
+                >
+                  ¿Dudas? Escribir por WhatsApp
+                </button>
+              ) : null
+            }
             {
               messengerUrl && (
                 <a
@@ -212,19 +150,13 @@ const messengerUrl = storeMessengerUrl;
     type CartLineView,
   } from "@/ui/scripts/cart";
   import {
-    buildCartCheckoutMessage,
     buildWhatsAppUrl,
     isWhatsAppConfigured,
   } from "@/lib/storeContact";
-  import {
-    createCheckoutOrder,
-    hasAuthSession,
-  } from "@/ui/scripts/cartSync";
 
   let lineViews: CartLineView[] = [];
   let validating = false;
   let skipNextEventRender = false;
-  let checkingOut = false;
 
   const formatBob = (value: number): string =>
     `Bs ${value.toLocaleString("es-BO", {
@@ -271,25 +203,32 @@ const messengerUrl = storeMessengerUrl;
     banner.classList.toggle("text-red-400", tone === "red");
   };
 
-  const readCartWhatsAppNumber = (): string => {
-    const checkout = document.getElementById("cart-checkout");
-    return checkout?.dataset.whatsappNumber?.trim() ?? "";
-  };
-
   const syncCheckoutState = () => {
     const checkout = document.getElementById(
       "cart-checkout",
-    ) as HTMLButtonElement | null;
+    ) as HTMLAnchorElement | null;
     const hint = document.getElementById("cart-checkout-hint");
-    const cartNumber = readCartWhatsAppNumber();
-    const whatsappReady =
-      checkout?.dataset.whatsappReady === "true" ||
-      isWhatsAppConfigured(cartNumber);
     const blocked =
-      lineViews.length === 0 ||
-      cartHasBlockingIssues(lineViews) ||
-      !whatsappReady;
-    if (checkout) checkout.disabled = blocked || checkingOut;
+      lineViews.length === 0 || cartHasBlockingIssues(lineViews);
+    if (checkout) {
+      if (blocked) {
+        checkout.setAttribute("aria-disabled", "true");
+        checkout.classList.add(
+          "pointer-events-none",
+          "bg-zinc-800",
+          "text-zinc-500",
+        );
+        checkout.classList.remove("bg-amber-500", "text-black");
+      } else {
+        checkout.removeAttribute("aria-disabled");
+        checkout.classList.remove(
+          "pointer-events-none",
+          "bg-zinc-800",
+          "text-zinc-500",
+        );
+        checkout.classList.add("bg-amber-500", "text-black");
+      }
+    }
     if (hint) {
       hint.classList.toggle(
         "hidden",
@@ -488,99 +427,17 @@ const messengerUrl = storeMessengerUrl;
     }
   };
 
-  const readCheckoutCustomer = () => ({
-    name:
-      (
-        document.getElementById("checkout-name") as HTMLInputElement | null
-      )?.value ?? "",
-    city:
-      (
-        document.getElementById("checkout-city") as HTMLInputElement | null
-      )?.value ?? "",
-    note:
-      (
-        document.getElementById("checkout-note") as HTMLTextAreaElement | null
-      )?.value ?? "",
-  });
-
-  const startWhatsAppCheckout = async () => {
-    if (checkingOut) return;
-    const cartNumber = readCartWhatsAppNumber();
-    if (!isWhatsAppConfigured(cartNumber)) {
-      setBanner(
-        "Configura el WhatsApp del carrito en Admin → Redes sociales.",
-        "red",
-      );
-      return;
-    }
-    if (getCartItemCount() === 0) return;
-
-    checkingOut = true;
-    syncCheckoutState();
-
-    try {
-      const ok = await revalidateCart();
-      if (!ok || cartHasBlockingIssues(lineViews)) {
-        setBanner(
-          "Hay productos no disponibles. Elimínalos o ajústalos para continuar.",
-          "red",
-        );
-        return;
-      }
-
-      const purchasable = lineViews.filter((line) => line.canPurchase);
-      if (purchasable.length === 0) return;
-
-      const checkoutItems = purchasable.map((line) => ({
-        productId: line.productId,
-        name: line.name,
-        price: line.price,
-        imageUrl: line.imageUrl,
-        quantity: line.quantity,
-        stock: line.stock,
-      }));
-
-      let orderId: string | undefined;
-      const loggedIn = await hasAuthSession();
-      if (loggedIn) {
-        try {
-          const order = await createCheckoutOrder(checkoutItems);
-          orderId = order?.id;
-        } catch (error) {
-          setBanner(
-            error instanceof Error
-              ? error.message
-              : "No se pudo registrar el pedido.",
-            "red",
-          );
-          return;
-        }
-      }
-
-      const message = buildCartCheckoutMessage(
-        checkoutItems,
-        {
-          ...readCheckoutCustomer(),
-          orderId,
-        },
-      );
-
-      const url = buildWhatsAppUrl(message, cartNumber);
-      window.open(url, "_blank", "noopener,noreferrer");
-      setBanner(
-        orderId
-          ? `Pedido #${orderId.slice(0, 8).toUpperCase()} registrado. Confirma en WhatsApp.`
-          : "Pedido abierto en WhatsApp. Confirma allí disponibilidad y pago.",
-      );
-
-      if (orderId) {
-        lineViews = [];
-        renderCart([]);
-      }
-    } finally {
-      checkingOut = false;
-      syncCheckoutState();
-    }
+  const openWhatsAppSupport = () => {
+    const btn = document.getElementById(
+      "cart-whatsapp-support",
+    ) as HTMLButtonElement | null;
+    const number = btn?.dataset.whatsappNumber?.trim() ?? "";
+    if (!isWhatsAppConfigured(number)) return;
+    const message = [
+      "Hola Sanctuary 👋",
+      "Tengo una consulta sobre productos en mi carrito.",
+    ].join("\n");
+    window.open(buildWhatsAppUrl(message, number), "_blank", "noopener,noreferrer");
   };
 
   const handleCartAction = (event: Event) => {
@@ -638,12 +495,10 @@ const messengerUrl = storeMessengerUrl;
       });
     }
 
-    const checkout = document.getElementById("cart-checkout");
-    if (checkout && checkout.dataset.bound !== "1") {
-      checkout.dataset.bound = "1";
-      checkout.addEventListener("click", () => {
-        void startWhatsAppCheckout();
-      });
+    const support = document.getElementById("cart-whatsapp-support");
+    if (support && support.dataset.bound !== "1") {
+      support.dataset.bound = "1";
+      support.addEventListener("click", openWhatsAppSupport);
     }
   };
 

@@ -1,0 +1,447 @@
+---
+import MainLayout from "@/ui/layouts/MainLayout.astro";
+import { getStoreSettings } from "@/application/services/StoreSettingsService";
+import { isWhatsAppConfigured } from "@/lib/storeContact";
+
+const storeSettings = await getStoreSettings();
+const cartWhatsApp = storeSettings.cartWhatsApp;
+const whatsappReady = isWhatsAppConfigured(cartWhatsApp);
+const qrReady = Boolean(storeSettings.paymentQrImageUrl.trim());
+const user = Astro.locals.user;
+---
+
+<MainLayout title="Checkout">
+  <div class="mx-auto max-w-[900px] overflow-x-hidden px-4 py-10 sm:px-6 md:py-24">
+    <div class="mb-8 space-y-3">
+      <p class="text-[10px] font-black uppercase tracking-[0.35em] text-amber-500">
+        Sanctuary
+      </p>
+      <h1 class="text-3xl font-black uppercase tracking-tighter text-white sm:text-4xl md:text-5xl">
+        Checkout
+      </h1>
+      <div class="h-1 w-12 bg-amber-500"></div>
+      <p class="max-w-xl text-xs leading-6 text-zinc-500">
+        Confirma tus datos y elige cómo pagar. Con QR el pedido se confirma
+        cuando verifiquemos tu comprobante.
+      </p>
+    </div>
+
+    <div
+      id="checkout-banner"
+      class="mb-6 hidden border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-amber-400"
+      role="status"
+      aria-live="polite"
+    >
+    </div>
+
+    <div
+      id="checkout-empty"
+      class="hidden border border-zinc-900 bg-zinc-950 px-5 py-12 text-center sm:px-6 sm:py-14"
+    >
+      <p class="text-sm font-black uppercase tracking-[0.2em] text-zinc-500">
+        Tu carrito está vacío
+      </p>
+      <a
+        href="/catalog"
+        class="mt-6 inline-flex border border-amber-500/60 px-6 py-3 text-[11px] font-black uppercase tracking-widest text-amber-500 transition-colors hover:bg-amber-500 hover:text-black"
+      >
+        Explorar catálogo
+      </a>
+    </div>
+
+    <div id="checkout-content" class="hidden space-y-5 sm:space-y-6">
+      <div class="border border-zinc-900 bg-zinc-950 px-4 py-5 sm:px-5">
+        <p class="text-[10px] font-black uppercase tracking-[0.24em] text-amber-500">
+          Resumen
+        </p>
+        <ul id="checkout-items" class="mt-4 divide-y divide-zinc-900"></ul>
+        <div class="mt-4 flex items-end justify-between border-t border-zinc-900 pt-4">
+          <span class="text-[10px] font-black uppercase tracking-widest text-zinc-600">
+            Total
+          </span>
+          <span id="checkout-total" class="text-2xl font-black text-white">Bs 0</span>
+        </div>
+      </div>
+
+      <div class="space-y-4 border border-zinc-900 bg-zinc-950 px-4 py-5 sm:px-5">
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-[0.24em] text-amber-500">
+            Datos de contacto
+          </p>
+          <p class="mt-2 text-xs leading-relaxed text-zinc-500">
+            Los usamos para confirmar el pedido y coordinar el envío.
+          </p>
+        </div>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <label class="block space-y-2">
+            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-600">
+              Nombre *
+            </span>
+            <input
+              id="checkout-name"
+              type="text"
+              autocomplete="name"
+              maxlength="80"
+              value={user?.name ?? ""}
+              class="w-full border border-zinc-800 bg-black px-3 py-3 text-sm text-white outline-none transition-colors focus:border-amber-500/60"
+              placeholder="Tu nombre"
+              required
+            />
+          </label>
+          <label class="block space-y-2">
+            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-600">
+              Teléfono / WhatsApp *
+            </span>
+            <input
+              id="checkout-phone"
+              type="tel"
+              autocomplete="tel"
+              maxlength="40"
+              class="w-full border border-zinc-800 bg-black px-3 py-3 text-sm text-white outline-none transition-colors focus:border-amber-500/60"
+              placeholder="5917…"
+              required
+            />
+          </label>
+          <label class="block space-y-2 sm:col-span-2">
+            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-600">
+              Ciudad
+            </span>
+            <input
+              id="checkout-city"
+              type="text"
+              autocomplete="address-level2"
+              maxlength="80"
+              class="w-full border border-zinc-800 bg-black px-3 py-3 text-sm text-white outline-none transition-colors focus:border-amber-500/60"
+              placeholder="La Paz, Santa Cruz…"
+            />
+          </label>
+          <label class="block space-y-2 sm:col-span-2">
+            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-600">
+              Nota
+            </span>
+            <textarea
+              id="checkout-note"
+              rows="2"
+              maxlength="240"
+              class="w-full resize-y border border-zinc-800 bg-black px-3 py-3 text-sm text-white outline-none transition-colors focus:border-amber-500/60"
+              placeholder="Preferencia de envío, horario, etc."
+            ></textarea>
+          </label>
+        </div>
+      </div>
+
+      <div class="space-y-4 border border-zinc-900 bg-zinc-950 px-4 py-5 sm:px-5">
+        <p class="text-[10px] font-black uppercase tracking-[0.24em] text-amber-500">
+          Método de pago
+        </p>
+        <div class="space-y-3">
+          <label
+            class="flex cursor-pointer items-start gap-3 border border-zinc-800 bg-black px-4 py-4 transition-colors has-[:checked]:border-amber-500/60"
+          >
+            <input
+              type="radio"
+              name="payment-method"
+              value="QR_BANK"
+              class="mt-1 accent-amber-500"
+              checked
+              disabled={!qrReady}
+            />
+            <span class="min-w-0">
+              <span class="block text-sm font-black uppercase tracking-tight text-white">
+                Pagar con QR bancario
+              </span>
+              <span class="mt-1 block text-xs leading-relaxed text-zinc-500">
+                Escanea desde tu app bancaria y sube el comprobante. El pedido se
+                confirma al verificar el pago.
+              </span>
+              {
+                !qrReady && (
+                  <span class="mt-2 block text-[10px] uppercase tracking-widest text-amber-400">
+                    El QR aún no está configurado en Admin → Redes sociales
+                  </span>
+                )
+              }
+            </span>
+          </label>
+          <label
+            class="flex cursor-pointer items-start gap-3 border border-zinc-800 bg-black px-4 py-4 transition-colors has-[:checked]:border-amber-500/60"
+          >
+            <input
+              type="radio"
+              name="payment-method"
+              value="WHATSAPP"
+              class="mt-1 accent-amber-500"
+              disabled={!whatsappReady}
+            />
+            <span class="min-w-0">
+              <span class="block text-sm font-black uppercase tracking-tight text-white">
+                Coordinar por WhatsApp
+              </span>
+              <span class="mt-1 block text-xs leading-relaxed text-zinc-500">
+                Registramos el pedido y abres WhatsApp para coordinar pago y
+                envío.
+              </span>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <a
+          href="/cart"
+          class="text-center text-[11px] font-black uppercase tracking-widest text-zinc-500 transition-colors hover:text-amber-500 sm:text-left"
+        >
+          ← Volver al carrito
+        </a>
+        <button
+          type="button"
+          id="checkout-submit"
+          data-whatsapp-number={cartWhatsApp}
+          data-qr-ready={qrReady ? "true" : "false"}
+          data-whatsapp-ready={whatsappReady ? "true" : "false"}
+          class="inline-flex min-h-12 w-full items-center justify-center bg-amber-500 px-8 py-3.5 text-[11px] font-black uppercase tracking-widest text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500 sm:w-auto"
+        >
+          Continuar al pago
+        </button>
+      </div>
+    </div>
+  </div>
+</MainLayout>
+
+<script>
+  import {
+    clearCart,
+    readCart,
+    syncCartBadge,
+    validateCartWithServer,
+    type CartLineView,
+  } from "@/ui/scripts/cart";
+  import {
+    buildCartCheckoutMessage,
+    buildWhatsAppUrl,
+    isWhatsAppConfigured,
+  } from "@/lib/storeContact";
+
+  const formatBob = (value: number): string =>
+    `Bs ${value.toLocaleString("es-BO", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })}`;
+
+  const banner = document.getElementById("checkout-banner");
+  const empty = document.getElementById("checkout-empty");
+  const content = document.getElementById("checkout-content");
+  const itemsEl = document.getElementById("checkout-items");
+  const totalEl = document.getElementById("checkout-total");
+  const submitBtn = document.getElementById(
+    "checkout-submit",
+  ) as HTMLButtonElement | null;
+
+  let lines: CartLineView[] = [];
+  let submitting = false;
+
+  const showBanner = (message: string) => {
+    if (!banner) return;
+    banner.textContent = message;
+    banner.classList.remove("hidden");
+  };
+
+  const hideBanner = () => {
+    banner?.classList.add("hidden");
+  };
+
+  const selectedMethod = (): "QR_BANK" | "WHATSAPP" => {
+    const checked = document.querySelector(
+      'input[name="payment-method"]:checked',
+    ) as HTMLInputElement | null;
+    return checked?.value === "WHATSAPP" ? "WHATSAPP" : "QR_BANK";
+  };
+
+  const render = () => {
+    const purchasable = lines.filter((l) => l.canPurchase && l.stock > 0);
+    if (purchasable.length === 0) {
+      empty?.classList.remove("hidden");
+      content?.classList.add("hidden");
+      return;
+    }
+    empty?.classList.add("hidden");
+    content?.classList.remove("hidden");
+
+    if (itemsEl) {
+      itemsEl.innerHTML = purchasable
+        .map(
+          (line) => `
+        <li class="flex items-start justify-between gap-4 py-3">
+          <div class="min-w-0">
+            <p class="truncate text-sm font-black uppercase tracking-tight text-white">${line.name}</p>
+            <p class="mt-1 text-[10px] uppercase tracking-widest text-zinc-600">×${line.quantity} · ${formatBob(line.price)}</p>
+          </div>
+          <p class="shrink-0 text-sm font-black text-white">${formatBob(line.price * line.quantity)}</p>
+        </li>`,
+        )
+        .join("");
+    }
+
+    const total = purchasable.reduce(
+      (sum, line) => sum + line.price * line.quantity,
+      0,
+    );
+    if (totalEl) totalEl.textContent = formatBob(total);
+  };
+
+  const readCustomer = () => ({
+    name:
+      (
+        document.getElementById("checkout-name") as HTMLInputElement | null
+      )?.value.trim() ?? "",
+    phone:
+      (
+        document.getElementById("checkout-phone") as HTMLInputElement | null
+      )?.value.trim() ?? "",
+    city:
+      (
+        document.getElementById("checkout-city") as HTMLInputElement | null
+      )?.value.trim() ?? "",
+    note:
+      (
+        document.getElementById("checkout-note") as HTMLTextAreaElement | null
+      )?.value.trim() ?? "",
+  });
+
+  const submitCheckout = async () => {
+    if (!submitBtn || submitting) return;
+    hideBanner();
+
+    const purchasable = lines.filter((l) => l.canPurchase && l.stock > 0);
+    if (purchasable.length === 0) {
+      showBanner("No hay productos disponibles");
+      return;
+    }
+
+    const method = selectedMethod();
+    const customer = readCustomer();
+
+    if (method === "QR_BANK") {
+      if (submitBtn.dataset.qrReady !== "true") {
+        showBanner("El QR bancario aún no está configurado");
+        return;
+      }
+      if (!customer.name || !customer.phone) {
+        showBanner("Nombre y teléfono son requeridos");
+        return;
+      }
+    }
+
+    if (method === "WHATSAPP") {
+      const number = submitBtn.dataset.whatsappNumber ?? "";
+      if (!isWhatsAppConfigured(number)) {
+        showBanner("WhatsApp no está configurado");
+        return;
+      }
+    }
+
+    submitting = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Creando pedido…";
+
+    try {
+      const response = await fetch("/api/orders/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          paymentMethod: method,
+          customerName: customer.name || null,
+          customerPhone: customer.phone || null,
+          customerCity: customer.city || null,
+          customerNote: customer.note || null,
+          items: purchasable.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as {
+        data?: {
+          order?: {
+            id: string;
+            referenceCode?: string;
+            guestAccessToken?: string | null;
+            totalAmount: number;
+            items: Array<{
+              productId: string;
+              name: string;
+              quantity: number;
+              price: number;
+            }>;
+          };
+        };
+        error?: { message?: string };
+      } | null;
+
+      if (!response.ok || !payload?.data?.order) {
+        throw new Error(
+          payload?.error?.message || "No se pudo crear el pedido",
+        );
+      }
+
+      const order = payload.data.order;
+      clearCart();
+      syncCartBadge();
+
+      if (method === "WHATSAPP") {
+        const number = submitBtn.dataset.whatsappNumber ?? "";
+        const message = buildCartCheckoutMessage(order.items, {
+          name: customer.name,
+          city: customer.city,
+          note: customer.note,
+          orderId: order.referenceCode || order.id,
+        });
+        window.location.href = buildWhatsAppUrl(message, number);
+        return;
+      }
+
+      const token = order.guestAccessToken
+        ? `?token=${encodeURIComponent(order.guestAccessToken)}`
+        : "";
+      window.location.href = `/orders/${order.id}/pay${token}`;
+    } catch (error) {
+      showBanner(
+        error instanceof Error ? error.message : "Error al crear el pedido",
+      );
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Continuar al pago";
+      submitting = false;
+    }
+  };
+
+  const boot = async () => {
+    const cart = readCart();
+    if (cart.length === 0) {
+      empty?.classList.remove("hidden");
+      return;
+    }
+
+    try {
+      const { lines: validated } = await validateCartWithServer(cart);
+      lines = validated;
+    } catch {
+      lines = cart.map((item) => ({
+        ...item,
+        canPurchase: (item.stock ?? 1) > 0,
+        availabilityLabel: "Disponible",
+        issue: null,
+        priceChanged: false,
+        stock: item.stock ?? 0,
+      }));
+    }
+    render();
+  };
+
+  submitBtn?.addEventListener("click", () => {
+    void submitCheckout();
+  });
+
+  void boot();
+</script>

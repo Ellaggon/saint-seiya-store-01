@@ -2,6 +2,11 @@
 import MainLayout from "../../layouts/MainLayout.astro";
 import { prisma } from "@/infrastructure/database/prisma";
 import { formatPrice } from "@/lib/utils";
+import {
+  canCustomerPayOrder,
+  orderStatusClass,
+  orderStatusLabel,
+} from "@/application/orders/orderStatus";
 
 const user = Astro.locals.user;
 if (!user) {
@@ -21,24 +26,12 @@ const orders = await prisma.order.findMany({
         },
       },
     },
+    payments: {
+      orderBy: { createdAt: "desc" },
+      take: 1,
+    },
   },
 });
-
-const statusLabel: Record<string, string> = {
-  PENDING: "Pendiente",
-  PAID: "Pagado",
-  SHIPPED: "Enviado",
-  DELIVERED: "Entregado",
-  CANCELED: "Cancelado",
-};
-
-const statusClass: Record<string, string> = {
-  PENDING: "text-amber-500",
-  PAID: "text-emerald-400",
-  SHIPPED: "text-sky-400",
-  DELIVERED: "text-white",
-  CANCELED: "text-red-400",
-};
 
 const formatDate = (value: Date) =>
   value.toLocaleDateString("es-BO", {
@@ -59,8 +52,7 @@ const formatDate = (value: Date) =>
       </h1>
       <div class="h-1 w-12 bg-amber-500"></div>
       <p class="max-w-xl text-xs leading-6 text-zinc-500">
-        Historial de pedidos registrados al confirmar por WhatsApp con tu
-        sesión iniciada.
+        Historial de pedidos y estado de pagos QR.
       </p>
     </div>
 
@@ -84,13 +76,14 @@ const formatDate = (value: Date) =>
               order.items.length === 1
                 ? order.items[0]?.product.name
                 : `${order.items.length} productos`;
-            const shortId = order.id.slice(0, 8).toUpperCase();
+            const ref = order.referenceCode || order.id.slice(0, 8).toUpperCase();
+            const payHref = `/orders/${order.id}/pay`;
             return (
               <li class="border border-zinc-900 bg-zinc-950 px-5 py-5 transition-colors hover:border-amber-500/40">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div class="min-w-0 space-y-2">
                     <span class="block text-[10px] font-black uppercase tracking-[0.24em] text-amber-500">
-                      Pedido #{shortId}
+                      {ref}
                     </span>
                     <h2 class="truncate text-lg font-black uppercase tracking-tight text-white">
                       {title}
@@ -107,11 +100,11 @@ const formatDate = (value: Date) =>
                       ))}
                     </ul>
                   </div>
-                  <div class="shrink-0 text-left sm:text-right">
+                  <div class="shrink-0 space-y-3 text-left sm:text-right">
                     <span
-                      class={`block text-sm font-black uppercase tracking-widest ${statusClass[order.status] || "text-white"}`}
+                      class={`block text-sm font-black uppercase tracking-widest ${orderStatusClass(order.status)}`}
                     >
-                      {statusLabel[order.status] || order.status}
+                      {orderStatusLabel(order.status)}
                     </span>
                     <span class="mt-1 block text-sm font-black text-white">
                       {formatPrice(Number(order.totalAmount))}
@@ -121,6 +114,22 @@ const formatDate = (value: Date) =>
                         Tracking: {order.shippingTrackerId}
                       </span>
                     )}
+                    <div class="flex flex-col gap-2 sm:items-end">
+                      <a
+                        href={`/account/orders/${order.id}`}
+                        class="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-amber-500"
+                      >
+                        Ver detalle →
+                      </a>
+                      {canCustomerPayOrder(order.status) && (
+                        <a
+                          href={payHref}
+                          class="inline-flex border border-amber-500/60 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-amber-500 transition-colors hover:bg-amber-500 hover:text-black"
+                        >
+                          Completar pago
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               </li>

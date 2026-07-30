@@ -9,6 +9,8 @@ import {
 const resolvesUser = (pathname: string): boolean =>
   pathname.startsWith("/admin") ||
   pathname.startsWith("/account") ||
+  pathname.startsWith("/checkout") ||
+  pathname.startsWith("/orders") ||
   pathname.startsWith("/api/admin") ||
   pathname.startsWith("/api/upload-") ||
   pathname.startsWith("/api/cart/sync") ||

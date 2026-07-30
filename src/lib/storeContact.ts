@@ -109,3 +109,27 @@ export const buildCartCheckoutMessage = (
     "¿Me confirman disponibilidad y forma de pago/envío?",
   ].join("\n");
 };
+
+export const buildQrPaidMessage = (input: {
+  referenceCode: string;
+  totalAmount: number;
+  customerName?: string | null;
+  customerCity?: string | null;
+  proofUploaded?: boolean;
+}): string => {
+  const lines = [
+    "Hola Sanctuary 👋",
+    `Pedido ${input.referenceCode} — ${formatBob(input.totalAmount)}`,
+    "Ya realicé el pago QR.",
+    input.proofUploaded
+      ? "Subí el comprobante en la web."
+      : "Adjunto / voy a enviar el comprobante.",
+  ];
+  if (input.customerName?.trim()) {
+    lines.push(`Nombre: ${input.customerName.trim()}`);
+  }
+  if (input.customerCity?.trim()) {
+    lines.push(`Ciudad: ${input.customerCity.trim()}`);
+  }
+  return lines.join("\n");
+};

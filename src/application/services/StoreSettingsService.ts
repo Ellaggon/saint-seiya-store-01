@@ -9,25 +9,9 @@ import { prisma } from "@/infrastructure/database/prisma";
 const STORE_SETTINGS_ID = "store";
 const STORE_SETTINGS_CACHE_TTL_MS = 5 * 60_000;
 
-let ensuredStoreSettingsTable = false;
 let storeSettingsCache:
   | { value: StoreSettingsContent; expiresAt: number }
   | null = null;
-
-const ensureStoreSettingsTable = async (): Promise<void> => {
-  if (ensuredStoreSettingsTable) return;
-
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS "StoreSettings" (
-      "id" TEXT NOT NULL DEFAULT 'store',
-      "content" JSONB NOT NULL,
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      "updatedBy" TEXT,
-      CONSTRAINT "StoreSettings_pkey" PRIMARY KEY ("id")
-    );
-  `);
-  ensuredStoreSettingsTable = true;
-};
 
 const readStoredContent = async (): Promise<StoreSettingsContent> => {
   try {
@@ -71,8 +55,6 @@ export async function saveStoreSettings(
   content: StoreSettingsContent,
   updatedBy?: string | null,
 ): Promise<StoreSettingsContent> {
-  await ensureStoreSettingsTable();
-
   const normalized = normalizeStoreSettings(content);
   const payload = JSON.stringify(normalized);
 

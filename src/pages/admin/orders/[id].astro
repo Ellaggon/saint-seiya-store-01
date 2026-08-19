@@ -1,13 +1,16 @@
 ---
 import MainLayout from "@/ui/layouts/MainLayout.astro";
-import { serializeOrder } from "@/application/orders/serializeOrder";
+import {
+  orderInclude,
+  serializeOrder,
+} from "@/application/orders/serializeOrder";
 import {
   orderStatusClass,
   orderStatusLabel,
 } from "@/application/orders/orderStatus";
-import { findAdminOrderById } from "@/application/orders/adminOrderQueries";
 import { buildWhatsAppUrl, isWhatsAppConfigured } from "@/lib/storeContact";
 import { formatPrice } from "@/lib/utils";
+import { prisma } from "@/infrastructure/database/prisma";
 
 const user = Astro.locals.user;
 if (!user || user.role !== "ADMIN") {
@@ -17,7 +20,10 @@ if (!user || user.role !== "ADMIN") {
 const { id } = Astro.params;
 if (!id) return Astro.redirect("/admin/orders");
 
-const orderRow = await findAdminOrderById(id);
+const orderRow = await prisma.order.findUnique({
+  where: { id },
+  include: orderInclude,
+});
 
 if (!orderRow) {
   return new Response("Pedido no encontrado", { status: 404 });

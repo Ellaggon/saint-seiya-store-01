@@ -1,0 +1,115 @@
+---
+interface GalleryImage {
+  id: string;
+  url: string;
+  altText: string;
+  sortOrder: number;
+  width?: number | null;
+  height?: number | null;
+}
+
+interface Props {
+  productName: string;
+  images: GalleryImage[];
+}
+
+const { productName, images } = Astro.props;
+const galleryImages = images.length
+  ? [...images].sort((a, b) => a.sortOrder - b.sortOrder)
+  : [];
+---
+
+<section class="grid grid-cols-1 gap-3 sm:grid-cols-[82px_minmax(0,1fr)]" data-product-gallery-view data-gallery-images={JSON.stringify(galleryImages)} aria-label={`Galería de ${productName}`}>
+  <div class="order-2 flex gap-2 overflow-x-auto pb-1 sm:order-1 sm:max-h-[min(72vh,760px)] sm:flex-col sm:overflow-y-auto sm:overflow-x-hidden">
+    {galleryImages.map((image, index) => (
+      <button type="button" data-gallery-thumb data-index={index} aria-label={`Ver imagen ${index + 1} de ${galleryImages.length}`} aria-current={index === 0 ? "true" : undefined} class={`relative aspect-square w-[70px] shrink-0 overflow-hidden border bg-zinc-950 transition-colors sm:w-full ${index === 0 ? "border-amber-500" : "border-zinc-800 hover:border-zinc-500"}`}>
+        <img src={image.url} alt="" class="h-full w-full object-contain" loading={index < 4 ? "eager" : "lazy"} width={image.width || 1600} height={image.height || 1600} />
+      </button>
+    ))}
+  </div>
+
+  <div class="order-1 relative overflow-hidden bg-zinc-950 sm:order-2">
+    <button type="button" data-gallery-main class="relative block aspect-square w-full cursor-zoom-in" aria-label={`Ampliar imagen 1 de ${galleryImages.length}`}>
+      <img data-gallery-main-image src={galleryImages[0]?.url} alt={galleryImages[0]?.altText || productName} class="h-full w-full object-contain" width={galleryImages[0]?.width || 1600} height={galleryImages[0]?.height || 1600} fetchpriority="high" loading="eager" />
+    </button>
+    {galleryImages.length > 1 && (
+      <>
+        <button type="button" data-gallery-previous aria-label="Imagen anterior" class="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center border border-zinc-700 bg-black/80 text-xl text-white transition-colors hover:border-amber-500 hover:text-amber-400">‹</button>
+        <button type="button" data-gallery-next aria-label="Imagen siguiente" class="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center border border-zinc-700 bg-black/80 text-xl text-white transition-colors hover:border-amber-500 hover:text-amber-400">›</button>
+        <span data-gallery-counter class="absolute bottom-3 right-3 bg-black/80 px-3 py-1.5 text-[10px] font-black tracking-widest text-zinc-300">1 / {galleryImages.length}</span>
+      </>
+    )}
+  </div>
+
+  <dialog data-gallery-lightbox class="m-0 h-screen w-screen max-h-none max-w-none border-0 bg-black/95 p-4 text-white backdrop:bg-black/80">
+    <div class="mx-auto flex h-full max-w-6xl flex-col">
+      <div class="flex items-center justify-between pb-4">
+        <p data-lightbox-counter class="text-[10px] font-black uppercase tracking-widest text-zinc-400"></p>
+        <button type="button" data-lightbox-close aria-label="Cerrar imagen ampliada" class="grid h-10 w-10 place-items-center border border-zinc-700 text-xl transition-colors hover:border-white">×</button>
+      </div>
+      <div class="relative flex min-h-0 flex-1 items-center justify-center">
+        <img data-lightbox-image src="" alt="" class="max-h-full max-w-full object-contain" />
+        {galleryImages.length > 1 && (
+          <>
+            <button type="button" data-lightbox-previous aria-label="Imagen anterior" class="absolute left-0 grid h-11 w-11 place-items-center border border-zinc-700 bg-black/70 text-xl hover:border-white">‹</button>
+            <button type="button" data-lightbox-next aria-label="Imagen siguiente" class="absolute right-0 grid h-11 w-11 place-items-center border border-zinc-700 bg-black/70 text-xl hover:border-white">›</button>
+          </>
+        )}
+      </div>
+    </div>
+  </dialog>
+</section>
+
+<script>
+  const initializeProductGallery = () => {
+    const root = document.querySelector("[data-product-gallery-view]") as HTMLElement | null;
+    if (!root || root.dataset.bound === "1") return;
+    root.dataset.bound = "1";
+    const images = JSON.parse(root.dataset.galleryImages || "[]") as Array<{ url: string; altText: string }>;
+    if (!images.length) return;
+    const mainImage = root.querySelector("[data-gallery-main-image]") as HTMLImageElement;
+    const mainButton = root.querySelector("[data-gallery-main]") as HTMLButtonElement;
+    const counter = root.querySelector("[data-gallery-counter]") as HTMLElement | null;
+    const thumbs = [...root.querySelectorAll<HTMLButtonElement>("[data-gallery-thumb]")];
+    const lightbox = root.querySelector("[data-gallery-lightbox]") as HTMLDialogElement;
+    const lightboxImage = root.querySelector("[data-lightbox-image]") as HTMLImageElement;
+    const lightboxCounter = root.querySelector("[data-lightbox-counter]") as HTMLElement;
+    let activeIndex = 0;
+
+    const setActive = (index: number) => {
+      activeIndex = (index + images.length) % images.length;
+      const image = images[activeIndex];
+      mainImage.src = image.url;
+      mainImage.alt = image.altText;
+      mainButton.setAttribute("aria-label", `Ampliar imagen ${activeIndex + 1} de ${images.length}`);
+      if (counter) counter.textContent = `${activeIndex + 1} / ${images.length}`;
+      thumbs.forEach((thumb, thumbIndex) => {
+        const selected = thumbIndex === activeIndex;
+        thumb.setAttribute("aria-current", selected ? "true" : "false");
+        thumb.classList.toggle("border-amber-500", selected);
+        thumb.classList.toggle("border-zinc-800", !selected);
+      });
+      if (lightbox.open) {
+        lightboxImage.src = image.url;
+        lightboxImage.alt = image.altText;
+        lightboxCounter.textContent = `${activeIndex + 1} / ${images.length}`;
+      }
+    };
+
+    const next = () => setActive(activeIndex + 1);
+    const previous = () => setActive(activeIndex - 1);
+    thumbs.forEach((thumb, index) => thumb.addEventListener("click", () => setActive(index)));
+    root.querySelector("[data-gallery-next]")?.addEventListener("click", next);
+    root.querySelector("[data-gallery-previous]")?.addEventListener("click", previous);
+    mainButton.addEventListener("click", () => { setActive(activeIndex); lightbox.showModal(); });
+    root.querySelector("[data-lightbox-close]")?.addEventListener("click", () => lightbox.close());
+    root.querySelector("[data-lightbox-next]")?.addEventListener("click", next);
+    root.querySelector("[data-lightbox-previous]")?.addEventListener("click", previous);
+    root.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight") next();
+      if (event.key === "ArrowLeft") previous();
+    });
+  };
+  document.addEventListener("astro:page-load", initializeProductGallery);
+  initializeProductGallery();
+</script>

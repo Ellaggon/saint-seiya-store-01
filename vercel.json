@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run db:migrate:status && npm run build",
   "installCommand": "npm install",
   "framework": "astro",
   "regions": ["gru1"],

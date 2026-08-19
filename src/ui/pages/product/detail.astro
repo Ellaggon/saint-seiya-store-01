@@ -10,6 +10,7 @@ import ProductPurchaseCTA from "../../components/product/ProductPurchaseCTA.astr
 import { formatPrice } from "@/lib/utils";
 import { resolveDisplayAvailability } from "@/shared/catalog/displayAvailability";
 import { siteOrigin } from "@/lib/siteUrl";
+import ProductGallery from "@/ui/components/product/ProductGallery.astro";
 
 interface Props {
   product: {
@@ -22,6 +23,14 @@ interface Props {
     height: number;
     material: string;
     imageUrl: string;
+    images?: {
+      id: string;
+      url: string;
+      altText: string;
+      sortOrder: number;
+      width?: number | null;
+      height?: number | null;
+    }[];
     stock: number;
     status: string;
     line?: string;
@@ -33,6 +42,11 @@ interface Props {
 }
 
 const { product, preorder = null } = Astro.props;
+const productImages = product?.images?.length
+  ? product.images
+  : product
+    ? [{ id: "cover", url: product.imageUrl, altText: product.name, sortOrder: 0 }]
+    : [];
 const preorderIsSoldOut = preorder
   ? preorder.availability.availableUnits <= 0 || preorder.availability.isSoldOut
   : false;
@@ -60,7 +74,7 @@ const productStructuredData =
         "@type": "Product",
         name: product.name,
         description: product.description,
-        image: product.imageUrl ? [product.imageUrl] : undefined,
+        image: productImages.map((image) => image.url),
         sku: product.id,
         brand: {
           "@type": "Brand",
@@ -104,18 +118,7 @@ const charactersLabel =
       product ? (
         <div class="mx-auto grid max-w-[1440px] grid-cols-1 gap-12 px-4 pb-20 pt-24 md:px-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(420px,0.7fr)] lg:gap-16 lg:pt-28 2xl:px-10">
           <div class="lg:sticky lg:top-28 lg:self-start">
-            <div class="relative overflow-hidden rounded-md bg-zinc-950/70">
-              <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_12%,rgba(245,158,11,0.12),transparent_34%)]">
-              </div>
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                class="relative z-10 h-full min-h-[420px] w-full object-cover md:min-h-[620px]"
-                loading="eager"
-              />
-              <div class="absolute inset-x-0 bottom-0 z-20 h-28 bg-gradient-to-t from-black/70 to-transparent">
-              </div>
-            </div>
+            <ProductGallery productName={product.name} images={productImages} />
           </div>
 
           <div class="flex flex-col gap-9 lg:py-6">

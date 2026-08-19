@@ -1,5 +1,6 @@
 ---
 import MainLayout from "@/ui/layouts/MainLayout.astro";
+import ProductImageManager from "@/ui/components/admin/ProductImageManager.astro";
 
 interface Props {
   product?: any;
@@ -19,6 +20,8 @@ const {
 const defaultStatus = returnTo.startsWith("/admin/preorders")
   ? "PRE_ORDER"
   : "DRAFT";
+const mediaProductId = product?.id || crypto.randomUUID();
+const formError = Astro.url.searchParams.get("error");
 
 const statusOptions = [
   { value: "DRAFT", label: "Borrador" },
@@ -68,9 +71,15 @@ const statusOptions = [
       <div class="w-12 h-1 bg-amber-500"></div>
     </div>
 
+    {formError === "product-image-migration-pending" && (
+      <div class="mb-6 border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs leading-5 text-amber-100" role="alert">
+        La imagen no se guardó porque esta base aún no tiene la migración de galería. Aplica las migraciones y vuelve a cargarla.
+      </div>
+    )}
+
     <!-- Form Section -->
     <form
-      action="/admin/products/actions"
+      action="/api/admin/products/actions"
       method="POST"
       onsubmit="this.querySelector('button[type=submit]').disabled = true;"
       class="space-y-8 bg-zinc-950 p-8 border border-zinc-900 shadow-2xl"
@@ -266,97 +275,23 @@ const statusOptions = [
         </div>
       </div>
 
-      <!-- Image Upload Component -->
-      <div class="space-y-4">
-        <label
-          class="block text-[10px] font-black text-amber-500 uppercase tracking-widest"
-          >Imagen de la Figura</label
-        >
-
-        <div class="flex flex-col gap-4">
-          <!-- File Input -->
-          <div class="relative group">
-            <input
-              type="file"
-              id="image-upload"
-              accept="image/jpeg,image/png,image/webp"
-              class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-            />
-            <div
-              class="w-full bg-black border border-zinc-800 px-4 py-8 text-center border-dashed group-hover:border-amber-500 transition-colors"
-            >
-              <span
-                id="upload-status"
-                class="text-zinc-500 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="square"
-                  stroke-linejoin="round"
-                  ><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-                  ></path><polyline points="17 8 12 3 7 8"></polyline><line
-                    x1="12"
-                    x2="12"
-                    y1="3"
-                    y2="15"></line>
-                </svg>
-                Seleccionar Archivo (Max 5MB)
-              </span>
-            </div>
-          </div>
-
-          <!-- Hidden Input for the URL -->
-          <input
-            type="hidden"
-            id="imageUrl"
-            name="imageUrl"
-            value={product?.imageUrl || ""}
-            required
-          />
-
-          <!-- Preview Container -->
-          <div
-            id="image-preview-container"
-            class={`space-y-2 ${product?.imageUrl ? "" : "hidden"}`}
-          >
-            <p
-              class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest"
-            >
-              Previsualización del Archivo:
-            </p>
-            <div
-              class="flex items-center gap-3 bg-zinc-900/50 p-3 border border-zinc-800"
-            >
-              <div
-                class="w-12 h-12 bg-black border border-zinc-700 overflow-hidden flex-shrink-0"
-              >
-                <img
-                  id="image-preview"
-                  src={product?.imageUrl}
-                  class="w-full h-full object-contain"
-                />
-              </div>
-              <div class="flex flex-col min-w-0">
-                <span
-                  id="image-url-text"
-                  class="text-[10px] text-zinc-400 truncate font-mono"
-                >
-                  {product?.imageUrl}
-                </span>
-                <span class="text-[8px] text-amber-500/50 font-black uppercase"
-                  >Subido al Servidor R2</span
-                >
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ProductImageManager
+        productId={mediaProductId}
+        productName={product?.name || "Figura"}
+        images={
+          product?.images?.length
+            ? product.images
+            : product?.imageUrl
+              ? [{
+                  id: crypto.randomUUID(),
+                  url: product.imageUrl,
+                  storageKey: product.imageUrl,
+                  altText: product.name || "Figura",
+                  sortOrder: 0,
+                }]
+              : []
+        }
+      />
 
       <!-- Description -->
       <div class="space-y-2">
@@ -371,7 +306,8 @@ const statusOptions = [
           rows="5"
           required
           placeholder="Describe la figura, materiales, accesorios y contexto histórico..."
-          class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors resize-none"
+          data-autoresize
+          class="min-h-36 w-full overflow-y-hidden bg-black border border-zinc-800 px-4 py-3 text-white text-sm leading-6 focus:border-amber-500 focus:outline-none transition-colors resize-none"
           >{product?.description || ""}</textarea
         >
       </div>
@@ -1151,11 +1087,34 @@ const statusOptions = [
     });
   };
 
+  const bindAutoResize = () => {
+    const textareas = document.querySelectorAll<HTMLTextAreaElement>(
+      "textarea[data-autoresize]",
+    );
+    const maxHeight = 640;
+
+    textareas.forEach((textarea) => {
+      if (textarea.dataset.boundAutoResize === "1") return;
+      textarea.dataset.boundAutoResize = "1";
+
+      const resize = () => {
+        textarea.style.height = "auto";
+        const nextHeight = Math.min(Math.max(textarea.scrollHeight, 144), maxHeight);
+        textarea.style.height = `${nextHeight}px`;
+        textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+      };
+
+      textarea.addEventListener("input", resize);
+      requestAnimationFrame(resize);
+    });
+  };
+
   const initializeProductForm = () => {
     if (!document.getElementById("open-category-modal")) return;
 
     bindImageUpload();
     bindCategoryModalImageUpload();
+    bindAutoResize();
 
     bindCreateModal({
       kind: "category",

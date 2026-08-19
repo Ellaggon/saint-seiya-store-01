@@ -1,0 +1,286 @@
+---
+interface ProductImage {
+  id: string;
+  url: string;
+  storageKey?: string;
+  altText: string;
+  sortOrder: number;
+  width?: number | null;
+  height?: number | null;
+}
+
+interface Props {
+  productId: string;
+  productName?: string;
+  images?: ProductImage[];
+}
+
+const { productId, productName = "Figura", images = [] } = Astro.props;
+---
+
+<section class="space-y-4" aria-labelledby="product-gallery-title" data-product-gallery data-product-id={productId} data-product-name={productName} data-gallery-images={JSON.stringify(images)}>
+  <div class="flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <p id="product-gallery-title" class="text-[10px] font-black uppercase tracking-widest text-amber-500">Galería del producto</p>
+      <p class="mt-1 text-xs leading-5 text-zinc-500">La primera imagen es la portada. Añade hasta 12 vistas de la figura, accesorios y empaque.</p>
+    </div>
+    <span data-gallery-count class="shrink-0 border border-zinc-800 bg-black px-3 py-2 text-[10px] font-black tracking-widest text-zinc-400">0 / 12</span>
+  </div>
+
+  <input type="hidden" name="productId" value={productId} />
+  <input type="hidden" name="images" data-gallery-value />
+  <input type="hidden" id="imageUrl" name="imageUrl" value={images[0]?.url || ""} />
+  <input type="hidden" name="removedImageKeys" data-gallery-removed />
+
+  <label class="group relative flex min-h-32 cursor-pointer flex-col items-center justify-center border border-dashed border-zinc-800 bg-black px-5 text-center transition-colors hover:border-amber-500" data-gallery-dropzone>
+    <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple class="sr-only" data-gallery-input />
+    <span class="text-sm font-semibold text-white">Añadir imágenes</span>
+    <span class="mt-1 text-[10px] font-black uppercase tracking-widest text-zinc-500">JPEG, PNG, WebP o AVIF · máximo 20 MB por original</span>
+  </label>
+
+  <p data-gallery-status aria-live="polite" class="min-h-5 text-xs text-zinc-500"></p>
+  <div data-gallery-grid class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"></div>
+
+  <template data-gallery-card-template>
+    <article class="group relative overflow-hidden border border-zinc-800 bg-black" draggable="true">
+      <div class="relative aspect-square bg-zinc-950">
+        <img class="h-full w-full object-contain" alt="" />
+        <span data-cover class="absolute left-2 top-2 hidden bg-amber-500 px-2 py-1 text-[8px] font-black uppercase tracking-widest text-black">Portada</span>
+        <span data-image-state class="absolute inset-x-0 bottom-0 bg-black/75 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-zinc-300"></span>
+      </div>
+      <div class="space-y-2 border-t border-zinc-900 p-2.5">
+        <label class="sr-only">Texto alternativo</label>
+        <input data-alt type="text" maxlength="140" class="w-full border border-zinc-800 bg-zinc-950 px-2 py-2 text-[10px] text-zinc-200 outline-none placeholder:text-zinc-700 focus:border-amber-500" placeholder="Describe esta vista" />
+        <div class="grid grid-cols-4 gap-1">
+          <button type="button" data-action="cover" title="Usar como portada" class="border border-zinc-800 p-2 text-zinc-300 transition-colors hover:border-amber-500 hover:text-amber-400">★</button>
+          <button type="button" data-action="left" title="Mover a la izquierda" class="border border-zinc-800 p-2 text-zinc-300 transition-colors hover:border-white hover:text-white">←</button>
+          <button type="button" data-action="right" title="Mover a la derecha" class="border border-zinc-800 p-2 text-zinc-300 transition-colors hover:border-white hover:text-white">→</button>
+          <button type="button" data-action="remove" title="Quitar imagen" class="border border-zinc-800 p-2 text-zinc-500 transition-colors hover:border-red-500 hover:text-red-400">×</button>
+        </div>
+      </div>
+    </article>
+  </template>
+</section>
+
+<script>
+  import { compressImageFile } from "@/ui/scripts/compressImage";
+
+  type GalleryImage = {
+    id: string;
+    url: string;
+    storageKey: string;
+    altText: string;
+    width: number | null;
+    height: number | null;
+    byteSize: number | null;
+    mimeType: string | null;
+    isNew?: boolean;
+    state?: "ready" | "uploading" | "error";
+  };
+
+  const MAX_IMAGES = 12;
+  const MAX_BYTES = 20 * 1024 * 1024;
+
+  const getImageDimensions = (file: File): Promise<{ width: number; height: number }> =>
+    new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve({ width: image.naturalWidth, height: image.naturalHeight });
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("No se pudo leer una de las imágenes"));
+      };
+      image.src = url;
+    });
+
+  const initializeGallery = () => {
+    const root = document.querySelector("[data-product-gallery]") as HTMLElement | null;
+    if (!root || root.dataset.bound === "1") return;
+    root.dataset.bound = "1";
+
+    const productId = root.dataset.productId || "";
+    const productName = root.dataset.productName || "Figura";
+    const initialImages = JSON.parse(root.dataset.galleryImages || "[]") as GalleryImage[];
+
+    const input = root.querySelector("[data-gallery-input]") as HTMLInputElement;
+    const grid = root.querySelector("[data-gallery-grid]") as HTMLElement;
+    const count = root.querySelector("[data-gallery-count]") as HTMLElement;
+    const status = root.querySelector("[data-gallery-status]") as HTMLElement;
+    const value = root.querySelector("[data-gallery-value]") as HTMLInputElement;
+    const removedValue = root.querySelector("[data-gallery-removed]") as HTMLInputElement;
+    const coverUrl = document.getElementById("imageUrl") as HTMLInputElement;
+    const template = root.querySelector("[data-gallery-card-template]") as HTMLTemplateElement;
+    const dropzone = root.querySelector("[data-gallery-dropzone]") as HTMLElement;
+    const submitButton = root.closest("form")?.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+    const removedKeys: string[] = [];
+    let draggingIndex: number | null = null;
+    let entries: GalleryImage[] = [...initialImages]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((image) => ({ ...image, storageKey: image.storageKey || image.url, width: image.width ?? null, height: image.height ?? null, byteSize: null, mimeType: null, state: "ready" }));
+
+    const announce = (message: string, isError = false) => {
+      status.textContent = message;
+      status.className = `min-h-5 text-xs ${isError ? "text-red-400" : "text-zinc-500"}`;
+    };
+
+    const sync = () => {
+      entries.forEach((entry, index) => { entry.altText = entry.altText.trim() || `${productName} - vista ${index + 1}`; });
+      value.value = JSON.stringify(entries.filter((entry) => entry.state === "ready").map((entry, index) => ({ ...entry, sortOrder: index })));
+      removedValue.value = JSON.stringify(removedKeys);
+      coverUrl.value = entries[0]?.url || "";
+      count.textContent = `${entries.length} / ${MAX_IMAGES}`;
+    };
+
+    const move = (from: number, to: number) => {
+      if (to < 0 || to >= entries.length || from === to) return;
+      const [entry] = entries.splice(from, 1);
+      entries.splice(to, 0, entry);
+      render();
+      announce("Orden de galería actualizado.");
+    };
+
+    const remove = async (index: number) => {
+      if (entries.length === 1) {
+        announce("Cada producto necesita una portada. Añade otra imagen antes de retirar esta.", true);
+        return;
+      }
+      const [entry] = entries.splice(index, 1);
+      if (entry.isNew) {
+        await fetch("/api/admin/product-images", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId, storageKey: entry.storageKey }),
+        }).catch(() => undefined);
+      } else {
+        removedKeys.push(entry.storageKey);
+      }
+      render();
+      announce("Imagen retirada de la galería.");
+    };
+
+    const render = () => {
+      grid.replaceChildren();
+      entries.forEach((entry, index) => {
+        const fragment = template.content.cloneNode(true) as DocumentFragment;
+        const card = fragment.querySelector("article") as HTMLElement;
+        const img = fragment.querySelector("img") as HTMLImageElement;
+        const cover = fragment.querySelector("[data-cover]") as HTMLElement;
+        const imageState = fragment.querySelector("[data-image-state]") as HTMLElement;
+        const alt = fragment.querySelector("[data-alt]") as HTMLInputElement;
+        img.src = entry.url;
+        img.alt = entry.altText || `${productName} - vista ${index + 1}`;
+        alt.value = entry.altText;
+        if (index === 0) cover.classList.remove("hidden");
+        imageState.textContent = entry.state === "uploading" ? "Subiendo" : entry.state === "error" ? "Error" : `${index + 1} de ${entries.length}`;
+        card.dataset.index = String(index);
+        card.addEventListener("dragstart", () => { draggingIndex = index; });
+        card.addEventListener("dragover", (event) => event.preventDefault());
+        card.addEventListener("drop", (event) => {
+          event.preventDefault();
+          if (draggingIndex !== null) move(draggingIndex, index);
+          draggingIndex = null;
+        });
+        alt.addEventListener("input", () => { entry.altText = alt.value; sync(); });
+        card.querySelectorAll<HTMLButtonElement>("[data-action]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const action = button.dataset.action;
+            if (action === "cover") move(index, 0);
+            if (action === "left") move(index, index - 1);
+            if (action === "right") move(index, index + 1);
+            if (action === "remove") void remove(index);
+          });
+        });
+        grid.append(card);
+      });
+      sync();
+    };
+
+    const uploadOne = async (original: File) => {
+      if (original.size > MAX_BYTES) throw new Error(`${original.name} supera el máximo de 20 MB.`);
+      const file = await compressImageFile(original, { maxEdge: 2400, quality: 0.84 });
+      const dimensions = await getImageDimensions(file);
+      const signed = await fetch("/api/admin/product-images/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ productId, fileName: file.name, contentType: file.type, size: file.size }),
+      });
+      const signedPayload = await signed.json() as { data?: { id: string; storageKey: string; publicUrl: string; uploadUrl: string }; error?: { message?: string } };
+      if (!signed.ok || !signedPayload.data) throw new Error(signedPayload.error?.message || "No fue posible preparar la subida.");
+      let storageKey = signedPayload.data.storageKey;
+      let publicUrl = signedPayload.data.publicUrl;
+      let byteSize = file.size;
+      let mimeType = file.type;
+      const useServerUpload = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      try {
+        if (useServerUpload) throw new Error("Use server upload in local development");
+        const uploaded = await fetch(signedPayload.data.uploadUrl, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+        if (!uploaded.ok) throw new Error("R2 rejected direct upload");
+      } catch {
+        // Local development and restrictive bucket CORS use the authenticated fallback.
+        const fallbackFile = await compressImageFile(file, { maxEdge: 1600, quality: 0.76 });
+        const body = new FormData();
+        body.set("productId", productId);
+        body.set("imageId", signedPayload.data.id);
+        body.set("file", fallbackFile);
+        const fallback = await fetch("/api/admin/product-images/upload", { method: "POST", body });
+        const fallbackPayload = await fallback.json() as { data?: { storageKey: string; publicUrl: string; byteSize: number; mimeType: string }; error?: { message?: string } };
+        if (!fallback.ok || !fallbackPayload.data) {
+          throw new Error(fallbackPayload.error?.message || "No se pudo cargar la imagen mediante el servidor local.");
+        }
+        storageKey = fallbackPayload.data.storageKey;
+        publicUrl = fallbackPayload.data.publicUrl;
+        byteSize = fallbackPayload.data.byteSize;
+        mimeType = fallbackPayload.data.mimeType;
+      }
+      entries.push({
+        id: signedPayload.data.id,
+        storageKey,
+        url: publicUrl,
+        altText: `${productName} - vista ${entries.length + 1}`,
+        width: dimensions.width,
+        height: dimensions.height,
+        byteSize,
+        mimeType,
+        isNew: true,
+        state: "ready",
+      });
+    };
+
+    const addFiles = async (files: File[]) => {
+      const accepted = files.slice(0, Math.max(0, MAX_IMAGES - entries.length));
+      if (!accepted.length) return announce("La galería ya tiene el máximo de 12 imágenes.", true);
+      if (accepted.length < files.length) announce("Solo se añadieron las imágenes que caben en el límite de 12.");
+      input.disabled = true;
+      if (submitButton) submitButton.disabled = true;
+      try {
+        for (const file of accepted) {
+          announce(`Preparando ${file.name}…`);
+          await uploadOne(file);
+          render();
+        }
+        announce("Imágenes incorporadas a la galería.");
+      } catch (error) {
+        announce(error instanceof Error ? error.message : "No se pudo subir una imagen.", true);
+      } finally {
+        input.disabled = false;
+        if (submitButton) submitButton.disabled = false;
+        input.value = "";
+      }
+    };
+
+    input.addEventListener("change", () => void addFiles([...(input.files || [])]));
+    ["dragenter", "dragover"].forEach((eventName) => dropzone.addEventListener(eventName, (event) => { event.preventDefault(); dropzone.classList.add("border-amber-500"); }));
+    ["dragleave", "drop"].forEach((eventName) => dropzone.addEventListener(eventName, (event) => { event.preventDefault(); dropzone.classList.remove("border-amber-500"); }));
+    dropzone.addEventListener("drop", (event) => {
+      const files = [...((event as DragEvent).dataTransfer?.files || [])];
+      void addFiles(files);
+    });
+    render();
+  };
+
+  document.addEventListener("astro:page-load", initializeGallery);
+  initializeGallery();
+</script>

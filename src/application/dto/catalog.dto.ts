@@ -1,4 +1,5 @@
 import type { ProductStatus } from "../../domain/entities/Product";
+import type { ProductImageProps } from "../../domain/entities/Product";
 import type { CatalogSort } from "../../domain/repositories/ProductRepository";
 import type { DisplayAvailability } from "@/shared/catalog/displayAvailability";
 
@@ -12,6 +13,7 @@ export interface ProductDTO {
   height: number;
   material: string;
   imageUrl: string;
+  images?: ProductImageProps[];
   stock: number;
   status: ProductStatus;
   line?: string;
@@ -40,6 +42,7 @@ export interface CharacterDTO {
 }
 
 export interface CreateProductRequestDTO {
+  id?: string;
   name: string;
   slug?: string;
   description: string;
@@ -49,6 +52,7 @@ export interface CreateProductRequestDTO {
   height: number;
   material?: string;
   imageUrl: string;
+  images?: ProductImageProps[];
   stock?: number;
   status: ProductStatus;
 }

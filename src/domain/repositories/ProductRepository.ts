@@ -1,5 +1,6 @@
 import type { Product } from "../entities/Product";
 import type { ProductStatus } from "../entities/Product";
+import type { ProductImageProps } from "../entities/Product";
 
 export interface ProductFilters {
   q?: string;
@@ -81,6 +82,7 @@ export interface AdminProductData {
   height: number;
   material?: string | null;
   imageUrl: string;
+  images: ProductImageProps[];
   stock: number;
   status: ProductStatus;
   createdAt: Date;
@@ -90,6 +92,7 @@ export interface AdminProductData {
 }
 
 export interface AdminProductInput {
+  id?: string;
   name: string;
   slug?: string;
   description: string;
@@ -99,8 +102,22 @@ export interface AdminProductInput {
   height: number;
   material?: string | null;
   imageUrl: string;
+  images?: ProductImageInput[];
   stock?: number;
   status: ProductStatus;
+}
+
+export interface ProductImageInput {
+  id: string;
+  storageKey: string;
+  url: string;
+  altText: string;
+  sortOrder: number;
+  width?: number | null;
+  height?: number | null;
+  byteSize?: number | null;
+  mimeType?: string | null;
+  checksum?: string | null;
 }
 
 export interface ProductRepository {

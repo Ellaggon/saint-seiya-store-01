@@ -106,6 +106,7 @@ model Product {
   category          Category           @relation(fields: [categoryId], references: [id])
   collection        Collection         @relation(fields: [collectionId], references: [id])
   characters        ProductCharacter[]
+  images            ProductImage[]
   // LEGACY: inventory reservation relation. Preorder flows must use preorderCampaigns.
   reservations      Reservation[]
 
@@ -114,6 +115,34 @@ model Product {
   @@index([categoryId])
   @@index([collectionId])
   @@index([deletedAt])
+}
+
+enum ProductImageStatus {
+  READY
+  DELETED
+}
+
+/// Ordered product gallery. The image at sortOrder 0 is the storefront cover.
+model ProductImage {
+  id         String             @id @default(uuid())
+  productId  String
+  storageKey String
+  altText    String
+  sortOrder  Int
+  width      Int?
+  height     Int?
+  byteSize   Int?
+  mimeType   String?
+  checksum   String?
+  status     ProductImageStatus @default(READY)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  deletedAt  DateTime?
+  product    Product            @relation(fields: [productId], references: [id])
+
+  @@unique([productId, sortOrder])
+  @@index([productId, status, sortOrder])
+  @@index([checksum])
 }
 
 model ProductCharacter {

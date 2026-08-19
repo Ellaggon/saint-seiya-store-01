@@ -6,6 +6,15 @@ import { ProductStatus } from "@/domain/entities/Product";
 import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
 import { invalidateCatalogCache } from "@/application/services/CatalogQueryService";
 import { invalidatePreorderCache } from "@/application/services/PreorderQueryCache";
+import type { ProductImageInput } from "@/domain/repositories/ProductRepository";
+import { R2Storage } from "@/infrastructure/storage/r2Storage";
+import { isProductImageSchemaAvailable } from "@/infrastructure/database/productImageSchema";
+
+class ProductImageMigrationPendingError extends Error {
+  constructor() {
+    super("La galería requiere aplicar las migraciones de base de datos antes de guardar imágenes.");
+  }
+}
 
 // Helper to validate admin role (redundant because of middleware but safe)
 const ensureAdmin = (locals: App.Locals) => {
@@ -62,7 +71,105 @@ const parseProductStatus = (formData: FormData): ProductStatus => {
   return status as ProductStatus;
 };
 
+const isUuid = (value: unknown): value is string =>
+  typeof value === "string" &&
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
+const parseProductImages = (
+  formData: FormData,
+  productId: string,
+  productName: string,
+  allowLegacyUrls = false,
+): ProductImageInput[] | undefined => {
+  const raw = formData.get("images");
+  if (typeof raw !== "string" || !raw.trim()) return undefined;
+
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    throw new Error("La galería de imágenes no es válida");
+  }
+  if (!Array.isArray(value) || value.length === 0 || value.length > 12) {
+    throw new Error("El producto debe tener entre 1 y 12 imágenes");
+  }
+
+  return value.map((item, index) => {
+    const image = item as Record<string, unknown>;
+    const id = image.id;
+    const storageKey = image.storageKey;
+    if (!isUuid(id) || typeof storageKey !== "string") {
+      throw new Error("Una imagen de la galería es inválida");
+    }
+    const expectedPrefix = `products/${productId}/${id}/`;
+    const isLegacyUrl = /^https?:\/\//.test(storageKey) || storageKey.startsWith("/");
+    if (!storageKey.startsWith(expectedPrefix) && !(allowLegacyUrls && isLegacyUrl)) {
+      throw new Error("La imagen no pertenece a este producto");
+    }
+    const suppliedAlt = typeof image.altText === "string" ? image.altText.trim() : "";
+    return {
+      id,
+      storageKey,
+      url: "",
+      altText:
+        suppliedAlt && !suppliedAlt.startsWith("Figura - vista")
+          ? suppliedAlt
+          : `${productName} - vista ${index + 1}`,
+      sortOrder: index,
+      width: typeof image.width === "number" ? image.width : null,
+      height: typeof image.height === "number" ? image.height : null,
+      byteSize: typeof image.byteSize === "number" ? image.byteSize : null,
+      mimeType: typeof image.mimeType === "string" ? image.mimeType : null,
+    };
+  });
+};
+
+const parseRemovedImageKeys = (formData: FormData, productId: string): string[] => {
+  const raw = formData.get("removedImageKeys");
+  if (typeof raw !== "string" || !raw.trim()) return [];
+  try {
+    const keys = JSON.parse(raw);
+    if (!Array.isArray(keys)) return [];
+    return keys.filter(
+      (key): key is string =>
+        typeof key === "string" && key.startsWith(`products/${productId}/`),
+    );
+  } catch {
+    return [];
+  }
+};
+
+const deleteRemovedObjects = async (keys: string[]): Promise<void> => {
+  if (!keys.length) return;
+  try {
+    const storage = new R2Storage();
+    await Promise.allSettled(keys.map((key) => storage.delete(key)));
+  } catch (error) {
+    console.warn("[Product media cleanup] unable to delete removed objects", error);
+  }
+};
+
+const verifyUploadedImages = async (images: ProductImageInput[] | undefined): Promise<void> => {
+  if (!images?.length) return;
+  const storage = new R2Storage();
+  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
+  await Promise.all(
+    images
+      .filter((image) => image.storageKey.startsWith("products/"))
+      .map(async (image) => {
+        const object = await storage.head(image.storageKey);
+        if (!object.contentLength || object.contentLength > 20 * 1024 * 1024) {
+          throw new Error("Una imagen no cumple el límite de 20 MB");
+        }
+        if (!object.contentType || !allowedTypes.has(object.contentType)) {
+          throw new Error("Una imagen tiene un formato no permitido");
+        }
+      }),
+  );
+};
+
 export const POST: APIRoute = async ({ request, locals, redirect }) => {
+  let errorTarget = "/admin/products";
   try {
     ensureAdmin(locals);
 
@@ -71,19 +178,36 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
     const repository = new PrismaProductRepository();
 
     if (action === "create") {
+      const productId = requiredString(formData, "productId");
+      errorTarget = "/admin/products/new";
+      if (!isUuid(productId)) throw new Error("ID de producto inválido");
+      const name = requiredString(formData, "name");
+      const requestedImages = parseProductImages(formData, productId, name);
+      const images = (await isProductImageSchemaAvailable())
+        ? requestedImages
+        : undefined;
+      if (!images && requestedImages?.some((image) => image.storageKey.startsWith("products/"))) {
+        await deleteRemovedObjects(requestedImages.map((image) => image.storageKey));
+        throw new ProductImageMigrationPendingError();
+      }
+      await verifyUploadedImages(images);
       const useCase = new CreateProductUseCase(repository);
       await useCase.execute({
-        name: requiredString(formData, "name"),
+        id: productId,
+        name,
         description: requiredString(formData, "description"),
         price: requiredNumber(formData, "price"),
         height: requiredNumber(formData, "height"),
-        imageUrl: requiredString(formData, "imageUrl"),
+        imageUrl: images?.[0]?.url || requiredString(formData, "imageUrl"),
+        images,
         categoryId: requiredString(formData, "categoryId"),
         collectionId: requiredString(formData, "collectionId"),
         material: "",
         stock: requiredNonNegativeInteger(formData, "stock"),
         status: parseProductStatus(formData),
       });
+
+      await deleteRemovedObjects(parseRemovedImageKeys(formData, productId));
 
       invalidateCatalogCache();
       invalidatePreorderCache();
@@ -91,20 +215,35 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
     }
 
     if (action === "update") {
+      const productId = requiredString(formData, "id");
+      errorTarget = `/admin/products/${productId}`;
+      const name = requiredString(formData, "name");
+      const requestedImages = parseProductImages(formData, productId, name, true);
+      const images = (await isProductImageSchemaAvailable())
+        ? requestedImages
+        : undefined;
+      if (!images && requestedImages?.some((image) => image.storageKey.startsWith("products/"))) {
+        await deleteRemovedObjects(requestedImages.map((image) => image.storageKey));
+        throw new ProductImageMigrationPendingError();
+      }
+      await verifyUploadedImages(images);
       const useCase = new UpdateProductUseCase(repository);
       await useCase.execute({
-        id: requiredString(formData, "id"),
-        name: requiredString(formData, "name"),
+        id: productId,
+        name,
         description: requiredString(formData, "description"),
         price: requiredNumber(formData, "price"),
         height: requiredNumber(formData, "height"),
-        imageUrl: requiredString(formData, "imageUrl"),
+        imageUrl: images?.[0]?.url || requiredString(formData, "imageUrl"),
+        images,
         categoryId: requiredString(formData, "categoryId"),
         collectionId: requiredString(formData, "collectionId"),
         material: "",
         stock: requiredNonNegativeInteger(formData, "stock"),
         status: parseProductStatus(formData),
       });
+
+      await deleteRemovedObjects(parseRemovedImageKeys(formData, productId));
 
       invalidateCatalogCache();
       invalidatePreorderCache();
@@ -122,6 +261,9 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
 
     return new Response("Action not found", { status: 400 });
   } catch (error: unknown) {
+    if (error instanceof ProductImageMigrationPendingError) {
+      return redirect(`${errorTarget}?error=product-image-migration-pending`);
+    }
     console.error("Admin Action Error:", error);
     return new Response(error instanceof Error ? error.message : "Internal Server Error", {
       status: 500,

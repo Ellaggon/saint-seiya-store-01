@@ -1,7 +1,13 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import type { StorageService } from "../../domain/services/StorageService";
+import {
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import type { ProductImageStorageService } from "../../domain/services/StorageService";
 
-export class R2Storage implements StorageService {
+export class R2Storage implements ProductImageStorageService {
   private readonly client: S3Client;
   private readonly bucket: string;
   private readonly publicUrl: string;
@@ -10,7 +16,12 @@ export class R2Storage implements StorageService {
     this.bucket = requiredEnv(["R2_BUCKET_NAME", "R2_BUCKET"]);
     const endpoint = resolveR2Endpoint();
     this.publicUrl =
-      normalizeUrl(process.env.R2_PUBLIC_URL || process.env.R2_PUBLIC_BASE_URL || "") ||
+      normalizeUrl(
+        process.env.R2_MEDIA_PUBLIC_URL ||
+          process.env.R2_PUBLIC_URL ||
+          process.env.R2_PUBLIC_BASE_URL ||
+          "",
+      ) ||
       `${endpoint}/${this.bucket}`;
 
     this.client = new S3Client({
@@ -35,9 +46,16 @@ export class R2Storage implements StorageService {
     const extension = file.name.split(".").pop();
     const fileName = `${folder}/${crypto.randomUUID()}.${extension}`;
 
+    return this.uploadAtKey(file, fileName);
+  }
+
+  async uploadAtKey(
+    file: { data: Uint8Array; name: string; type: string },
+    key: string,
+  ): Promise<string> {
     const command = new PutObjectCommand({
       Bucket: this.bucket,
-      Key: fileName,
+      Key: key,
       Body: file.data,
       ContentType: file.type,
       CacheControl: "public, max-age=31536000, immutable",
@@ -45,8 +63,48 @@ export class R2Storage implements StorageService {
 
     await this.client.send(command);
 
-    const baseUrl = this.publicUrl;
-    return `${baseUrl}/${fileName}`;
+    return this.publicUrlForKey(key);
+  }
+
+  async createPresignedUpload(input: {
+    key: string;
+    contentType: string;
+    expiresInSeconds?: number;
+  }): Promise<string> {
+    return getSignedUrl(
+      this.client,
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: input.key,
+        ContentType: input.contentType,
+        CacheControl: "public, max-age=31536000, immutable",
+      }),
+      { expiresIn: input.expiresInSeconds ?? 300 },
+    );
+  }
+
+  async head(key: string): Promise<{
+    contentType?: string;
+    contentLength?: number;
+    eTag?: string;
+  }> {
+    const object = await this.client.send(
+      new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    return {
+      contentType: object.ContentType,
+      contentLength: object.ContentLength,
+      eTag: object.ETag,
+    };
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+  }
+
+  publicUrlForKey(key: string): string {
+    if (/^https?:\/\//.test(key) || key.startsWith("/")) return key;
+    return `${this.publicUrl}/${key}`;
   }
 }
 

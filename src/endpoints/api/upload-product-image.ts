@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { UploadProductImageUseCase } from "../../application/use-cases/uploadProductImage";
 import { LocalPublicStorage } from "../../infrastructure/storage/localPublicStorage";
 import { R2Storage } from "../../infrastructure/storage/r2Storage";
+import { requireAdmin } from "./shared/auth";
 
 const isRecoverableStorageConfigError = (error: unknown): boolean => {
   const record =
@@ -48,8 +49,9 @@ const uploadErrorMessage = (error: unknown): string => {
   return message || "Unexpected error";
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
+    requireAdmin(locals);
     const formData = await request.formData();
     const file = formData.get("file") as File;
 

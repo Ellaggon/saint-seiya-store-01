@@ -44,15 +44,6 @@ const normalizeProductImages = (input: AdminProductInput): ProductImageInput[] =
   });
 };
 
-const isProductImagesSchemaUnavailable = (error: unknown): boolean => {
-  const message = error instanceof Error ? error.message : String(error);
-  return (
-    message.includes("Unknown field `images`") ||
-    message.includes("Unknown field images") ||
-    message.includes("ProductImage")
-  );
-};
-
 export class PrismaProductRepository implements ProductRepository {
   // slug helpers live in @/lib/uniqueSlug
 
@@ -159,25 +150,11 @@ export class PrismaProductRepository implements ProductRepository {
         where: { deletedAt: null, status: "READY" },
         orderBy: { sortOrder: "asc" },
       },
-    };
-    let p: any;
-    try {
-      p = await (prisma.product as any).findUnique({
-        where: { id },
-        include,
-      });
-    } catch (error) {
-      if (!isProductImagesSchemaUnavailable(error)) throw error;
-      console.warn("[Product media] ProductImage migration is pending; serving legacy cover.");
-      p = await (prisma.product as any).findUnique({
-        where: { id },
-        include: {
-          category: { select: { name: true } },
-          collection: { select: { name: true } },
-          characters: { select: { character: { select: { name: true } } } },
-        },
-      });
-    }
+    } as const;
+    const p = await prisma.product.findUnique({
+      where: { id },
+      include,
+    });
 
     if (!p) return null;
 
@@ -191,7 +168,7 @@ export class PrismaProductRepository implements ProductRepository {
       height: Number(p.height),
       material: p.material || "",
       imageUrl: p.imageUrl,
-      images: p.images?.map((image: any) => ({
+      images: p.images.map((image) => ({
         id: image.id,
         url: productImageUrl(image.storageKey),
         storageKey: image.storageKey,
@@ -461,16 +438,7 @@ export class PrismaProductRepository implements ProductRepository {
       },
       orderBy: { createdAt: "desc" },
     } as const;
-    let products: any[];
-    try {
-      products = await prisma.product.findMany(query);
-    } catch (error) {
-      if (!isProductImagesSchemaUnavailable(error)) throw error;
-      products = await prisma.product.findMany({
-        ...query,
-        include: { category: query.include.category },
-      });
-    }
+    const products = await prisma.product.findMany(query);
 
     return products.map((product) => this.toAdminProductData(product));
   }
@@ -492,16 +460,7 @@ export class PrismaProductRepository implements ProductRepository {
         },
       },
     } as const;
-    let product: any;
-    try {
-      product = await prisma.product.findUnique(query);
-    } catch (error) {
-      if (!isProductImagesSchemaUnavailable(error)) throw error;
-      product = await prisma.product.findUnique({
-        ...query,
-        include: { category: query.include.category },
-      });
-    }
+    const product = await prisma.product.findUnique(query);
 
     return product ? this.toAdminProductData(product) : null;
   }

@@ -16,12 +16,23 @@ export interface ProductProps {
   height: number;
   material: string;
   imageUrl: string;
+  images?: ProductImageProps[];
   stock: number;
   status: ProductStatus;
   line?: string;
   character?: string;
   category?: string;
   characters?: string[];
+}
+
+export interface ProductImageProps {
+  id: string;
+  url: string;
+  storageKey: string;
+  altText: string;
+  sortOrder: number;
+  width?: number | null;
+  height?: number | null;
 }
 
 export class Product {
@@ -61,6 +72,10 @@ export class Product {
 
   get imageUrl(): string {
     return this.props.imageUrl;
+  }
+
+  get images(): ProductImageProps[] {
+    return this.props.images ?? [];
   }
 
   get stock(): number {

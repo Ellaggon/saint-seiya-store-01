@@ -4,6 +4,7 @@ import { Product, ProductStatus } from "../../domain/entities/Product";
 import type {
   AdminProductData,
   AdminProductInput,
+  ProductImageInput,
   ProductRepository,
 } from "../../domain/repositories/ProductRepository";
 import {
@@ -11,6 +12,7 @@ import {
   allocateCollectionSlug,
   allocateProductSlug,
 } from "@/lib/uniqueSlug";
+import { productImageUrl } from "@/application/services/productImageUrl";
 
 const productStatusToPrisma: Record<ProductStatus, PrismaProductStatus> = {
   [ProductStatus.DRAFT]: "DRAFT",
@@ -18,6 +20,37 @@ const productStatusToPrisma: Record<ProductStatus, PrismaProductStatus> = {
   [ProductStatus.PRE_ORDER]: "PRE_ORDER",
   [ProductStatus.OUT_OF_STOCK]: "OUT_OF_STOCK",
   [ProductStatus.ARCHIVED]: "ARCHIVED",
+};
+
+const normalizeProductImages = (input: AdminProductInput): ProductImageInput[] => {
+  const source = input.images;
+  if (!source) return [];
+  if (source.length === 0 || source.length > 12) {
+    throw new Error("A product must have between 1 and 12 images");
+  }
+
+  const uniqueIds = new Set<string>();
+  return source.map((image, index) => {
+    if (!image.id || !image.storageKey || uniqueIds.has(image.id)) {
+      throw new Error("Invalid product image payload");
+    }
+    uniqueIds.add(image.id);
+    return {
+      ...image,
+      url: productImageUrl(image.storageKey),
+      altText: image.altText.trim() || input.name,
+      sortOrder: index,
+    };
+  });
+};
+
+const isProductImagesSchemaUnavailable = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("Unknown field `images`") ||
+    message.includes("Unknown field images") ||
+    message.includes("ProductImage")
+  );
 };
 
 export class PrismaProductRepository implements ProductRepository {
@@ -40,6 +73,14 @@ export class PrismaProductRepository implements ProductRepository {
     updatedAt: Date;
     deletedAt: Date | null;
     category?: { id: string; name: string; slug: string } | null;
+    images?: {
+      id: string;
+      storageKey: string;
+      altText: string;
+      sortOrder: number;
+      width: number | null;
+      height: number | null;
+    }[];
   }): AdminProductData {
     return {
       id: product.id,
@@ -52,6 +93,15 @@ export class PrismaProductRepository implements ProductRepository {
       height: Number(product.height),
       material: product.material,
       imageUrl: product.imageUrl,
+      images: (product.images ?? []).map((image) => ({
+        id: image.id,
+        url: productImageUrl(image.storageKey),
+        storageKey: image.storageKey,
+        altText: image.altText,
+        sortOrder: image.sortOrder,
+        width: image.width,
+        height: image.height,
+      })),
       stock: product.stock,
       status: product.status as ProductStatus,
       createdAt: product.createdAt,
@@ -97,18 +147,37 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async findById(id: string): Promise<Product | null> {
-    const p = await (prisma.product as any).findUnique({
-      where: { id },
-      include: {
-        category: { select: { name: true } },
-        collection: { select: { name: true } },
-        characters: {
-          select: {
-            character: { select: { name: true } },
-          },
+    const include = {
+      category: { select: { name: true } },
+      collection: { select: { name: true } },
+      characters: {
+        select: {
+          character: { select: { name: true } },
         },
       },
-    });
+      images: {
+        where: { deletedAt: null, status: "READY" },
+        orderBy: { sortOrder: "asc" },
+      },
+    };
+    let p: any;
+    try {
+      p = await (prisma.product as any).findUnique({
+        where: { id },
+        include,
+      });
+    } catch (error) {
+      if (!isProductImagesSchemaUnavailable(error)) throw error;
+      console.warn("[Product media] ProductImage migration is pending; serving legacy cover.");
+      p = await (prisma.product as any).findUnique({
+        where: { id },
+        include: {
+          category: { select: { name: true } },
+          collection: { select: { name: true } },
+          characters: { select: { character: { select: { name: true } } } },
+        },
+      });
+    }
 
     if (!p) return null;
 
@@ -122,6 +191,15 @@ export class PrismaProductRepository implements ProductRepository {
       height: Number(p.height),
       material: p.material || "",
       imageUrl: p.imageUrl,
+      images: p.images?.map((image: any) => ({
+        id: image.id,
+        url: productImageUrl(image.storageKey),
+        storageKey: image.storageKey,
+        altText: image.altText,
+        sortOrder: image.sortOrder,
+        width: image.width,
+        height: image.height,
+      })),
       stock: p.stock || 0,
       status: p.status as ProductStatus,
       line: p.collection?.name,
@@ -366,7 +444,7 @@ export class PrismaProductRepository implements ProductRepository {
   }
 
   async listAdminProducts(): Promise<AdminProductData[]> {
-    const products = await prisma.product.findMany({
+    const query = {
       where: { deletedAt: null },
       include: {
         category: {
@@ -376,15 +454,29 @@ export class PrismaProductRepository implements ProductRepository {
             slug: true,
           },
         },
+        images: {
+          where: { deletedAt: null, status: "READY" },
+          orderBy: { sortOrder: "asc" },
+        },
       },
       orderBy: { createdAt: "desc" },
-    });
+    } as const;
+    let products: any[];
+    try {
+      products = await prisma.product.findMany(query);
+    } catch (error) {
+      if (!isProductImagesSchemaUnavailable(error)) throw error;
+      products = await prisma.product.findMany({
+        ...query,
+        include: { category: query.include.category },
+      });
+    }
 
     return products.map((product) => this.toAdminProductData(product));
   }
 
   async findAdminProductById(id: string): Promise<AdminProductData | null> {
-    const product = await prisma.product.findUnique({
+    const query = {
       where: { id },
       include: {
         category: {
@@ -394,17 +486,33 @@ export class PrismaProductRepository implements ProductRepository {
             slug: true,
           },
         },
+        images: {
+          where: { deletedAt: null, status: "READY" },
+          orderBy: { sortOrder: "asc" },
+        },
       },
-    });
+    } as const;
+    let product: any;
+    try {
+      product = await prisma.product.findUnique(query);
+    } catch (error) {
+      if (!isProductImagesSchemaUnavailable(error)) throw error;
+      product = await prisma.product.findUnique({
+        ...query,
+        include: { category: query.include.category },
+      });
+    }
 
     return product ? this.toAdminProductData(product) : null;
   }
 
   async createAdminProduct(input: AdminProductInput): Promise<AdminProductData> {
     const slug = await allocateProductSlug(input.name);
+    const images = normalizeProductImages(input);
 
     const product = await prisma.product.create({
       data: {
+        id: input.id,
         name: input.name,
         slug,
         description: input.description,
@@ -413,9 +521,22 @@ export class PrismaProductRepository implements ProductRepository {
         collectionId: input.collectionId,
         height: input.height,
         material: input.material ?? undefined,
-        imageUrl: input.imageUrl,
+        imageUrl: images[0]?.url ?? input.imageUrl,
         stock: input.stock,
         status: productStatusToPrisma[input.status],
+        images: {
+          create: images.map((image) => ({
+            id: image.id,
+            storageKey: image.storageKey,
+            altText: image.altText,
+            sortOrder: image.sortOrder,
+            width: image.width ?? undefined,
+            height: image.height ?? undefined,
+            byteSize: image.byteSize ?? undefined,
+            mimeType: image.mimeType ?? undefined,
+            checksum: image.checksum ?? undefined,
+          })),
+        },
       },
       include: {
         category: {
@@ -425,6 +546,7 @@ export class PrismaProductRepository implements ProductRepository {
             slug: true,
           },
         },
+        images: { orderBy: { sortOrder: "asc" } },
       },
     });
 
@@ -435,6 +557,7 @@ export class PrismaProductRepository implements ProductRepository {
     input: AdminProductInput & { id: string },
   ): Promise<AdminProductData> {
     const slug = await allocateProductSlug(input.name, input.id);
+    const images = normalizeProductImages(input);
 
     const product = await prisma.product.update({
       where: { id: input.id },
@@ -447,9 +570,27 @@ export class PrismaProductRepository implements ProductRepository {
         collectionId: input.collectionId,
         height: input.height,
         material: input.material,
-        imageUrl: input.imageUrl,
+        imageUrl: images[0]?.url ?? input.imageUrl,
         stock: input.stock ?? 0,
         status: productStatusToPrisma[input.status],
+        ...(input.images
+          ? {
+              images: {
+                deleteMany: {},
+                create: images.map((image) => ({
+                  id: image.id,
+                  storageKey: image.storageKey,
+                  altText: image.altText,
+                  sortOrder: image.sortOrder,
+                  width: image.width ?? undefined,
+                  height: image.height ?? undefined,
+                  byteSize: image.byteSize ?? undefined,
+                  mimeType: image.mimeType ?? undefined,
+                  checksum: image.checksum ?? undefined,
+                })),
+              },
+            }
+          : {}),
       },
       include: {
         category: {
@@ -459,6 +600,7 @@ export class PrismaProductRepository implements ProductRepository {
             slug: true,
           },
         },
+        images: { orderBy: { sortOrder: "asc" } },
       },
     });
 

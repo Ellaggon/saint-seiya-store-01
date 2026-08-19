@@ -21,6 +21,7 @@ export class CatalogMapper {
       height: product.height,
       material: product.material,
       imageUrl: product.imageUrl,
+      images: product.images,
       stock: product.stock,
       status: product.status,
       line: product.line,

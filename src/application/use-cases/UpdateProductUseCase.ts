@@ -27,6 +27,7 @@ export class UpdateProductUseCase {
       height: product.height,
       material: product.material ?? "",
       imageUrl: product.imageUrl,
+      images: product.images,
       stock: product.stock,
       status: product.status,
     };

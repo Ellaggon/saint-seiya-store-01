@@ -1,16 +1,12 @@
 ---
 import MainLayout from "@/ui/layouts/MainLayout.astro";
-import {
-  orderInclude,
-  serializeOrder,
-} from "@/application/orders/serializeOrder";
+import { serializeOrder } from "@/application/orders/serializeOrder";
 import {
   orderStatusClass,
   orderStatusLabel,
 } from "@/application/orders/orderStatus";
+import { listAdminOrders } from "@/application/orders/adminOrderQueries";
 import { formatPrice } from "@/lib/utils";
-import { prisma } from "@/infrastructure/database/prisma";
-import type { OrderStatus } from "@prisma/client";
 
 const user = Astro.locals.user;
 if (!user || user.role !== "ADMIN") {
@@ -20,28 +16,9 @@ if (!user || user.role !== "ADMIN") {
 const statusFilter = Astro.url.searchParams.get("status") ?? "ALL";
 const q = Astro.url.searchParams.get("q")?.trim() ?? "";
 
-const where: {
-  status?: OrderStatus;
-  OR?: Array<Record<string, unknown>>;
-} = {};
-
-if (statusFilter !== "ALL") {
-  where.status = statusFilter as OrderStatus;
-}
-
-if (q) {
-  where.OR = [
-    { referenceCode: { contains: q, mode: "insensitive" } },
-    { customerName: { contains: q, mode: "insensitive" } },
-    { customerPhone: { contains: q, mode: "insensitive" } },
-  ];
-}
-
-const orders = await prisma.order.findMany({
-  where,
-  orderBy: { createdAt: "desc" },
-  take: 100,
-  include: orderInclude,
+const orders = await listAdminOrders({
+  status: statusFilter === "ALL" ? undefined : statusFilter as any,
+  q,
 });
 
 const serialized = orders.map((order) => serializeOrder(order));

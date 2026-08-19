@@ -16,7 +16,8 @@ export type ApplicationErrorCode =
   | "PAYMENT_EXCEEDS_BALANCE"
   | "DUPLICATE_PAYMENT"
   | "FORBIDDEN"
-  | "INVALID_PREORDER_STATE";
+  | "INVALID_PREORDER_STATE"
+  | "NOT_FOUND";
 
 interface CodedError {
   code: string;
@@ -134,6 +135,15 @@ export class ApplicationError extends Error {
 
   static forbidden(): ApplicationError {
     return new ApplicationError("FORBIDDEN", "Operation is not allowed", 403);
+  }
+
+  static notFound(entity: string, id?: string): ApplicationError {
+    return new ApplicationError(
+      "NOT_FOUND",
+      id ? `${entity} not found` : `${entity} not found`,
+      404,
+      id ? { id } : undefined,
+    );
   }
 
   static invalidPreorderState(message: string): ApplicationError {

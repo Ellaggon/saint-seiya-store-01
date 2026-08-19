@@ -36,11 +36,13 @@ const trackingAttrs = {
       Reservar
     </a>
   ) : (
-    <span
+    <button
+      type="button"
+      id="preorder-cta-open"
       {...trackingAttrs}
-      class="block border border-amber-500 text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-3 text-center"
+      class="block w-full border border-amber-500 text-amber-500 text-[10px] font-black uppercase tracking-[0.2em] px-4 py-3 text-center hover:bg-amber-500 hover:text-black transition-all"
     >
       Reservar
-    </span>
+    </button>
   )
 }

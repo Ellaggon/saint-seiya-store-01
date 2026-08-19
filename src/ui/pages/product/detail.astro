@@ -255,8 +255,56 @@ const charactersLabel =
                     campaignId={preorder.campaign.id}
                   />
 
+                  <div
+                    id="preorder-reserve-panel"
+                    class="hidden space-y-3 border border-zinc-900 bg-black px-4 py-4"
+                    data-campaign-id={preorder.campaign.id}
+                    data-allow-full={preorder.campaign.allowFullPayment ? "true" : "false"}
+                  >
+                    <p class="text-[10px] font-black uppercase tracking-widest text-amber-500">
+                      Confirmar reserva
+                    </p>
+                    <label class="block space-y-2">
+                      <span class="text-[10px] uppercase tracking-widest text-zinc-600">
+                        Cantidad
+                      </span>
+                      <input
+                        id="preorder-qty"
+                        type="number"
+                        min="1"
+                        value="1"
+                        class="w-full border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white"
+                      />
+                    </label>
+                    <label class="block space-y-2">
+                      <span class="text-[10px] uppercase tracking-widest text-zinc-600">
+                        Modo de pago
+                      </span>
+                      <select
+                        id="preorder-mode"
+                        class="w-full border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm text-white"
+                      >
+                        <option value="DEPOSIT">Abono / depósito</option>
+                        {preorder.campaign.allowFullPayment && (
+                          <option value="FULL">Pago total</option>
+                        )}
+                      </select>
+                    </label>
+                    <p
+                      id="preorder-reserve-error"
+                      class="hidden text-[10px] font-black uppercase tracking-widest text-red-400"
+                    ></p>
+                    <button
+                      type="button"
+                      id="preorder-reserve-submit"
+                      class="w-full bg-amber-500 py-3 text-[10px] font-black uppercase tracking-widest text-black hover:bg-white"
+                    >
+                      Reservar y pagar con QR
+                    </button>
+                  </div>
+
                   <p class="text-zinc-600 text-[9px] uppercase tracking-[0.2em]">
-                    Debes iniciar sesión para reservar. El pago queda asociado a esta campaña de preventa.
+                    Debes iniciar sesión para reservar. Luego pagas con QR bancario y subes el comprobante.
                   </p>
                 </section>
               )
@@ -278,3 +326,72 @@ const charactersLabel =
     }
   </main>
 </MainLayout>
+
+{
+  product && preorder && preorderIsOpen && !preorderIsSoldOut && (
+    <script>
+      const openBtn = document.getElementById("preorder-cta-open");
+      const panel = document.getElementById("preorder-reserve-panel");
+      const submitBtn = document.getElementById("preorder-reserve-submit");
+      const errorEl = document.getElementById("preorder-reserve-error");
+
+      openBtn?.addEventListener("click", () => {
+        panel?.classList.remove("hidden");
+        openBtn.classList.add("hidden");
+      });
+
+      submitBtn?.addEventListener("click", async () => {
+        if (!panel || !submitBtn) return;
+        const campaignId = panel.dataset.campaignId;
+        if (!campaignId) return;
+
+        const qtyInput = document.getElementById(
+          "preorder-qty",
+        ) as HTMLInputElement | null;
+        const modeSelect = document.getElementById(
+          "preorder-mode",
+        ) as HTMLSelectElement | null;
+        const quantity = Math.max(1, Number(qtyInput?.value || 1));
+        const paymentMode = modeSelect?.value === "FULL" ? "FULL" : "DEPOSIT";
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Reservando…";
+        errorEl?.classList.add("hidden");
+
+        try {
+          const res = await fetch(`/api/preorders/${campaignId}/reserve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ quantity, paymentMode }),
+          });
+          const json = (await res.json().catch(() => null)) as {
+            data?: { reservation?: { id: string } };
+            error?: { message?: string; code?: string };
+          } | null;
+
+          if (res.status === 401) {
+            window.location.href = `/login?returnTo=${encodeURIComponent(window.location.pathname)}`;
+            return;
+          }
+
+          if (!res.ok || !json?.data?.reservation?.id) {
+            throw new Error(
+              json?.error?.message || "No se pudo crear la reserva",
+            );
+          }
+
+          window.location.href = `/preorders/reservations/${json.data.reservation.id}/pay`;
+        } catch (error) {
+          if (errorEl) {
+            errorEl.textContent =
+              error instanceof Error ? error.message : "Error al reservar";
+            errorEl.classList.remove("hidden");
+          }
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Reservar y pagar con QR";
+        }
+      });
+    </script>
+  )
+}

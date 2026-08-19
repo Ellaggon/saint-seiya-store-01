@@ -74,6 +74,7 @@ const PRISMA_PAYMENT_STATUS = {
 
 const PRISMA_PAYMENT_PROVIDER = {
   MANUAL: "MANUAL",
+  QR_BANK: "QR_BANK",
   STRIPE: "STRIPE",
   MERCADOPAGO: "MERCADOPAGO",
   WEBPAY: "WEBPAY",
@@ -209,6 +210,7 @@ const paymentProviderToDomain: Record<
   PreorderPaymentProvider
 > = {
   [PRISMA_PAYMENT_PROVIDER.MANUAL]: PreorderPaymentProvider.MANUAL,
+  [PRISMA_PAYMENT_PROVIDER.QR_BANK]: PreorderPaymentProvider.QR_BANK,
   [PRISMA_PAYMENT_PROVIDER.STRIPE]: PreorderPaymentProvider.STRIPE,
   [PRISMA_PAYMENT_PROVIDER.MERCADOPAGO]: PreorderPaymentProvider.MERCADOPAGO,
   [PRISMA_PAYMENT_PROVIDER.WEBPAY]: PreorderPaymentProvider.WEBPAY,
@@ -220,6 +222,7 @@ export const paymentProviderToPrisma: Record<
   PrismaPaymentProviderType
 > = {
   [PreorderPaymentProvider.MANUAL]: PRISMA_PAYMENT_PROVIDER.MANUAL,
+  [PreorderPaymentProvider.QR_BANK]: PRISMA_PAYMENT_PROVIDER.QR_BANK,
   [PreorderPaymentProvider.STRIPE]: PRISMA_PAYMENT_PROVIDER.STRIPE,
   [PreorderPaymentProvider.MERCADOPAGO]: PRISMA_PAYMENT_PROVIDER.MERCADOPAGO,
   [PreorderPaymentProvider.WEBPAY]: PRISMA_PAYMENT_PROVIDER.WEBPAY,

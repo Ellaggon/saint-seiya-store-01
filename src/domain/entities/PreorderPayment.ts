@@ -16,6 +16,7 @@ export enum PreorderPaymentStatus {
 
 export enum PreorderPaymentProvider {
   MANUAL = "MANUAL",
+  QR_BANK = "QR_BANK",
   STRIPE = "STRIPE",
   MERCADOPAGO = "MERCADOPAGO",
   WEBPAY = "WEBPAY",

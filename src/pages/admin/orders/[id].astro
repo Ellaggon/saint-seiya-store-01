@@ -1,0 +1,378 @@
+---
+import MainLayout from "@/ui/layouts/MainLayout.astro";
+import { serializeOrder } from "@/application/orders/serializeOrder";
+import {
+  orderStatusClass,
+  orderStatusLabel,
+} from "@/application/orders/orderStatus";
+import { findAdminOrderById } from "@/application/orders/adminOrderQueries";
+import { buildWhatsAppUrl, isWhatsAppConfigured } from "@/lib/storeContact";
+import { formatPrice } from "@/lib/utils";
+
+const user = Astro.locals.user;
+if (!user || user.role !== "ADMIN") {
+  return Astro.redirect("/login");
+}
+
+const { id } = Astro.params;
+if (!id) return Astro.redirect("/admin/orders");
+
+const orderRow = await findAdminOrderById(id);
+
+if (!orderRow) {
+  return new Response("Pedido no encontrado", { status: 404 });
+}
+
+const order = serializeOrder(orderRow);
+const customerWa =
+  order.customerPhone && isWhatsAppConfigured(order.customerPhone)
+    ? buildWhatsAppUrl(
+        `Hola ${order.customerName || ""}, sobre tu pedido ${order.referenceCode}…`,
+        order.customerPhone,
+      )
+    : null;
+
+const canConfirm =
+  order.status === "AWAITING_PAYMENT" ||
+  order.status === "PAYMENT_REVIEW" ||
+  order.status === "PENDING";
+const canReject = order.status === "PAYMENT_REVIEW";
+const canShip = order.status === "PAID";
+const canDeliver = order.status === "SHIPPED" || order.status === "PAID";
+const canCancel =
+  order.status !== "SHIPPED" &&
+  order.status !== "DELIVERED" &&
+  order.status !== "CANCELED";
+---
+
+<MainLayout title={`Pedido ${order.referenceCode}`}>
+  <div class="mx-auto max-w-[900px] px-6 py-12">
+    <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div class="space-y-2">
+        <a
+          href="/admin/orders"
+          class="text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-amber-500"
+        >
+          ← Pedidos
+        </a>
+        <h1 class="text-3xl font-black uppercase tracking-tighter text-white sm:text-4xl">
+          {order.referenceCode}
+        </h1>
+        <p class={`text-sm font-black uppercase tracking-widest ${orderStatusClass(order.status)}`}>
+          {orderStatusLabel(order.status)}
+        </p>
+      </div>
+      <p class="text-2xl font-black text-white">
+        {formatPrice(order.totalAmount)}
+      </p>
+    </div>
+
+    <div
+      id="admin-order-banner"
+      class="mb-6 hidden border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-amber-400"
+    >
+    </div>
+
+    <div class="space-y-5">
+      <section class="border border-zinc-900 bg-zinc-950 px-5 py-6">
+        <p class="text-[10px] font-black uppercase tracking-[0.35em] text-amber-500">
+          Cliente
+        </p>
+        <dl class="mt-4 grid gap-3 sm:grid-cols-2">
+          <div>
+            <dt class="text-[10px] uppercase tracking-widest text-zinc-600">Nombre</dt>
+            <dd class="mt-1 text-sm font-bold text-white">
+              {order.customerName || order.user?.name || "—"}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-widest text-zinc-600">Teléfono</dt>
+            <dd class="mt-1 text-sm font-bold text-white">
+              {order.customerPhone || "—"}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-widest text-zinc-600">Ciudad</dt>
+            <dd class="mt-1 text-sm font-bold text-white">
+              {order.customerCity || "—"}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-widest text-zinc-600">Email</dt>
+            <dd class="mt-1 text-sm font-bold text-white">
+              {order.user?.email || "Invitado"}
+            </dd>
+          </div>
+          {
+            order.customerNote && (
+              <div class="sm:col-span-2">
+                <dt class="text-[10px] uppercase tracking-widest text-zinc-600">Nota</dt>
+                <dd class="mt-1 text-sm text-zinc-300">{order.customerNote}</dd>
+              </div>
+            )
+          }
+        </dl>
+        {
+          customerWa && (
+            <a
+              href={customerWa}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="mt-4 inline-flex text-[10px] font-black uppercase tracking-widest text-[#25D366] hover:text-white"
+            >
+              Abrir WhatsApp del cliente →
+            </a>
+          )
+        }
+      </section>
+
+      <section class="border border-zinc-900 bg-zinc-950 px-5 py-6">
+        <p class="text-[10px] font-black uppercase tracking-[0.35em] text-amber-500">
+          Pedido
+        </p>
+        <ul class="mt-4 divide-y divide-zinc-900">
+          {
+            order.items.map((item) => (
+              <li class="flex items-center justify-between gap-4 py-3">
+                <div class="flex min-w-0 items-center gap-3">
+                  <img
+                    src={item.imageUrl}
+                    alt=""
+                    class="h-12 w-12 border border-zinc-800 object-cover"
+                  />
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-black uppercase tracking-tight text-white">
+                      {item.name}
+                    </p>
+                    <p class="text-[10px] uppercase tracking-widest text-zinc-600">
+                      ×{item.quantity} · {formatPrice(item.price)}
+                    </p>
+                  </div>
+                </div>
+                <p class="shrink-0 text-sm font-black text-white">
+                  {formatPrice(item.price * item.quantity)}
+                </p>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section class="border border-zinc-900 bg-zinc-950 px-5 py-6">
+        <p class="text-[10px] font-black uppercase tracking-[0.35em] text-amber-500">
+          Pago
+        </p>
+        <dl class="mt-4 grid gap-3 sm:grid-cols-2">
+          <div>
+            <dt class="text-[10px] uppercase tracking-widest text-zinc-600">Método</dt>
+            <dd class="mt-1 text-sm font-bold text-white">
+              {order.paymentMethod === "QR_BANK" ? "QR bancario" : "WhatsApp"}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-widest text-zinc-600">
+              Estado pago
+            </dt>
+            <dd class="mt-1 text-sm font-bold text-white">
+              {order.payment?.status ?? "—"}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-widest text-zinc-600">
+              Referencia
+            </dt>
+            <dd class="mt-1 text-sm font-black uppercase tracking-widest text-amber-500">
+              {order.referenceCode}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-[10px] uppercase tracking-widest text-zinc-600">
+              Tracking
+            </dt>
+            <dd class="mt-1 text-sm font-bold text-white">
+              {order.shippingTrackerId || "—"}
+            </dd>
+          </div>
+        </dl>
+        {
+          order.payment?.proofUrl && (
+            <div class="mt-5 space-y-3">
+              <p class="text-[10px] uppercase tracking-widest text-zinc-600">
+                Comprobante
+              </p>
+              {order.payment.proofUrl.toLowerCase().endsWith(".pdf") ? (
+                <a
+                  href={order.payment.proofUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex border border-zinc-800 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-amber-500 hover:border-amber-500"
+                >
+                  Abrir PDF
+                </a>
+              ) : (
+                <a
+                  href={order.payment.proofUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img
+                    src={order.payment.proofUrl}
+                    alt="Comprobante de pago"
+                    class="max-h-80 w-auto max-w-full border border-zinc-800"
+                  />
+                </a>
+              )}
+              {order.payment.proofUploadedAt && (
+                <p class="text-[10px] uppercase tracking-widest text-zinc-600">
+                  Subido:{" "}
+                  {new Date(order.payment.proofUploadedAt).toLocaleString("es-BO")}
+                </p>
+              )}
+            </div>
+          )
+        }
+        {
+          order.payment?.adminNote && (
+            <p class="mt-4 text-xs text-zinc-500">
+              Nota admin: {order.payment.adminNote}
+            </p>
+          )
+        }
+      </section>
+
+      <section class="border border-zinc-900 bg-zinc-950 px-5 py-6">
+        <p class="text-[10px] font-black uppercase tracking-[0.35em] text-amber-500">
+          Acciones
+        </p>
+        <div class="mt-4 space-y-3">
+          <label class="block space-y-2">
+            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-600">
+              Nota interna
+            </span>
+            <textarea
+              id="admin-note"
+              rows="2"
+              class="w-full border border-zinc-800 bg-black px-3 py-3 text-sm text-white outline-none focus:border-amber-500"
+              placeholder="Opcional"
+            ></textarea>
+          </label>
+          <label class="block space-y-2">
+            <span class="text-[10px] font-black uppercase tracking-widest text-zinc-600">
+              Tracking de envío
+            </span>
+            <input
+              id="shipping-tracker"
+              type="text"
+              value={order.shippingTrackerId ?? ""}
+              class="w-full border border-zinc-800 bg-black px-3 py-3 text-sm text-white outline-none focus:border-amber-500"
+              placeholder="Código de tracking"
+            />
+          </label>
+          <div class="flex flex-wrap gap-3 pt-2">
+            {
+              canConfirm && (
+                <button
+                  type="button"
+                  data-action="confirm_payment"
+                  class="bg-emerald-500 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-black hover:bg-white"
+                >
+                  Confirmar pago
+                </button>
+              )
+            }
+            {
+              canReject && (
+                <button
+                  type="button"
+                  data-action="reject_proof"
+                  class="border border-red-500/50 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-red-400 hover:bg-red-500 hover:text-black"
+                >
+                  Rechazar comprobante
+                </button>
+              )
+            }
+            {
+              canShip && (
+                <button
+                  type="button"
+                  data-action="ship"
+                  class="border border-sky-500/50 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-sky-400 hover:bg-sky-500 hover:text-black"
+                >
+                  Marcar enviado
+                </button>
+              )
+            }
+            {
+              canDeliver && (
+                <button
+                  type="button"
+                  data-action="deliver"
+                  class="border border-zinc-700 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-300 hover:bg-white hover:text-black"
+                >
+                  Marcar entregado
+                </button>
+              )
+            }
+            {
+              canCancel && (
+                <button
+                  type="button"
+                  data-action="cancel"
+                  class="border border-zinc-800 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:border-red-500 hover:text-red-400"
+                >
+                  Cancelar
+                </button>
+              )
+            }
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</MainLayout>
+
+<script define:vars={{ orderId: order.id }}>
+  const banner = document.getElementById("admin-order-banner");
+  const show = (msg) => {
+    if (!banner) return;
+    banner.textContent = msg;
+    banner.classList.remove("hidden");
+  };
+
+  document.querySelectorAll("[data-action]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const action = btn.getAttribute("data-action");
+      if (!action) return;
+      if (action === "cancel" && !confirm("¿Cancelar este pedido?")) return;
+      if (
+        action === "reject_proof" &&
+        !confirm("¿Rechazar el comprobante y pedir uno nuevo?")
+      ) {
+        return;
+      }
+
+      const adminNote =
+        document.getElementById("admin-note")?.value?.trim() || null;
+      const shippingTrackerId =
+        document.getElementById("shipping-tracker")?.value?.trim() || null;
+
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/admin/orders/${orderId}/status`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ action, adminNote, shippingTrackerId }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(json?.error?.message || "No se pudo actualizar");
+        }
+        window.location.reload();
+      } catch (error) {
+        show(error instanceof Error ? error.message : "Error");
+        btn.disabled = false;
+      }
+    });
+  });
+</script>

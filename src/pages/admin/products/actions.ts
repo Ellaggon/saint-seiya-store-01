@@ -8,6 +8,13 @@ import { invalidateCatalogCache } from "@/application/services/CatalogQueryServi
 import { invalidatePreorderCache } from "@/application/services/PreorderQueryCache";
 import type { ProductImageInput } from "@/domain/repositories/ProductRepository";
 import { R2Storage } from "@/infrastructure/storage/r2Storage";
+import { isProductImageSchemaAvailable } from "@/infrastructure/database/productImageSchema";
+
+class ProductImageMigrationPendingError extends Error {
+  constructor() {
+    super("La galería requiere aplicar las migraciones de base de datos antes de guardar imágenes.");
+  }
+}
 
 // Helper to validate admin role (redundant because of middleware but safe)
 const ensureAdmin = (locals: App.Locals) => {
@@ -162,6 +169,7 @@ const verifyUploadedImages = async (images: ProductImageInput[] | undefined): Pr
 };
 
 export const POST: APIRoute = async ({ request, locals, redirect }) => {
+  let errorTarget = "/admin/products";
   try {
     ensureAdmin(locals);
 
@@ -171,9 +179,17 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
 
     if (action === "create") {
       const productId = requiredString(formData, "productId");
+      errorTarget = "/admin/products/new";
       if (!isUuid(productId)) throw new Error("ID de producto inválido");
       const name = requiredString(formData, "name");
-      const images = parseProductImages(formData, productId, name);
+      const requestedImages = parseProductImages(formData, productId, name);
+      const images = (await isProductImageSchemaAvailable())
+        ? requestedImages
+        : undefined;
+      if (!images && requestedImages?.some((image) => image.storageKey.startsWith("products/"))) {
+        await deleteRemovedObjects(requestedImages.map((image) => image.storageKey));
+        throw new ProductImageMigrationPendingError();
+      }
       await verifyUploadedImages(images);
       const useCase = new CreateProductUseCase(repository);
       await useCase.execute({
@@ -200,8 +216,16 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
 
     if (action === "update") {
       const productId = requiredString(formData, "id");
+      errorTarget = `/admin/products/${productId}`;
       const name = requiredString(formData, "name");
-      const images = parseProductImages(formData, productId, name, true);
+      const requestedImages = parseProductImages(formData, productId, name, true);
+      const images = (await isProductImageSchemaAvailable())
+        ? requestedImages
+        : undefined;
+      if (!images && requestedImages?.some((image) => image.storageKey.startsWith("products/"))) {
+        await deleteRemovedObjects(requestedImages.map((image) => image.storageKey));
+        throw new ProductImageMigrationPendingError();
+      }
       await verifyUploadedImages(images);
       const useCase = new UpdateProductUseCase(repository);
       await useCase.execute({
@@ -237,6 +261,9 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
 
     return new Response("Action not found", { status: 400 });
   } catch (error: unknown) {
+    if (error instanceof ProductImageMigrationPendingError) {
+      return redirect(`${errorTarget}?error=product-image-migration-pending`);
+    }
     console.error("Admin Action Error:", error);
     return new Response(error instanceof Error ? error.message : "Internal Server Error", {
       status: 500,

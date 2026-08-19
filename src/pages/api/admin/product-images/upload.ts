@@ -4,6 +4,7 @@ import { failure, success } from "@/endpoints/api/shared/api-response";
 import { ApplicationError } from "@/application/errors/ApplicationError";
 import { optimizeImageForUpload } from "@/application/services/optimizeImageForUpload";
 import { R2Storage } from "@/infrastructure/storage/r2Storage";
+import { isProductImageSchemaAvailable } from "@/infrastructure/database/productImageSchema";
 
 const MAX_PROXY_BYTES = 4 * 1024 * 1024;
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
@@ -14,6 +15,11 @@ const isUuid = (value: unknown): value is string =>
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     requireAdmin(locals);
+    if (!(await isProductImageSchemaAvailable())) {
+      throw ApplicationError.validation(
+        "La galería requiere aplicar las migraciones de base de datos antes de subir imágenes.",
+      );
+    }
     const formData = await request.formData();
     const productId = formData.get("productId");
     const imageId = formData.get("imageId");

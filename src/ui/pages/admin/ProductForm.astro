@@ -21,6 +21,7 @@ const defaultStatus = returnTo.startsWith("/admin/preorders")
   ? "PRE_ORDER"
   : "DRAFT";
 const mediaProductId = product?.id || crypto.randomUUID();
+const formError = Astro.url.searchParams.get("error");
 
 const statusOptions = [
   { value: "DRAFT", label: "Borrador" },
@@ -69,6 +70,12 @@ const statusOptions = [
       </h1>
       <div class="w-12 h-1 bg-amber-500"></div>
     </div>
+
+    {formError === "product-image-migration-pending" && (
+      <div class="mb-6 border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs leading-5 text-amber-100" role="alert">
+        La imagen no se guardó porque esta base aún no tiene la migración de galería. Aplica las migraciones y vuelve a cargarla.
+      </div>
+    )}
 
     <!-- Form Section -->
     <form

@@ -3,6 +3,7 @@ import { requireAdmin } from "@/endpoints/api/shared/auth";
 import { failure, success } from "@/endpoints/api/shared/api-response";
 import { ApplicationError } from "@/application/errors/ApplicationError";
 import { R2Storage } from "@/infrastructure/storage/r2Storage";
+import { isProductImageSchemaAvailable } from "@/infrastructure/database/productImageSchema";
 
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
@@ -20,6 +21,11 @@ const isUuid = (value: unknown): value is string =>
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     requireAdmin(locals);
+    if (!(await isProductImageSchemaAvailable())) {
+      throw ApplicationError.validation(
+        "La galería requiere aplicar las migraciones de base de datos antes de subir imágenes.",
+      );
+    }
     const body = (await request.json()) as {
       productId?: unknown;
       fileName?: unknown;

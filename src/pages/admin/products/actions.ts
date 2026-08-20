@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { CreateProductUseCase } from "@/application/use-cases/CreateProductUseCase";
 import { UpdateProductUseCase } from "@/application/use-cases/UpdateProductUseCase";
 import { ArchiveProductUseCase } from "@/application/use-cases/admin/products/ArchiveProductUseCase";
+import { DeleteProductUseCase } from "@/application/use-cases/admin/products/DeleteProductUseCase";
 import { ProductStatus } from "@/domain/entities/Product";
 import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
 import { invalidateCatalogCache } from "@/application/services/CatalogQueryService";
@@ -9,6 +10,7 @@ import { invalidatePreorderCache } from "@/application/services/PreorderQueryCac
 import type { ProductImageInput } from "@/domain/repositories/ProductRepository";
 import { R2Storage } from "@/infrastructure/storage/r2Storage";
 import { isProductImageSchemaAvailable } from "@/infrastructure/database/productImageSchema";
+import { ApplicationError } from "@/application/errors/ApplicationError";
 
 class ProductImageMigrationPendingError extends Error {
   constructor() {
@@ -45,6 +47,31 @@ const safeReturnTo = (formData: FormData): string => {
   }
 
   return value;
+};
+
+const redirectWithError = (
+  redirect: (
+    path: string,
+    status?: 300 | 301 | 302 | 303 | 304 | 307 | 308,
+  ) => Response,
+  path: string,
+  message: string,
+): Response => {
+  const params = new URLSearchParams({ error: message });
+  return redirect(`${path}?${params.toString()}`, 303);
+};
+
+const friendlyProductActionError = (error: unknown): string => {
+  if (error instanceof ApplicationError) return error.message;
+  const message = error instanceof Error ? error.message : "No se pudo completar la acción";
+  if (
+    message.includes("Foreign key constraint") ||
+    message.includes("OrderItem") ||
+    message.includes("Preorder")
+  ) {
+    return "No se puede eliminar esta figura porque tiene pedidos o preventas asociadas. Cámbiala a estado Archivado para ocultarla del catálogo sin perder el historial.";
+  }
+  return message;
 };
 
 const requiredNumber = (formData: FormData, key: string): number => {
@@ -170,11 +197,12 @@ const verifyUploadedImages = async (images: ProductImageInput[] | undefined): Pr
 
 export const POST: APIRoute = async ({ request, locals, redirect }) => {
   let errorTarget = "/admin/products";
+  let action: FormDataEntryValue | null = null;
   try {
     ensureAdmin(locals);
 
     const formData = await request.formData();
-    const action = formData.get("_action");
+    action = formData.get("_action");
     const repository = new PrismaProductRepository();
 
     if (action === "create") {
@@ -250,9 +278,20 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
       return redirect("/admin/products");
     }
 
-    if (action === "delete") {
+    if (action === "archive") {
       const useCase = new ArchiveProductUseCase(repository);
       await useCase.execute(requiredString(formData, "id"));
+
+      invalidateCatalogCache();
+      invalidatePreorderCache();
+      return redirect("/admin/products");
+    }
+
+    if (action === "delete") {
+      const productId = requiredString(formData, "id");
+      if (!isUuid(productId)) throw new Error("ID de producto inválido");
+      const useCase = new DeleteProductUseCase(repository, new R2Storage());
+      await useCase.execute(productId);
 
       invalidateCatalogCache();
       invalidatePreorderCache();
@@ -263,6 +302,14 @@ export const POST: APIRoute = async ({ request, locals, redirect }) => {
   } catch (error: unknown) {
     if (error instanceof ProductImageMigrationPendingError) {
       return redirect(`${errorTarget}?error=product-image-migration-pending`);
+    }
+    if (action === "delete" || action === "archive") {
+      console.error("Admin product delete error:", error);
+      return redirectWithError(
+        redirect,
+        "/admin/products",
+        friendlyProductActionError(error),
+      );
     }
     console.error("Admin Action Error:", error);
     return new Response(error instanceof Error ? error.message : "Internal Server Error", {

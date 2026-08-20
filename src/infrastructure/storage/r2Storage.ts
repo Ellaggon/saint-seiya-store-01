@@ -1,6 +1,8 @@
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -100,6 +102,61 @@ export class R2Storage implements ProductImageStorageService {
 
   async delete(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+  }
+
+  async listKeysByPrefix(prefix: string): Promise<string[]> {
+    if (!prefix || prefix.includes("..")) {
+      throw new Error("Invalid storage prefix");
+    }
+
+    const keys: string[] = [];
+    let continuationToken: string | undefined;
+
+    do {
+      const page = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: prefix,
+          ContinuationToken: continuationToken,
+        }),
+      );
+
+      for (const object of page.Contents ?? []) {
+        if (object.Key) keys.push(object.Key);
+      }
+
+      continuationToken = page.IsTruncated
+        ? page.NextContinuationToken
+        : undefined;
+    } while (continuationToken);
+
+    return keys;
+  }
+
+  async deleteMany(keys: string[]): Promise<void> {
+    const uniqueKeys = [...new Set(keys.filter((key) => key.trim().length > 0))];
+    if (!uniqueKeys.length) return;
+
+    for (let index = 0; index < uniqueKeys.length; index += 1000) {
+      const chunk = uniqueKeys.slice(index, index + 1000);
+      const result = await this.client.send(
+        new DeleteObjectsCommand({
+          Bucket: this.bucket,
+          Delete: {
+            Objects: chunk.map((Key) => ({ Key })),
+            Quiet: true,
+          },
+        }),
+      );
+
+      if (result.Errors?.length) {
+        throw new Error(
+          `Failed to delete ${result.Errors.length} object(s) from R2: ${
+            result.Errors[0]?.Key ?? "unknown"
+          }`,
+        );
+      }
+    }
   }
 
   publicUrlForKey(key: string): string {

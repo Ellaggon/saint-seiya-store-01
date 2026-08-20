@@ -12,6 +12,7 @@ if (!user || user.role !== "ADMIN") {
 const productRepository = new PrismaProductRepository();
 const listProducts = new ListAdminProductsUseCase(productRepository);
 const products = await getCachedAdminProductList(() => listProducts.execute());
+const error = Astro.url.searchParams.get("error");
 ---
 
-<ProductList products={products} />
+<ProductList products={products} error={error} />

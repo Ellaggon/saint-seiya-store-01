@@ -120,6 +120,10 @@ export interface ProductImageInput {
   checksum?: string | null;
 }
 
+export interface ProductDeletionMedia {
+  storageKeys: string[];
+}
+
 export interface ProductRepository {
   findById(id: string): Promise<Product | null>;
   findAll(): Promise<Product[]>;
@@ -134,7 +138,9 @@ export interface ProductRepository {
     input: AdminProductInput & { id: string },
   ): Promise<AdminProductData>;
   save(product: Product): Promise<void>;
-  delete(id: string): Promise<void>;
+  archive(id: string): Promise<void>;
+  delete(id: string): Promise<ProductDeletionMedia>;
+  countOrderItems(productId: string): Promise<number>;
 
   // Collection Management
   findAllCollections(): Promise<CollectionData[]>;

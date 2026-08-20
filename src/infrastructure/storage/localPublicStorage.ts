@@ -47,6 +47,14 @@ export class LocalPublicStorage implements ProductImageStorageService {
     // Local fallback is intentionally non-destructive; generated files are development-only.
   }
 
+  async listKeysByPrefix(): Promise<string[]> {
+    return [];
+  }
+
+  async deleteMany(): Promise<void> {
+    // Local fallback is intentionally non-destructive; generated files are development-only.
+  }
+
   publicUrlForKey(key: string): string {
     return key.startsWith("/") ? key : `/uploads/${key}`;
   }

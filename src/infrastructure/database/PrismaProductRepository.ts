@@ -5,6 +5,7 @@ import type {
   AdminProductData,
   AdminProductInput,
   ProductImageInput,
+  ProductDeletionMedia,
   ProductRepository,
 } from "../../domain/repositories/ProductRepository";
 import {
@@ -13,6 +14,7 @@ import {
   allocateProductSlug,
 } from "@/lib/uniqueSlug";
 import { productImageUrl } from "@/application/services/productImageUrl";
+import { ApplicationError } from "@/application/errors/ApplicationError";
 
 const productStatusToPrisma: Record<ProductStatus, PrismaProductStatus> = {
   [ProductStatus.DRAFT]: "DRAFT",
@@ -566,11 +568,82 @@ export class PrismaProductRepository implements ProductRepository {
     return this.toAdminProductData(product);
   }
 
-  async delete(id: string): Promise<void> {
+  async archive(id: string): Promise<void> {
     await prisma.product.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  async delete(id: string): Promise<ProductDeletionMedia> {
+    return prisma.$transaction(async (tx) => {
+      const product = await tx.product.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          imageUrl: true,
+          images: {
+            select: { storageKey: true },
+          },
+          _count: {
+            select: {
+              orderItems: true,
+            },
+          },
+        },
+      });
+
+      if (!product) {
+        throw ApplicationError.validation(
+          "La figura no existe o ya fue eliminada.",
+        );
+      }
+
+      if (product._count.orderItems > 0) {
+        throw ApplicationError.validation(
+          "No se puede eliminar esta figura porque ya aparece en pedidos. Cámbiala a estado Archivado para ocultarla del catálogo sin perder el historial.",
+        );
+      }
+
+      const reservationCount = await tx.preorderReservation.count({
+        where: { campaign: { productId: id } },
+      });
+      if (reservationCount > 0) {
+        throw ApplicationError.validation(
+          "No se puede eliminar esta figura porque tiene reservas de preventa. Cámbiala a estado Archivado para ocultarla del catálogo sin perder el historial.",
+        );
+      }
+
+      const storageKeys = [
+        product.imageUrl,
+        ...product.images.map((image) => image.storageKey),
+      ];
+
+      const campaignIds = (
+        await tx.preorderCampaign.findMany({
+          where: { productId: id },
+          select: { id: true },
+        })
+      ).map((campaign) => campaign.id);
+
+      if (campaignIds.length > 0) {
+        await tx.preorderCampaign.deleteMany({
+          where: { id: { in: campaignIds } },
+        });
+      }
+
+      await tx.reservation.deleteMany({ where: { productId: id } });
+      await tx.inventory.deleteMany({ where: { productId: id } });
+      await tx.productCharacter.deleteMany({ where: { productId: id } });
+      await tx.productImage.deleteMany({ where: { productId: id } });
+      await tx.product.delete({ where: { id } });
+
+      return { storageKeys };
+    });
+  }
+
+  async countOrderItems(productId: string): Promise<number> {
+    return prisma.orderItem.count({ where: { productId } });
   }
 
   // Collection Management

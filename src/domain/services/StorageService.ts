@@ -25,5 +25,7 @@ export interface ProductImageStorageService extends StorageService {
     eTag?: string;
   }>;
   delete(key: string): Promise<void>;
+  listKeysByPrefix(prefix: string): Promise<string[]>;
+  deleteMany(keys: string[]): Promise<void>;
   publicUrlForKey(key: string): string;
 }

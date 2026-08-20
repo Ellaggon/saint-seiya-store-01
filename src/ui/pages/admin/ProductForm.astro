@@ -76,6 +76,11 @@ const statusOptions = [
         La imagen no se guardó porque esta base aún no tiene la migración de galería. Aplica las migraciones y vuelve a cargarla.
       </div>
     )}
+    {formError && formError !== "product-image-migration-pending" && (
+      <div class="mb-6 border border-red-500/30 bg-red-500/5 px-4 py-3 text-xs font-bold uppercase tracking-widest text-red-400" role="alert">
+        {formError}
+      </div>
+    )}
 
     <!-- Form Section -->
     <form
@@ -326,6 +331,40 @@ const statusOptions = [
         </button>
       </div>
     </form>
+
+    {
+      isEditing && (
+        <section class="mt-8 space-y-4 border border-red-500/20 bg-zinc-950 p-8">
+          <div class="space-y-2">
+            <p class="text-[10px] font-black uppercase tracking-[0.35em] text-red-500">
+              Zona de riesgo
+            </p>
+            <h2 class="text-xl font-black uppercase tracking-tighter text-white">
+              Eliminar figura
+            </h2>
+            <p class="max-w-xl text-xs leading-5 text-zinc-500">
+              Borra el producto, su galería y los archivos en Cloudflare R2.
+              Si tiene pedidos o reservas de preventa, la eliminación se
+              bloqueará para conservar el historial.
+            </p>
+          </div>
+          <form
+            action="/api/admin/products/actions"
+            method="POST"
+            onsubmit="if (!confirm('¿Eliminar definitivamente esta figura? Se borrarán sus datos y las imágenes en Cloudflare. Esta acción no se puede deshacer.')) return false; this.querySelector('button[type=submit]').disabled = true;"
+          >
+            <input type="hidden" name="id" value={product.id} />
+            <input type="hidden" name="_action" value="delete" />
+            <button
+              type="submit"
+              class="inline-flex items-center justify-center border border-red-500/40 px-6 py-3 text-[11px] font-black uppercase tracking-widest text-red-500 transition-colors hover:bg-red-500/10"
+            >
+              Eliminar figura
+            </button>
+          </form>
+        </section>
+      )
+    }
   </div>
 
   <!-- Create category (saga) modal -->

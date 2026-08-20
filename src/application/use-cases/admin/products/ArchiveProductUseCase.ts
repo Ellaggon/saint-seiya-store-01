@@ -5,6 +5,6 @@ export class ArchiveProductUseCase {
 
   async execute(id: string): Promise<void> {
     if (!id) throw new Error("Product ID is required");
-    await this.productRepository.delete(id);
+    await this.productRepository.archive(id);
   }
 }

@@ -64,23 +64,26 @@ const getClearSidebarFiltersUrl = () => {
 };
 ---
 
-<aside class="w-full lg:w-[280px] flex-shrink-0">
-  <input type="checkbox" id="filter-toggle" class="peer sr-only" />
-
-  <label
-    for="filter-toggle"
-    class="lg:hidden mb-5 flex cursor-pointer items-center justify-between rounded-md border border-zinc-900 bg-zinc-950/80 px-4 py-3.5 transition-colors hover:border-zinc-700 md:mb-6 md:px-5 md:py-4 group"
+<aside class="w-full lg:w-[280px] flex-shrink-0" data-catalog-filters>
+  <button
+    id="catalog-filters-mobile-toggle"
+    type="button"
+    class="group lg:hidden mb-5 flex w-full cursor-pointer items-center justify-between rounded-md border border-zinc-900 bg-zinc-950/80 px-4 py-3.5 transition-colors hover:border-zinc-700 md:mb-6 md:px-5 md:py-4"
+    aria-controls="catalog-filters-panel"
+    aria-expanded="false"
   >
+    <span class="text-sm font-semibold text-white transition-colors group-hover:text-amber-400">Filtros</span>
     <span
-      class="text-white font-semibold text-sm group-hover:text-amber-400 transition-colors"
-      >Filtros</span
-    >
-    <span class="text-amber-500 text-lg leading-none">+</span>
-  </label>
+      data-filters-mobile-icon
+      class="text-lg leading-none text-amber-500 transition-transform duration-200"
+      aria-hidden="true"
+    >+</span>
+  </button>
 
   <!-- Filter content -->
   <div
-    class="hidden peer-checked:block lg:block animate-in fade-in slide-in-from-top-4 duration-300"
+    id="catalog-filters-panel"
+    class="max-lg:hidden lg:block"
   >
     {
       hasActiveFilters && (

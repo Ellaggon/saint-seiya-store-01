@@ -8,6 +8,7 @@ const isAbortError = (error: unknown): boolean =>
 
 class CatalogFilters {
   private static readonly sidebarStorageKey = "catalogSidebarCollapsed";
+  private static documentBound = false;
   private gridContainer: HTMLElement | null = null;
   private paginationContainer: HTMLElement | null = null;
   private toolbarCount: HTMLElement | null = null;
@@ -15,26 +16,22 @@ class CatalogFilters {
   private searchForm: HTMLFormElement | null = null;
   private marketplace: HTMLElement | null = null;
   private sidebarToggle: HTMLButtonElement | null = null;
+  private mobileToggle: HTMLButtonElement | null = null;
+  private filtersPanel: HTMLElement | null = null;
   private currentUrl: string = window.location.href;
   private abortController: AbortController | null = null;
+  private elementListeners: AbortController | null = null;
 
   constructor() {
-    this.init();
+    this.bindDocumentListeners();
+    this.bindPage();
   }
 
-  private track(eventName: string, payload: Record<string, unknown> = {}) {
-    const eventPayload = {
-      event: eventName,
-      ...payload,
-    };
+  bindPage() {
+    this.elementListeners?.abort();
+    this.elementListeners = new AbortController();
+    const { signal } = this.elementListeners;
 
-    window.dispatchEvent(
-      new CustomEvent("commerce:conversion", { detail: eventPayload }),
-    );
-    (window as unknown as { dataLayer?: unknown[] }).dataLayer?.push(eventPayload);
-  }
-
-  private init() {
     this.gridContainer = document.getElementById("catalog-grid-container");
     this.paginationContainer = document.getElementById(
       "catalog-pagination-container",
@@ -50,15 +47,74 @@ class CatalogFilters {
     this.sidebarToggle = document.getElementById(
       "catalog-sidebar-toggle",
     ) as HTMLButtonElement | null;
+    this.mobileToggle = document.getElementById(
+      "catalog-filters-mobile-toggle",
+    ) as HTMLButtonElement | null;
+    this.filtersPanel = document.getElementById("catalog-filters-panel");
+    this.currentUrl = window.location.href;
 
     if (!this.gridContainer) return;
 
-    this.initSidebarToggle();
+    this.initSidebarToggle(signal);
+    this.initMobileFilters(signal);
+
+    this.sortSelect?.addEventListener(
+      "change",
+      () => {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.set("sort", this.sortSelect?.value || "created-desc");
+        nextUrl.searchParams.delete("page");
+        this.track("catalog_sort_change", {
+          sort: this.sortSelect?.value || "created-desc",
+        });
+        this.applyFilters(nextUrl);
+      },
+      { signal },
+    );
+
+    this.searchForm?.addEventListener(
+      "submit",
+      (e) => {
+        e.preventDefault();
+        const nextUrl = new URL(window.location.href);
+        const formData = new FormData(this.searchForm as HTMLFormElement);
+        const query = String(formData.get("q") || "").trim();
+
+        if (query) {
+          nextUrl.searchParams.set("q", query);
+        } else {
+          nextUrl.searchParams.delete("q");
+        }
+
+        nextUrl.searchParams.delete("page");
+        this.track("catalog_search_submit", { query });
+        this.applyFilters(nextUrl);
+      },
+      { signal },
+    );
+  }
+
+  private track(eventName: string, payload: Record<string, unknown> = {}) {
+    const eventPayload = {
+      event: eventName,
+      ...payload,
+    };
+
+    window.dispatchEvent(
+      new CustomEvent("commerce:conversion", { detail: eventPayload }),
+    );
+    (window as unknown as { dataLayer?: unknown[] }).dataLayer?.push(eventPayload);
+  }
+
+  private bindDocumentListeners() {
+    if (CatalogFilters.documentBound) return;
+    CatalogFilters.documentBound = true;
 
     document.addEventListener("click", (e) => {
+      if (!this.gridContainer) return;
       const target = e.target;
       if (!(target instanceof Element)) return;
-      
+
       const link = target.closest("a[data-filter-link]");
 
       if (link && link instanceof HTMLAnchorElement) {
@@ -72,37 +128,12 @@ class CatalogFilters {
     });
 
     window.addEventListener("popstate", () => {
+      if (!this.gridContainer) return;
       this.applyFilters(new URL(window.location.href), false);
     });
 
-    this.sortSelect?.addEventListener("change", () => {
-      const nextUrl = new URL(window.location.href);
-      nextUrl.searchParams.set("sort", this.sortSelect?.value || "created-desc");
-      nextUrl.searchParams.delete("page");
-      this.track("catalog_sort_change", {
-        sort: this.sortSelect?.value || "created-desc",
-      });
-      this.applyFilters(nextUrl);
-    });
-
-    this.searchForm?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const nextUrl = new URL(window.location.href);
-      const formData = new FormData(this.searchForm as HTMLFormElement);
-      const query = String(formData.get("q") || "").trim();
-
-      if (query) {
-        nextUrl.searchParams.set("q", query);
-      } else {
-        nextUrl.searchParams.delete("q");
-      }
-
-      nextUrl.searchParams.delete("page");
-      this.track("catalog_search_submit", { query });
-      this.applyFilters(nextUrl);
-    });
-
     document.addEventListener("submit", (e) => {
+      if (!this.gridContainer) return;
       const target = e.target;
       if (!(target instanceof HTMLFormElement)) return;
       if (!target.matches("[data-catalog-filter-form]")) return;
@@ -136,19 +167,50 @@ class CatalogFilters {
     });
   }
 
-  private initSidebarToggle() {
+  private initSidebarToggle(signal: AbortSignal) {
     if (!this.marketplace || !this.sidebarToggle) return;
 
     const storedValue = this.getStoredSidebarState();
     const isCollapsed = storedValue === "true";
     this.setSidebarCollapsed(isCollapsed);
 
-    this.sidebarToggle.addEventListener("click", () => {
-      const nextValue =
-        this.marketplace?.dataset.sidebarCollapsed !== "true";
-      this.setSidebarCollapsed(nextValue);
-      this.storeSidebarState(nextValue);
-    });
+    this.sidebarToggle.addEventListener(
+      "click",
+      () => {
+        const nextValue =
+          this.marketplace?.dataset.sidebarCollapsed !== "true";
+        this.setSidebarCollapsed(nextValue);
+        this.storeSidebarState(nextValue);
+      },
+      { signal },
+    );
+  }
+
+  private initMobileFilters(signal: AbortSignal) {
+    if (!this.mobileToggle || !this.filtersPanel) return;
+
+    this.setMobileFiltersOpen(false);
+
+    this.mobileToggle.addEventListener(
+      "click",
+      () => {
+        const nextOpen = this.mobileToggle?.getAttribute("aria-expanded") !== "true";
+        this.setMobileFiltersOpen(nextOpen);
+      },
+      { signal },
+    );
+  }
+
+  private setMobileFiltersOpen(isOpen: boolean) {
+    if (!this.mobileToggle || !this.filtersPanel) return;
+
+    this.mobileToggle.setAttribute("aria-expanded", String(isOpen));
+    this.filtersPanel.classList.toggle("max-lg:hidden", !isOpen);
+    this.filtersPanel.classList.add("lg:block");
+    const icon = this.mobileToggle.querySelector("[data-filters-mobile-icon]");
+    if (icon instanceof HTMLElement) {
+      icon.style.transform = isOpen ? "rotate(45deg)" : "";
+    }
   }
 
   private getStoredSidebarState(): string | null {
@@ -431,7 +493,22 @@ class CatalogFilters {
   }
 }
 
-// Initialize on Load
-document.addEventListener("DOMContentLoaded", () => {
-  new CatalogFilters();
-});
+let catalogFilters: CatalogFilters | null = null;
+
+const bootCatalogFilters = () => {
+  if (!document.getElementById("catalog-grid-container")) {
+    catalogFilters?.bindPage();
+    return;
+  }
+
+  if (!catalogFilters) {
+    catalogFilters = new CatalogFilters();
+    return;
+  }
+
+  catalogFilters.bindPage();
+};
+
+document.addEventListener("astro:after-swap", bootCatalogFilters);
+document.addEventListener("astro:page-load", bootCatalogFilters);
+bootCatalogFilters();

@@ -1,6 +1,7 @@
 import {
   CancelReservation,
   CreatePreorderCampaign,
+  DeletePreorderCampaign,
   ExpirePendingReservations,
   GetPreorderDetail,
   ListPreorderReservations,
@@ -10,8 +11,10 @@ import {
   ReservePreorder,
   UpdatePreorderCampaign,
 } from "@/application/use-cases/preorders";
+import { DeleteProductUseCase } from "@/application/use-cases/admin/products/DeleteProductUseCase";
 import { PrismaPreorderRepository } from "@/infrastructure/database/PrismaPreorderRepository";
 import { PrismaProductRepository } from "@/infrastructure/database/PrismaProductRepository";
+import { R2Storage } from "@/infrastructure/storage/r2Storage";
 
 const createPreorderRepository = () => new PrismaPreorderRepository();
 
@@ -50,3 +53,12 @@ export const createRegisterManualPreorderPaymentUseCase =
 export const createExpirePendingReservationsUseCase =
   (): ExpirePendingReservations =>
     new ExpirePendingReservations(createPreorderRepository());
+
+export const createDeletePreorderCampaignUseCase = (): DeletePreorderCampaign => {
+  const productRepository = new PrismaProductRepository();
+  return new DeletePreorderCampaign(
+    createPreorderRepository(),
+    productRepository,
+    new DeleteProductUseCase(productRepository, new R2Storage()),
+  );
+};

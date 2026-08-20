@@ -1,0 +1,143 @@
+---
+interface Props {
+  text: string;
+  id?: string;
+  label?: string;
+}
+
+const { text, id, label = "Más información" } = Astro.props;
+---
+
+<span class="admin-field-help relative inline-flex shrink-0" data-admin-field-help>
+  <button
+    type="button"
+    class="admin-field-help-trigger inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-zinc-700 text-zinc-500 transition-colors hover:border-amber-500 hover:text-amber-500 focus-visible:border-amber-500 focus-visible:text-amber-500 focus-visible:outline-none aria-expanded:border-amber-500 aria-expanded:text-amber-500"
+    aria-label={label}
+    aria-expanded="false"
+    data-admin-field-help-trigger
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+      <path d="M12 17h.01"></path>
+    </svg>
+  </button>
+  <span
+    class="absolute right-0 top-full z-40 hidden w-[min(16rem,calc(100vw-2.5rem))] pt-2"
+    data-admin-field-help-panel
+  >
+    <span
+      role="tooltip"
+      class="relative block border border-zinc-800 bg-zinc-950 px-3.5 py-3 text-left text-xs font-medium leading-5 text-zinc-300 shadow-[0_16px_40px_rgba(0,0,0,0.55)]"
+    >
+      <span class="absolute -top-1.5 right-3 h-3 w-3 rotate-45 border-l border-t border-zinc-800 bg-zinc-950"></span>
+      <span id={id} data-admin-field-help-text>{text}</span>
+    </span>
+  </span>
+</span>
+
+<script>
+  const bindAdminFieldHelp = () => {
+    const roots = document.querySelectorAll<HTMLElement>("[data-admin-field-help]");
+    roots.forEach((root) => {
+      if (root.dataset.bound === "1") return;
+      root.dataset.bound = "1";
+
+      const trigger = root.querySelector<HTMLButtonElement>(
+        "[data-admin-field-help-trigger]",
+      );
+      const panel = root.querySelector<HTMLElement>("[data-admin-field-help-panel]");
+      if (!trigger || !panel) return;
+
+      let pinned = false;
+      let hideTimer = 0;
+
+      const setOpen = (open: boolean) => {
+        panel.classList.toggle("hidden", !open);
+        root.classList.toggle("z-50", open);
+        trigger.setAttribute("aria-expanded", open ? "true" : "false");
+      };
+
+      const show = () => {
+        window.clearTimeout(hideTimer);
+        document.querySelectorAll<HTMLElement>("[data-admin-field-help]").forEach((other) => {
+          if (other === root) return;
+          const otherPanel = other.querySelector<HTMLElement>("[data-admin-field-help-panel]");
+          const otherTrigger = other.querySelector<HTMLButtonElement>(
+            "[data-admin-field-help-trigger]",
+          );
+          otherPanel?.classList.add("hidden");
+          other.classList.remove("z-50");
+          otherTrigger?.setAttribute("aria-expanded", "false");
+          other.dataset.pinned = "false";
+        });
+        setOpen(true);
+      };
+
+      const hide = () => {
+        pinned = false;
+        root.dataset.pinned = "false";
+        setOpen(false);
+      };
+
+      const scheduleHide = () => {
+        if (pinned) return;
+        hideTimer = window.setTimeout(hide, 120);
+      };
+
+      trigger.addEventListener("mouseenter", show);
+      trigger.addEventListener("mouseleave", scheduleHide);
+      panel.addEventListener("mouseenter", () => {
+        window.clearTimeout(hideTimer);
+      });
+      panel.addEventListener("mouseleave", scheduleHide);
+
+      trigger.addEventListener("focus", show);
+      trigger.addEventListener("blur", scheduleHide);
+
+      trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        pinned = !pinned;
+        root.dataset.pinned = pinned ? "true" : "false";
+        if (pinned) show();
+        else hide();
+      });
+    });
+
+    if (document.documentElement.dataset.adminFieldHelpDocBound === "1") return;
+    document.documentElement.dataset.adminFieldHelpDocBound = "1";
+
+    document.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[data-admin-field-help]")) return;
+      document.querySelectorAll<HTMLElement>("[data-admin-field-help]").forEach((root) => {
+        const panel = root.querySelector<HTMLElement>("[data-admin-field-help-panel]");
+        const trigger = root.querySelector<HTMLButtonElement>(
+          "[data-admin-field-help-trigger]",
+        );
+        panel?.classList.add("hidden");
+        root.classList.remove("z-50");
+        trigger?.setAttribute("aria-expanded", "false");
+        root.dataset.pinned = "false";
+      });
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      document.querySelectorAll<HTMLElement>("[data-admin-field-help]").forEach((root) => {
+        const panel = root.querySelector<HTMLElement>("[data-admin-field-help-panel]");
+        const trigger = root.querySelector<HTMLButtonElement>(
+          "[data-admin-field-help-trigger]",
+        );
+        panel?.classList.add("hidden");
+        root.classList.remove("z-50");
+        trigger?.setAttribute("aria-expanded", "false");
+        root.dataset.pinned = "false";
+      });
+    });
+  };
+
+  bindAdminFieldHelp();
+  document.addEventListener("astro:page-load", bindAdminFieldHelp);
+</script>

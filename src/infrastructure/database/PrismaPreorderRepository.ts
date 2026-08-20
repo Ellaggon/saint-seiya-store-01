@@ -4,6 +4,7 @@ import {
 } from "@prisma/client";
 
 import { PreorderRepositoryError } from "@/domain/errors/PreorderRepositoryError";
+import { ApplicationError } from "@/application/errors/ApplicationError";
 import { PreorderCampaignStatus } from "@/domain/entities/PreorderCampaign";
 import {
   PreorderPaymentProvider,
@@ -1169,6 +1170,70 @@ export class PrismaPreorderRepository implements PreorderRepository {
       });
 
       return { expiredCount: result.count };
+    });
+  }
+
+  async deleteCampaign(id: string): Promise<{ productId: string }> {
+    return prisma.$transaction(async (tx) => {
+      const campaign = await tx.preorderCampaign.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          productId: true,
+          reservations: {
+            select: {
+              id: true,
+              status: true,
+              payments: {
+                select: { status: true },
+              },
+            },
+          },
+        },
+      });
+
+      if (!campaign) {
+        throw ApplicationError.validation(
+          "La preventa no existe o ya fue eliminada.",
+        );
+      }
+
+      const historicStatuses: string[] = [
+        PRISMA_RESERVATION_STATUS.CONFIRMED,
+        PRISMA_RESERVATION_STATUS.PARTIALLY_PAID,
+        PRISMA_RESERVATION_STATUS.PAID,
+        PRISMA_RESERVATION_STATUS.FULFILLED,
+      ];
+      const historicPaymentStatuses: string[] = ["PAID", "REFUNDED"];
+
+      const hasHistoricReservations = campaign.reservations.some(
+        (reservation) =>
+          historicStatuses.includes(reservation.status) ||
+          reservation.payments.some((payment) =>
+            historicPaymentStatuses.includes(payment.status),
+          ),
+      );
+
+      if (hasHistoricReservations) {
+        throw ApplicationError.validation(
+          "No se puede eliminar esta preventa porque tiene reservas o pagos confirmados. Ciérrala para ocultarla sin perder el historial.",
+        );
+      }
+
+      const reservationIds = campaign.reservations.map(
+        (reservation) => reservation.id,
+      );
+      if (reservationIds.length > 0) {
+        await tx.preorderPayment.deleteMany({
+          where: { reservationId: { in: reservationIds } },
+        });
+        await tx.preorderReservation.deleteMany({
+          where: { campaignId: id },
+        });
+      }
+
+      await tx.preorderCampaign.delete({ where: { id } });
+      return { productId: campaign.productId };
     });
   }
 }

@@ -1,0 +1,106 @@
+---
+interface Props {
+  productName: string;
+  productImage: string | null;
+  productPriceLabel: string;
+  hoyLabel?: string;
+  despuesLabel?: string;
+  etaLabel?: string;
+  etaRangeLabel?: string;
+  windowLabel?: string;
+  slotsLabel?: string;
+}
+
+const {
+  productName,
+  productImage,
+  productPriceLabel,
+  hoyLabel = "Bs 0",
+  despuesLabel = "El saldo se muestra al elegir cómo reservan.",
+  etaLabel = "Sin informar",
+  etaRangeLabel = "",
+  windowLabel = "Mientras esté en vitrina.",
+  slotsLabel = "0 unidades",
+} = Astro.props;
+---
+
+<div class="preorder-receipt" data-receipt-root>
+  <p class="preorder-receipt-overline">Lo que ve el cliente</p>
+
+  <div class="mb-5 flex items-start gap-3">
+    <div
+      class="h-[60px] w-12 shrink-0 overflow-hidden rounded-md border border-[#18181B] bg-[#09090B]"
+      data-receipt-photo
+    >
+      {
+        productImage ? (
+          <img
+            src={productImage}
+            alt=""
+            class="h-full w-full object-cover"
+            data-receipt-image
+          />
+        ) : (
+          <span class="block h-full w-full" data-receipt-image-empty></span>
+        )
+      }
+    </div>
+    <div class="min-w-0">
+      <p
+        class="truncate text-[14px] font-semibold leading-5 text-[#FAFAFA]"
+        data-receipt-name
+      >
+        {productName || "Elige una figura"}
+      </p>
+      <p
+        class="mt-1 text-[13px] leading-[18px] text-[#A1A1AA]"
+        data-receipt-price
+      >
+        {productPriceLabel}
+      </p>
+    </div>
+  </div>
+
+  <div class="border-t border-[#18181B] pt-5">
+    <p class="text-[12px] leading-4 text-[#71717A]">Hoy</p>
+    <p
+      class="mt-1 text-[28px] font-semibold leading-[34px] tracking-[-0.03em] text-[#D4AF37]"
+      data-receipt-hoy
+      aria-live="polite"
+    >
+      {hoyLabel}
+    </p>
+    <p
+      class="mt-2 text-[14px] leading-[22px] text-[#A1A1AA]"
+      data-receipt-despues
+    >
+      {despuesLabel}
+    </p>
+  </div>
+
+  <div class="mt-5">
+    <p class="text-[14px] leading-[22px] text-[#FAFAFA]" data-receipt-eta>
+      {etaLabel}
+    </p>
+    <p
+      class:list={[
+        "mt-1 text-[12px] leading-[18px] text-[#71717A]",
+        !etaRangeLabel && "hidden",
+      ]}
+      data-receipt-eta-range
+    >
+      {etaRangeLabel}
+    </p>
+  </div>
+
+  <p class="mt-4 text-[13px] leading-5 text-[#A1A1AA]" data-receipt-window>
+    {windowLabel}
+  </p>
+  <p class="mt-2 text-[13px] leading-5 text-[#A1A1AA]" data-receipt-slots>
+    {slotsLabel}
+  </p>
+
+  <p class="mt-6 text-[12px] leading-[18px] text-[#52525B]">
+    Esto es exactamente lo que muestra la ficha al guardar.
+  </p>
+</div>

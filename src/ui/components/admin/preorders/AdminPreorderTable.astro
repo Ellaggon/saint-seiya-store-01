@@ -5,6 +5,7 @@ import AdminPreorderStatusBadge from "./AdminPreorderStatusBadge.astro";
 import AdminItemSheet from "@/ui/components/admin/AdminItemSheet.astro";
 import AdminItemSheetsInit from "@/ui/components/admin/AdminItemSheetsInit.astro";
 import AdminMobileListRow from "@/ui/components/admin/AdminMobileListRow.astro";
+import AdminPreorderDeleteDialog from "./AdminPreorderDeleteDialog.astro";
 
 interface Props {
   items: PreorderListItemDTO[];
@@ -160,20 +161,16 @@ const mobileStatus = (item: PreorderListItemDTO) => {
                     Cerrar
                   </button>
                 </form>
-                <form
-                  action="/admin/preorders/actions"
-                  method="POST"
-                  onsubmit="if (!confirm('¿Archivar esta preventa?')) return false; this.querySelector('button[type=submit]').disabled = true;"
+                <button
+                  type="button"
+                  data-preorder-delete-open
+                  data-campaign-id={item.campaign.id}
+                  data-product-name={item.product.name}
+                  data-has-reservations={item.campaign.reservedUnits > 0 ? "true" : "false"}
+                  class="inline-flex w-full items-center justify-center border border-red-500/30 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-red-500 transition-colors hover:bg-red-500/10"
                 >
-                  <input type="hidden" name="_action" value="archive" />
-                  <input type="hidden" name="id" value={item.campaign.id} />
-                  <button
-                    type="submit"
-                    class="inline-flex w-full items-center justify-center border border-red-500/30 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-red-500 transition-colors hover:bg-red-500/10"
-                  >
-                    Archivar
-                  </button>
-                </form>
+                  Eliminar
+                </button>
               </AdminItemSheet>
             </>
           );
@@ -308,20 +305,16 @@ const mobileStatus = (item: PreorderListItemDTO) => {
                         Cerrar
                       </button>
                     </form>
-                    <form
-                      action="/admin/preorders/actions"
-                      method="POST"
-                      onsubmit="if (!confirm('¿Archivar esta preventa?')) return false; this.querySelector('button[type=submit]').disabled = true;"
+                    <button
+                      type="button"
+                      data-preorder-delete-open
+                      data-campaign-id={item.campaign.id}
+                      data-product-name={item.product.name}
+                      data-has-reservations={item.campaign.reservedUnits > 0 ? "true" : "false"}
+                      class="text-[10px] font-black text-zinc-600 hover:text-red-500 uppercase transition-colors"
                     >
-                      <input type="hidden" name="_action" value="archive" />
-                      <input type="hidden" name="id" value={item.campaign.id} />
-                      <button
-                        type="submit"
-                        class="text-[10px] font-black text-zinc-600 hover:text-red-500 uppercase transition-colors"
-                      >
-                        Archivar
-                      </button>
-                    </form>
+                      Eliminar
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -333,3 +326,4 @@ const mobileStatus = (item: PreorderListItemDTO) => {
   )
 }
 <AdminItemSheetsInit />
+<AdminPreorderDeleteDialog />

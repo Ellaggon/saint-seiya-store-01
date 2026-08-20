@@ -1,9 +1,9 @@
 import type { APIRoute } from "astro";
 
-import { PreorderCampaignStatus } from "@/domain/entities/PreorderCampaign";
 import {
   createGetPreorderDetailUseCase,
   createUpdatePreorderCampaignUseCase,
+  createDeletePreorderCampaignUseCase,
 } from "@/infrastructure/preorders/PreorderUseCaseFactory";
 import { invalidateCatalogCache } from "@/application/services/CatalogQueryService";
 import { invalidatePreorderCache } from "@/application/services/PreorderQueryCache";
@@ -69,22 +69,25 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ params, locals }) => {
+export const DELETE: APIRoute = async ({ params, request, locals }) => {
   try {
     requireAdmin(locals);
     const id = params.id;
     if (!id) throw ApplicationError.validation("Preorder id is required");
 
-    const useCase = createUpdatePreorderCampaignUseCase();
-    const data = await useCase.execute({
-      id,
-      status: PreorderCampaignStatus.CANCELED,
-      deletedAt: new Date(),
-    });
+    const rawBody = await request.json().catch(() => null);
+    const deleteProduct =
+      rawBody && typeof rawBody === "object" && !Array.isArray(rawBody)
+        ? optionalBoolean((rawBody as { deleteProduct?: unknown }).deleteProduct) ===
+          true
+        : false;
+
+    const useCase = createDeletePreorderCampaignUseCase();
+    await useCase.execute({ id, deleteProduct });
 
     invalidateCatalogCache();
     invalidatePreorderCache();
-    return success(data);
+    return success({ deleted: true, deleteProduct });
   } catch (error) {
     return failure(error);
   }

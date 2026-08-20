@@ -154,4 +154,5 @@ export interface PreorderRepository {
   expirePendingReservations(
     input: ExpirePendingPreorderReservationsInput,
   ): Promise<ExpirePendingPreorderReservationsResult>;
+  deleteCampaign(id: string): Promise<{ productId: string }>;
 }

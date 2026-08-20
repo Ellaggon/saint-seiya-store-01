@@ -2,527 +2,1280 @@
 import type { ProductDTO } from "@/application/dto/catalog.dto";
 import type { PreorderDetailDTO } from "@/application/dto/preorder.dto";
 import { formatPrice } from "@/lib/utils";
+import AdminPreorderDeleteDialog from "./AdminPreorderDeleteDialog.astro";
+import AdminPreorderReceipt from "./AdminPreorderReceipt.astro";
 
 interface Props {
   products: ProductDTO[];
   preorder?: PreorderDetailDTO | null;
   error?: string | null;
+  saved?: boolean;
 }
 
-const { products, preorder = null, error = null } = Astro.props;
+const { products, preorder = null, error = null, saved = false } = Astro.props;
 const campaign = preorder?.campaign;
 const isEditing = Boolean(campaign);
 const hasReservations = (campaign?.reservedUnits ?? 0) > 0;
+const reservedUnits = campaign?.reservedUnits ?? 0;
+const product = preorder?.product;
+const selectedProduct = products.find((item) => item.id === campaign?.productId);
+const productId = campaign?.productId ?? "";
+const productName = product?.name ?? selectedProduct?.name ?? "";
+const productImage = product?.imageUrl ?? selectedProduct?.imageUrl ?? "";
+const productPrice = selectedProduct?.price ?? product?.price ?? 0;
+const productMeta = [
+  product?.collection?.name,
+  product?.category?.name ?? selectedProduct?.category,
+]
+  .filter(Boolean)
+  .join(" · ");
 
 const dateValue = (value?: string | null): string =>
   value ? value.slice(0, 10) : "";
 
-const selectedProduct = products.find(
-  (product) => product.id === campaign?.productId,
-);
+const formatDisplayDate = (value?: string | null): string => {
+  if (!value) return "";
+  const date = new Date(`${value.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("es-BO", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+};
 
-const selectedProductPrice = selectedProduct?.price ?? preorder?.product.price ?? 0;
+const calculateDeposit = (price: number, type: string, value: number): number => {
+  if (type === "FULL") return price;
+  if (type === "FIXED") return Math.min(value, price);
+  return Math.min(price * (value / 100), price);
+};
 
-const depositOptions = [
+const depositType = campaign?.depositType ?? "PERCENT";
+const depositValue = campaign?.depositValue ?? 0;
+const dueNow = calculateDeposit(productPrice, depositType, depositValue);
+const balance = Math.max(productPrice - dueNow, 0);
+
+const windowCopy = (() => {
+  const opens = dateValue(campaign?.opensAt);
+  const closes = dateValue(campaign?.closesAt);
+  if (!opens && !closes) {
+    return {
+      text: "Abierta todo el tiempo que esté en vitrina.",
+      tone: "muted" as const,
+    };
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const openDate = opens ? new Date(`${opens}T00:00:00`) : null;
+  const closeDate = closes ? new Date(`${closes}T00:00:00`) : null;
+  if (openDate && today < openDate) {
+    return {
+      text: `Todavía no acepta reservas. Abre el ${formatDisplayDate(opens)}.`,
+      tone: "muted" as const,
+    };
+  }
+  if (closeDate && today > closeDate) {
+    return {
+      text: "Ya no acepta reservas nuevas.",
+      tone: "danger" as const,
+    };
+  }
+  if (closeDate) {
+    const days = Math.max(
+      1,
+      Math.ceil((closeDate.getTime() - today.getTime()) / 86_400_000),
+    );
+    return {
+      text: `Abierta. Cierra en ${days} ${days === 1 ? "día" : "días"}.`,
+      tone: "live" as const,
+    };
+  }
+  return { text: "Abierta mientras esté en vitrina.", tone: "live" as const };
+})();
+
+const etaLabel = campaign?.etaLabel?.trim() || "Sin informar";
+const etaRange =
+  campaign?.etaStart || campaign?.etaEnd
+    ? `Ventana ${formatDisplayDate(campaign?.etaStart) || "—"} – ${formatDisplayDate(campaign?.etaEnd) || "—"}`
+    : "";
+const slotsLabel =
+  reservedUnits > 0
+    ? `${campaign?.totalSlots ?? 0} unidades · ${reservedUnits} ya tomadas`
+    : `${campaign?.totalSlots ?? 0} unidades`;
+const despuesLabel =
+  depositType === "FULL" || balance <= 0
+    ? "Pagan el total hoy. No queda saldo."
+    : `Después ${formatPrice(balance)}, cuando llegue a tienda`;
+
+const status = campaign?.status ?? "DRAFT";
+const isSoldOut = Boolean(campaign?.isSoldOut || status === "SOLD_OUT");
+const isLifecycle = ["ARRIVED", "CLOSED", "CANCELED"].includes(status);
+const showSegmented = isEditing && !isSoldOut && !isLifecycle;
+const occupancyPercent =
+  (campaign?.totalSlots ?? 0) > 0
+    ? Math.min(100, (reservedUnits / (campaign?.totalSlots ?? 1)) * 100)
+    : 0;
+
+const depositChoices = [
   {
     value: "PERCENT",
-    label: "Porcentaje del precio",
-    description: "El cliente paga un porcentaje del total para reservar.",
+    title: "Un porcentaje ahora",
+    description: "Dejan una parte del precio para asegurar la figura.",
   },
   {
     value: "FIXED",
-    label: "Monto fijo",
-    description: "El cliente paga un monto fijo por reserva.",
+    title: "Un monto fijo ahora",
+    description: "Dejan una cifra, da igual el precio de la figura.",
   },
   {
     value: "FULL",
-    label: "Pago total obligatorio",
-    description: "El cliente paga el total del producto al reservar.",
+    title: "Pagan el total al reservar",
+    description: "No hay saldo. Entran pagando el precio completo.",
   },
 ];
 
-const statusOptions = [
-  { value: "DRAFT", label: "Borrador" },
-  { value: "ACTIVE", label: "Activa" },
-  { value: "PAUSED", label: "Pausada" },
-  { value: "SOLD_OUT", label: "Agotada" },
-  { value: "ARRIVED", label: "Llegó a tienda" },
-  { value: "CLOSED", label: "Cerrada" },
-  { value: "CANCELED", label: "Cancelada" },
-];
+const productCatalog = products.map((item) => ({
+  id: item.id,
+  name: item.name,
+  price: item.price,
+  imageUrl: item.imageUrl || "",
+  meta: item.category || "",
+}));
+
+const windowToneClass =
+  windowCopy.tone === "live"
+    ? "text-[#4ADE80]"
+    : windowCopy.tone === "danger"
+      ? "text-[#F87171]"
+      : "text-[#71717A]";
 ---
 
-{error && (
-  <div class="border border-red-500/30 bg-red-500/5 text-red-400 px-5 py-4 text-xs font-bold uppercase tracking-widest mb-8">
-    {error}
-  </div>
-)}
-
-<form
-  action="/admin/preorders/actions"
-  method="POST"
-  onsubmit="this.querySelector('button[type=submit]').disabled = true;"
-  class="space-y-8"
->
-  <input type="hidden" name="_action" value={isEditing ? "update" : "create"} />
-  {campaign && <input type="hidden" name="id" value={campaign.id} />}
-  {isEditing && <input type="hidden" name="productId" value={campaign?.productId} />}
-
-  <section class="bg-zinc-950 p-8 border border-zinc-900 shadow-2xl space-y-6">
-    <div class="space-y-2">
-      <p class="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]">
-        Producto y cupos
-      </p>
-      <h2 class="text-white text-xl font-black uppercase tracking-widest">
-        Qué se va a reservar
-      </h2>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div class="space-y-2 md:col-span-2">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <label for="productId" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Producto en preventa</label>
-          {!isEditing && (
-            <a
-              href="/admin/products/new?returnTo=/admin/preorders/new"
-              class="inline-flex items-center justify-center border border-zinc-800 text-zinc-300 hover:text-black hover:bg-amber-500 hover:border-amber-500 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-colors"
-            >
-              Crear producto
-            </a>
-          )}
-        </div>
-        <select
-          id="productId"
-          name="productId"
-          required
-          disabled={isEditing}
-          data-selected-price={selectedProductPrice}
-          class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors appearance-none disabled:text-zinc-500"
+<div class="preorder-ficha">
+  {
+    error && (
+      <div class="mx-auto max-w-[1120px] px-8 pt-6">
+        <p
+          class="rounded-md border border-red-500/25 bg-red-500/5 px-4 py-3 text-[13px] leading-5 text-red-400"
+          role="alert"
         >
-          <option value="" disabled selected={!isEditing} data-price="0">Seleccionar producto...</option>
+          {error}
+        </p>
+      </div>
+    )
+  }
+
+  <form
+    id="preorder-campaign-form"
+    action="/admin/preorders/actions"
+    method="POST"
+    data-editing={isEditing ? "true" : "false"}
+    data-reserved={String(reservedUnits)}
+    data-deposit-locked={hasReservations ? "true" : "false"}
+    data-product-price={String(productPrice)}
+    data-product-name={productName}
+    data-product-image={productImage}
+    data-product-meta={productMeta}
+  >
+    <input type="hidden" name="_action" value={isEditing ? "update" : "create"} />
+    {campaign && <input type="hidden" name="id" value={campaign.id} />}
+    <input type="hidden" id="productId" name="productId" value={productId} />
+    {
+      isEditing && (
+        <input type="hidden" id="status" name="status" value={status} />
+      )
+    }
+
+    <div
+      class="sticky top-16 z-20 border-b border-[#18181B] bg-black md:top-20"
+    >
+      <div
+        class="mx-auto flex h-14 max-w-[1120px] items-center justify-between gap-4 px-8"
+      >
+        <a
+          href="/admin/preorders"
+          data-astro-prefetch="hover"
+          class="inline-flex items-center gap-1.5 text-[13px] font-medium leading-[18px] text-[#71717A] transition-colors duration-150 hover:text-[#FAFAFA]"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="m15 18-6-6 6-6"></path>
+          </svg>
+          Preventas
+        </a>
+
+        <div class="flex items-center gap-2">
           {
-            products.map((product) => (
-              <option
-                value={product.id}
-                selected={product.id === campaign?.productId}
-                data-price={product.price}
+            isEditing && productId && (
+              <a
+                href={`/product/${productId}`}
+                class="preorder-ghost hidden sm:inline-flex"
+                target="_blank"
+                rel="noreferrer"
               >
-                {product.name} - {formatPrice(product.price)}
-              </option>
-            ))
+                Ver ficha
+              </a>
+            )
           }
-        </select>
-        <p class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-          Solo aparecen productos publicados o marcados como preventa. Si todavía no existe, créalo primero y vuelve a esta pantalla.
-        </p>
-      </div>
-
-      <div class="space-y-2">
-        <label for="totalSlots" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Unidades disponibles para preventa</label>
-        <input
-          type="number"
-          id="totalSlots"
-          name="totalSlots"
-          min={Math.max(1, campaign?.reservedUnits ?? 1)}
-          value={campaign?.totalSlots ?? ""}
-          required
-          class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
-        />
-        <p class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-          Capacidad de esta campaña. No modifica el stock normal del catálogo.
-        </p>
-        {hasReservations && (
-          <p class="text-zinc-500 text-[10px] uppercase tracking-widest">
-            No puede bajar de {campaign?.reservedUnits} unidades ya reservadas.
-          </p>
-        )}
-      </div>
-
-      <div class="space-y-2">
-        <label class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Máximo por cliente</label>
-        <div class="w-full bg-black border border-zinc-800 px-4 py-3 text-zinc-600 text-sm">
-          Próximamente
+          {
+            isEditing && campaign && (
+              <a
+                href={`/admin/preorders/${campaign.id}/reservations`}
+                class="preorder-ghost hidden sm:inline-flex"
+              >
+                {reservedUnits > 0 ? `Reservas · ${reservedUnits}` : "Reservas"}
+              </a>
+            )
+          }
+          <button
+            type="button"
+            data-discard
+            class="preorder-ghost"
+          >
+            Descartar
+          </button>
+          <button
+            type="submit"
+            data-save
+            class="preorder-save hidden lg:inline-flex"
+          >
+            {isEditing ? "Guardar cambios" : "Crear preventa"}
+          </button>
         </div>
-        <p class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-          Recomendado para operación real, pero todavía no está guardado en la base de datos.
-        </p>
       </div>
     </div>
-  </section>
 
-  <section class="bg-zinc-950 p-8 border border-zinc-900 shadow-2xl space-y-6">
-    <div class="space-y-2">
-      <p class="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]">
-        Pago del cliente
-      </p>
-      <h2 class="text-white text-xl font-black uppercase tracking-widest">
-        Cuánto paga para reservar
-      </h2>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div class="space-y-2">
-        <label for="depositType" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Forma de abono</label>
-        <select
-          id="depositType"
-          name="depositType"
-          disabled={hasReservations}
-          class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors appearance-none disabled:text-zinc-500"
+    <div class="mx-auto max-w-[1120px] px-8 pb-28 pt-6 lg:pb-24">
+      <header class="preorder-hero">
+        <div
+          class="h-[110px] w-[88px] shrink-0 overflow-hidden rounded-[14px] border border-[#18181B] bg-[#09090B]"
+          data-hero-photo
         >
-          {depositOptions.map((option) => (
-            <option
-              value={option.value}
-              selected={option.value === (campaign?.depositType ?? "PERCENT")}
-              data-description={option.description}
-            >
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <p id="depositTypeHelp" class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-          El cliente paga un porcentaje del total para reservar.
-        </p>
-        {hasReservations && <input type="hidden" name="depositType" value={campaign?.depositType} />}
-      </div>
-
-      <div id="depositValueField" class="space-y-2">
-        <label id="depositValueLabel" for="depositValue" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Porcentaje de abono</label>
-        <div class="relative">
-          <input
-            type="number"
-            id="depositValue"
-            name="depositValue"
-            min="0"
-            step="0.01"
-            value={campaign?.depositValue ?? ""}
-            required
-            readonly={hasReservations}
-            class="w-full bg-black border border-zinc-800 px-4 py-3 pr-12 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors read-only:text-zinc-500"
-          />
-          <span id="depositValueSuffix" class="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 text-xs font-black">
-            %
-          </span>
+          {
+            productImage ? (
+              <img
+                src={productImage}
+                alt=""
+                class="h-full w-full object-cover"
+                data-hero-image
+              />
+            ) : null
+          }
         </div>
-        <p id="depositValueHelp" class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-          Ejemplo: 30 significa que el cliente paga el 30% ahora y el resto queda pendiente.
-        </p>
-        {hasReservations && (
-          <p class="text-zinc-500 text-[10px] uppercase tracking-widest">
-            Bloqueado porque ya existen reservas.
+
+        <div class="min-w-0 flex-1">
+          <h1
+            class="text-[26px] font-semibold leading-8 tracking-[-0.02em] text-[#FAFAFA]"
+            data-hero-title
+          >
+            {isEditing ? productName : "¿Cuál figura entra a preventa?"}
+          </h1>
+          <p
+            class="mt-2 text-[13px] leading-[18px] text-[#A1A1AA]"
+            data-hero-meta
+          >
+            {isEditing ? productMeta || "Preventa" : "Busca en el catálogo. Si todavía no existe, créala primero."}
           </p>
-        )}
-      </div>
+          <p
+            class:list={[
+              "mt-2 text-[22px] font-semibold leading-7 tracking-[-0.01em] text-[#D4AF37]",
+              !isEditing && !productId && "hidden",
+            ]}
+            data-hero-price
+          >
+            {productPrice ? formatPrice(productPrice) : ""}
+          </p>
 
-      <div class="space-y-2 md:col-span-2">
-        <label class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Pago total</label>
-        <label class="flex items-start gap-3 bg-black border border-zinc-800 px-4 py-3 text-white text-xs font-bold uppercase tracking-widest">
-          <input type="checkbox" name="allowFullPayment" checked={campaign?.allowFullPayment ?? true} class="accent-amber-500 mt-0.5" />
-          <span>
-            Permitir pagar el total al reservar
-            <small class="block text-zinc-600 text-[10px] leading-relaxed mt-2">
-              Si está activo, el cliente puede pagar el 100% aunque exista un abono mínimo.
-            </small>
-          </span>
-        </label>
-      </div>
-    </div>
+          {
+            !isEditing && (
+              <div class="relative mt-4 max-w-xl">
+                <label for="product-search" class="preorder-label">
+                  Figura
+                </label>
+                <input
+                  id="product-search"
+                  type="search"
+                  autocomplete="off"
+                  placeholder="Nombre de la figura"
+                  class="preorder-input mt-2 w-full"
+                />
+                <div
+                  id="product-results"
+                  hidden
+                  class="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-md border border-[#27272A] bg-black"
+                ></div>
+                <p
+                  class="mt-2 hidden text-[12px] leading-[18px] text-[#F87171]"
+                  data-product-error
+                >
+                  Elige una figura para abrir la preventa.
+                </p>
+                <a
+                  href="/admin/products/new?returnTo=/admin/preorders/new"
+                  class="mt-2 inline-block text-[12px] leading-4 text-[#71717A] transition-colors duration-150 hover:text-[#D4AF37]"
+                >
+                  Crear producto
+                </a>
+              </div>
+            )
+          }
 
-    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 border border-zinc-900 bg-black p-5">
-      <div>
-        <p class="text-zinc-600 text-[9px] font-black uppercase tracking-[0.25em]">Paga hoy</p>
-        <p id="previewDueNow" class="text-amber-500 text-lg font-black mt-2">$0</p>
-      </div>
-      <div>
-        <p class="text-zinc-600 text-[9px] font-black uppercase tracking-[0.25em]">Saldo pendiente</p>
-        <p id="previewBalance" class="text-white text-lg font-black mt-2">$0</p>
-      </div>
-      <div>
-        <p class="text-zinc-600 text-[9px] font-black uppercase tracking-[0.25em]">Llegada visible</p>
-        <p id="previewEta" class="text-white text-xs font-black uppercase tracking-widest mt-2">Sin informar</p>
-      </div>
-      <div>
-        <p class="text-zinc-600 text-[9px] font-black uppercase tracking-[0.25em]">Cupos</p>
-        <p id="previewSlots" class="text-white text-lg font-black mt-2">0</p>
-      </div>
-    </div>
-  </section>
+          {
+            isEditing && productId && (
+              <a
+                href={`/admin/products/${productId}`}
+                class="mt-2 inline-block text-[12px] leading-4 text-[#71717A] transition-colors duration-150 hover:text-[#D4AF37]"
+              >
+                Editar producto
+              </a>
+            )
+          }
 
-  <section class="bg-zinc-950 p-8 border border-zinc-900 shadow-2xl space-y-6">
-    <div class="space-y-2">
-      <p class="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]">
-        Fechas de preventa
-      </p>
-      <h2 class="text-white text-xl font-black uppercase tracking-widest">
-        Cuándo se puede reservar
-      </h2>
-    </div>
+          {
+            showSegmented && (
+              <div
+                class="preorder-segment mt-4"
+                role="radiogroup"
+                aria-label="Estado de la preventa"
+              >
+                <button type="button" data-status="DRAFT" aria-pressed={status === "DRAFT"}>
+                  <span data-status-dot="draft"></span>
+                  Borrador
+                </button>
+                <button type="button" data-status="ACTIVE" aria-pressed={status === "ACTIVE"}>
+                  <span data-status-dot="live"></span>
+                  En vitrina
+                </button>
+                <button type="button" data-status="PAUSED" aria-pressed={status === "PAUSED"}>
+                  <span data-status-dot="paused"></span>
+                  Pausada
+                </button>
+              </div>
+            )
+          }
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div class="space-y-2">
-        <label for="opensAt" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Inicio de preventa</label>
-        <input type="date" id="opensAt" name="opensAt" value={dateValue(campaign?.opensAt)} class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors" />
-        <p class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-          Antes de esta fecha no se aceptan reservas aunque la campaña esté activa.
-        </p>
-      </div>
+          {
+            isSoldOut && (
+              <p class="mt-4 text-[12px] font-medium leading-4 text-[#F87171]">
+                Agotada · El cupo está lleno.
+              </p>
+            )
+          }
 
-      <div class="space-y-2">
-        <label for="closesAt" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Cierre de preventa</label>
-        <input type="date" id="closesAt" name="closesAt" value={dateValue(campaign?.closesAt)} class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors" />
-        <p class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-          Después de esta fecha la campaña deja de recibir reservas.
-        </p>
-      </div>
-    </div>
-  </section>
+          {
+            isLifecycle && (
+              <p class="mt-4 text-[13px] font-medium leading-[18px] text-[#A1A1AA]">
+                {status === "ARRIVED"
+                  ? "Llegó a tienda"
+                  : status === "CLOSED"
+                    ? "Cerrada"
+                    : "Cancelada"}
+              </p>
+            )
+          }
 
-  <section class="bg-zinc-950 p-8 border border-zinc-900 shadow-2xl space-y-6">
-    <div class="space-y-2">
-      <p class="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]">
-        Llegada estimada
-      </p>
-      <h2 class="text-white text-xl font-black uppercase tracking-widest">
-        Qué verá el cliente sobre la entrega
-      </h2>
-    </div>
+          {
+            isEditing && (
+              <details class="preorder-more mt-3">
+                <summary>Más acciones</summary>
+                <div class="preorder-more-menu">
+                  <button type="button" data-status="ARRIVED">
+                    Marcar llegada
+                  </button>
+                  <button type="button" data-status="CLOSED">
+                    Cerrar preventa
+                  </button>
+                  <button type="button" data-status="CANCELED">
+                    Cancelar campaña
+                  </button>
+                  <button type="button" data-status="DRAFT">
+                    Volver a borrador
+                  </button>
+                </div>
+              </details>
+            )
+          }
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <div class="space-y-2 md:col-span-2">
-        <label for="etaLabel" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Texto visible de llegada</label>
-        <input
-          type="text"
-          id="etaLabel"
-          name="etaLabel"
-          value={campaign?.etaLabel ?? ""}
-          placeholder="Ej: Llegada estimada octubre 2026"
-          class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
-        />
-        <p class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-          Mensaje principal que se muestra al cliente. Es más claro que una fecha suelta.
-        </p>
-      </div>
+          <div class="mt-4">
+            <div class="mb-2 flex items-baseline justify-between gap-3">
+              <p class="text-[12px] leading-4 text-[#A1A1AA]" data-hero-occupancy>
+                {
+                  reservedUnits === 0
+                    ? "Nadie ha reservado todavía"
+                    : `${reservedUnits} de ${campaign?.totalSlots ?? 0} reservadas`
+                }
+              </p>
+              <p class="text-[12px] leading-4 text-[#A1A1AA]" data-hero-occupancy-total>
+                {campaign?.totalSlots ?? 0} unidades
+              </p>
+            </div>
+            <div class="h-1 overflow-hidden rounded-full bg-[#18181B]" aria-hidden="true">
+              <div
+                class="h-full bg-[#D4AF37]"
+                data-hero-occupancy-bar
+                style={`width: ${occupancyPercent}%`}
+              ></div>
+            </div>
+          </div>
+        </div>
+      </header>
 
-      <div class="space-y-2">
-        <label for="etaStart" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Llegada estimada desde</label>
-        <input type="date" id="etaStart" name="etaStart" value={dateValue(campaign?.etaStart)} class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors" />
-      </div>
-
-      <div class="space-y-2">
-        <label for="etaEnd" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Llegada estimada hasta</label>
-        <input type="date" id="etaEnd" name="etaEnd" value={dateValue(campaign?.etaEnd)} class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors" />
-      </div>
-    </div>
-
-    <details class="border border-zinc-900 bg-black">
-      <summary class="cursor-pointer px-4 py-3 text-zinc-400 hover:text-white text-[10px] font-black uppercase tracking-widest">
-        Fechas avanzadas
-      </summary>
-      <div class="border-t border-zinc-900 p-4 space-y-2">
-        <label for="releaseDate" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Fecha oficial de lanzamiento</label>
-        <input type="date" id="releaseDate" name="releaseDate" value={dateValue(campaign?.releaseDate)} class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors" />
-        <p class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-          Fecha anunciada por el fabricante o proveedor. No controla apertura, cierre ni disponibilidad de reservas.
-        </p>
-      </div>
-    </details>
-  </section>
-
-  <section class="bg-zinc-950 p-8 border border-zinc-900 shadow-2xl space-y-6">
-    <div class="space-y-2">
-      <p class="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]">
-        Condiciones
-      </p>
-      <h2 class="text-white text-xl font-black uppercase tracking-widest">
-        Reglas comerciales de la preventa
-      </h2>
-    </div>
-
-    <div class="space-y-2">
-      <label for="terms" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Condiciones de la preventa</label>
-      <textarea
-        id="terms"
-        name="terms"
-        rows="4"
-        placeholder="Ej: El abono confirma la reserva. El saldo se paga cuando el producto llegue a tienda."
-        class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors"
-      >{campaign?.terms ?? ""}</textarea>
-      <p class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-        Este texto puede mostrarse al cliente en la ficha de producto.
-      </p>
-    </div>
-
-    <details class="border border-zinc-900 bg-black">
-      <summary class="cursor-pointer px-4 py-3 text-zinc-400 hover:text-white text-[10px] font-black uppercase tracking-widest">
-        Recepción interna
-      </summary>
-      <div class="border-t border-zinc-900 p-4 space-y-2">
-        <label for="arrivalNotes" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Notas internas de recepción</label>
-        <textarea id="arrivalNotes" name="arrivalNotes" rows="3" class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors">{campaign?.arrivalNotes ?? ""}</textarea>
-        <p class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-          Útil cuando el producto llega a tienda. No debería reemplazar las condiciones visibles para el cliente.
-        </p>
-      </div>
-    </details>
-  </section>
-
-  <section class="bg-zinc-950 p-8 border border-zinc-900 shadow-2xl space-y-6">
-    <div class="space-y-2">
-      <p class="text-amber-500 text-[10px] font-black uppercase tracking-[0.4em]">
-        Publicación
-      </p>
-      <h2 class="text-white text-xl font-black uppercase tracking-widest">
-        Estado de la campaña
-      </h2>
-    </div>
-
-    {isEditing ? (
-      <div class="space-y-2">
-        <label for="status" class="block text-[10px] font-black text-amber-500 uppercase tracking-widest">Estado</label>
-        <select id="status" name="status" class="w-full bg-black border border-zinc-800 px-4 py-3 text-white text-sm focus:border-amber-500 focus:outline-none transition-colors appearance-none">
-          {statusOptions.map((status) => (
-            <option value={status.value} selected={status.value === campaign?.status}>{status.label}</option>
-          ))}
-        </select>
-        <p class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed">
-          Activa permite reservas si las fechas de preventa también lo permiten.
-        </p>
-      </div>
-    ) : (
-      <div class="border border-zinc-900 bg-black px-4 py-4">
-        <p class="text-white text-xs font-black uppercase tracking-widest">Se creará como borrador</p>
-        <p class="text-zinc-600 text-[10px] uppercase tracking-widest leading-relaxed mt-2">
-          Después podrás revisarla y activarla desde la edición de campaña.
-        </p>
-      </div>
-    )}
-
-    <div class="flex flex-col sm:flex-row gap-4 pt-4 border-t border-zinc-900">
-      <button type="submit" class="bg-white text-black text-[11px] font-black uppercase tracking-widest px-8 py-4 hover:bg-amber-500 transition-colors duration-300">
-        {isEditing ? "Guardar Preventa" : "Crear Preventa"}
+      <button
+        type="button"
+        class="mt-5 flex h-12 w-full items-center justify-between rounded-md border border-[#18181B] bg-[#09090B] px-4 text-left lg:hidden"
+        data-receipt-open
+      >
+        <span
+          class="text-[13px] leading-[18px] text-[#A1A1AA]"
+          data-receipt-strip
+        >
+          Recibo del cliente
+        </span>
+        <span class="text-[12px] text-[#71717A]">Ver</span>
       </button>
-      <a href="/admin/preorders" class="inline-flex items-center justify-center border border-zinc-800 text-zinc-400 text-[11px] font-black uppercase tracking-widest px-8 py-4 hover:text-white hover:border-zinc-600 transition-colors">
-        Cancelar
-      </a>
-    </div>
-  </section>
-</form>
 
-<script>
-  const productSelect = document.getElementById("productId") as HTMLSelectElement | null;
-  const depositTypeSelect = document.getElementById("depositType") as HTMLSelectElement | null;
-  const depositTypeHelp = document.getElementById("depositTypeHelp");
-  const depositValueField = document.getElementById("depositValueField");
-  const depositValueInput = document.getElementById("depositValue") as HTMLInputElement | null;
-  const depositValueLabel = document.getElementById("depositValueLabel");
-  const depositValueHelp = document.getElementById("depositValueHelp");
-  const depositValueSuffix = document.getElementById("depositValueSuffix");
-  const totalSlotsInput = document.getElementById("totalSlots") as HTMLInputElement | null;
-  const etaLabelInput = document.getElementById("etaLabel") as HTMLInputElement | null;
-  const etaStartInput = document.getElementById("etaStart") as HTMLInputElement | null;
-  const releaseDateInput = document.getElementById("releaseDate") as HTMLInputElement | null;
-  const previewDueNow = document.getElementById("previewDueNow");
-  const previewBalance = document.getElementById("previewBalance");
-  const previewEta = document.getElementById("previewEta");
-  const previewSlots = document.getElementById("previewSlots");
-  const isDepositLocked = Boolean(document.querySelector('input[type="hidden"][name="depositType"]'));
+      <div class="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-[1.7fr_1fr] lg:gap-12">
+        <div>
+          <section class="preorder-act">
+            <h2 class="preorder-act-title">Cuántas unidades abre esta preventa.</h2>
+            <p class="preorder-lead">
+              Es el cupo de esta campaña. No toca el stock del catálogo.
+            </p>
+            <label for="totalSlots" class="preorder-label">Unidades</label>
+            <div class="relative mt-2 w-[140px]">
+              <input
+                type="number"
+                id="totalSlots"
+                name="totalSlots"
+                min={Math.max(1, reservedUnits || 1)}
+                value={campaign?.totalSlots ?? ""}
+                required
+                class="preorder-input w-full pr-8"
+              />
+              <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[#71717A]">
+                u
+              </span>
+            </div>
+            <p class="preorder-help">
+              {
+                reservedUnits > 0
+                  ? `Ya hay ${reservedUnits} reservas. No puedes bajar de ${reservedUnits}.`
+                  : "Puedes subir o bajar mientras no haya reservas."
+              }
+            </p>
+          </section>
 
-  const moneyFormatter = new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  });
+          <section class="preorder-act">
+            <h2 class="preorder-act-title">Cómo reservan.</h2>
+            <p class="preorder-lead">
+              Elige una. El recibo muestra lo que paga el cliente hoy y lo que queda.
+            </p>
 
-  const getSelectedProductPrice = (): number => {
-    if (!productSelect) return 0;
-    const option = productSelect.selectedOptions[0];
-    const optionPrice = Number(option?.dataset.price ?? 0);
-    const selectedPrice = Number(productSelect.dataset.selectedPrice ?? 0);
-    return Number.isFinite(optionPrice) && optionPrice > 0 ? optionPrice : selectedPrice;
-  };
+            {
+              hasReservations && (
+                <p class="mb-4 text-[12px] leading-[18px] text-[#A1A1AA]">
+                  El abono quedó fijo porque ya hay reservas. Si necesitas
+                  cambiarlo, hay que resolver esas reservas primero.
+                </p>
+              )
+            }
 
-  const calculateDeposit = (price: number, type: string, value: number): number => {
-    if (type === "FULL") return price;
-    if (type === "FIXED") return Math.min(value, price);
-    return Math.min(price * (value / 100), price);
-  };
+            <div class="space-y-3">
+              {
+                depositChoices.map((choice) => (
+                  <label
+                    class:list={[
+                      "preorder-choice",
+                      depositType === choice.value && "is-selected",
+                    ]}
+                  >
+                    <input
+                      type="radio"
+                      name="depositType"
+                      value={choice.value}
+                      checked={depositType === choice.value}
+                      disabled={hasReservations}
+                    />
+                    <span class="preorder-choice-mark" aria-hidden="true">
+                      <span></span>
+                    </span>
+                    <span class="min-w-0">
+                      <span class="block text-[14px] font-semibold leading-5 text-[#FAFAFA]">
+                        {choice.title}
+                      </span>
+                      <span class="mt-1 block text-[12px] leading-[18px] text-[#71717A]">
+                        {choice.description}
+                      </span>
+                    </span>
+                  </label>
+                ))
+              }
+            </div>
+            {hasReservations && (
+              <input type="hidden" name="depositType" value={depositType} />
+            )}
 
-  const updateDepositControls = () => {
-    const type = depositTypeSelect?.value ?? "PERCENT";
-    const selectedOption = depositTypeSelect?.selectedOptions[0];
-    if (depositTypeHelp) {
-      depositTypeHelp.textContent =
-        selectedOption?.dataset.description ?? "Define cuánto paga el cliente al reservar.";
-    }
+            <div
+              id="depositValuePanel"
+              class:list={["preorder-choice-panel", depositType === "FULL" && "hidden"]}
+            >
+              <label for="depositValue" class="preorder-label" id="depositValueLabel">
+                {depositType === "FIXED" ? "Monto de abono" : "Porcentaje de abono"}
+              </label>
+              <div class="preorder-affix mt-2">
+                <span
+                  id="depositValuePrefix"
+                  class:list={[
+                    "preorder-affix-addon",
+                    depositType !== "FIXED" && "hidden",
+                  ]}
+                >
+                  Bs
+                </span>
+                <input
+                  type="number"
+                  id="depositValue"
+                  name="depositValue"
+                  min="0"
+                  step="0.01"
+                  value={campaign?.depositValue ?? ""}
+                  required={depositType !== "FULL"}
+                  readonly={hasReservations || depositType === "FULL"}
+                  class="preorder-input"
+                />
+                <span
+                  id="depositValueSuffix"
+                  class:list={[
+                    "preorder-affix-addon preorder-affix-suffix",
+                    depositType !== "PERCENT" && "hidden",
+                  ]}
+                >
+                  %
+                </span>
+              </div>
+              <p class="preorder-help" data-deposit-live>
+                {depositType === "FULL"
+                  ? `Pagan ${formatPrice(productPrice)} ahora. No queda saldo.`
+                  : `Hoy ${formatPrice(dueNow)} · después ${formatPrice(balance)}`}
+              </p>
+            </div>
 
-    if (!depositValueField || !depositValueInput || !depositValueLabel || !depositValueHelp || !depositValueSuffix) {
-      return;
-    }
+            <div class="preorder-choice-extra flex min-h-11 items-center justify-between gap-4">
+              <div class="min-w-0">
+                <p class="text-[14px] leading-[22px] text-[#FAFAFA]">
+                  También pueden pagar todo ahora, si quieren.
+                </p>
+                <p class="preorder-help mt-1">
+                  Si lo apagas, solo se cobra el abono mínimo.
+                </p>
+              </div>
+              <label class="preorder-toggle">
+                <span class="sr-only">Permitir pago completo</span>
+                <input
+                  type="checkbox"
+                  name="allowFullPayment"
+                  value="true"
+                  checked={campaign?.allowFullPayment ?? true}
+                />
+                <span class="preorder-toggle-track"></span>
+              </label>
+            </div>
+          </section>
 
-    if (type === "FULL") {
-      depositValueField.classList.add("opacity-60");
-      if (!isDepositLocked) {
-        depositValueInput.value = "0";
+          <section class="preorder-act">
+            <h2 class="preorder-act-title">Cuándo se puede reservar.</h2>
+            <p class="preorder-lead">
+              Fuera de estas fechas no entra nadie, aunque esté en vitrina.
+            </p>
+            <div class="flex flex-wrap items-end gap-4">
+              <div>
+                <label for="opensAt" class="preorder-label">Abre</label>
+                <input
+                  type="date"
+                  id="opensAt"
+                  name="opensAt"
+                  value={dateValue(campaign?.opensAt)}
+                  class="preorder-input mt-2 w-[168px]"
+                />
+              </div>
+              <span class="mb-[22px] hidden h-px w-6 bg-[#27272A] sm:block" aria-hidden="true"></span>
+              <div>
+                <label for="closesAt" class="preorder-label">Cierra</label>
+                <input
+                  type="date"
+                  id="closesAt"
+                  name="closesAt"
+                  value={dateValue(campaign?.closesAt)}
+                  class="preorder-input mt-2 w-[168px]"
+                />
+              </div>
+            </div>
+            <p class:list={["mt-3 text-[13px] leading-5", windowToneClass]} data-window-phrase>
+              {windowCopy.text}
+            </p>
+          </section>
+
+          <section class="preorder-act">
+            <h2 class="preorder-act-title">Qué les decimos de la llegada.</h2>
+            <p class="preorder-lead">
+              Una frase clara vale más que tres fechas. Eso es lo que se lee en la ficha.
+            </p>
+            <label for="etaLabel" class="preorder-label">Frase visible</label>
+            <input
+              type="text"
+              id="etaLabel"
+              name="etaLabel"
+              value={campaign?.etaLabel ?? ""}
+              placeholder="Llegada estimada diciembre 2026"
+              class="preorder-input preorder-input-copy mt-2 w-full"
+            />
+            <p class="preorder-help">Aparece tal cual en la ficha del producto.</p>
+
+            <p class="preorder-label mt-4">Ventana aproximada, opcional</p>
+            <div class="mt-2 flex flex-wrap items-end gap-4">
+              <div>
+                <label for="etaStart" class="preorder-label">Desde</label>
+                <input
+                  type="date"
+                  id="etaStart"
+                  name="etaStart"
+                  value={dateValue(campaign?.etaStart)}
+                  class="preorder-input mt-2 w-[168px]"
+                />
+              </div>
+              <div>
+                <label for="etaEnd" class="preorder-label">Hasta</label>
+                <input
+                  type="date"
+                  id="etaEnd"
+                  name="etaEnd"
+                  value={dateValue(campaign?.etaEnd)}
+                  class="preorder-input mt-2 w-[168px]"
+                />
+              </div>
+            </div>
+            <p class="preorder-help">
+              Si aún no tienes mes cerrado, deja solo la frase.
+            </p>
+          </section>
+
+          <section class="preorder-act">
+            <h2 class="preorder-act-title">Reglas que mostramos.</h2>
+            <p class="preorder-lead">
+              Dos o tres frases. Lo que el cliente acepta al reservar.
+            </p>
+            <label for="terms" class="preorder-label">Condiciones</label>
+            <textarea
+              id="terms"
+              name="terms"
+              rows="5"
+              placeholder="El abono confirma la reserva. El saldo se paga cuando el producto llegue a tienda."
+              class="preorder-input preorder-textarea mt-2 w-full"
+            >{campaign?.terms ?? ""}</textarea>
+            <p class="preorder-help">Se muestra en la ficha, bajo el precio.</p>
+          </section>
+
+          <details class="preorder-act preorder-internal">
+            <summary class="text-[13px] font-medium leading-[18px] text-[#71717A] transition-colors duration-150 hover:text-[#FAFAFA]">
+              Datos internos
+            </summary>
+            <div class="mt-5 space-y-5">
+              <div>
+                <label for="releaseDate" class="preorder-label">
+                  Fecha del fabricante
+                </label>
+                <input
+                  type="date"
+                  id="releaseDate"
+                  name="releaseDate"
+                  value={dateValue(campaign?.releaseDate)}
+                  class="preorder-input mt-2 w-[168px]"
+                />
+                <p class="preorder-help">
+                  No controla la preventa. Es referencia tuya.
+                </p>
+              </div>
+              <div>
+                <label for="arrivalNotes" class="preorder-label">
+                  Notas de recepción
+                </label>
+                <textarea
+                  id="arrivalNotes"
+                  name="arrivalNotes"
+                  rows="4"
+                  class="preorder-input preorder-textarea mt-2 w-full"
+                >{campaign?.arrivalNotes ?? ""}</textarea>
+                <p class="preorder-help">
+                  Para cuando la caja llegue a tienda. El cliente no lo ve.
+                </p>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <aside class="hidden lg:block">
+          <div class="sticky top-36 rounded-[14px] border border-[#18181B] bg-[#09090B] p-6">
+            <AdminPreorderReceipt
+              productName={productName}
+              productImage={productImage || null}
+              productPriceLabel={productPrice ? formatPrice(productPrice) : ""}
+              hoyLabel={formatPrice(dueNow)}
+              despuesLabel={despuesLabel}
+              etaLabel={etaLabel}
+              etaRangeLabel={etaRange}
+              windowLabel={
+                campaign?.opensAt || campaign?.closesAt
+                  ? `Se puede reservar ${formatDisplayDate(campaign?.opensAt) || "—"} – ${formatDisplayDate(campaign?.closesAt) || "—"}`
+                  : "Mientras esté en vitrina."
+              }
+              slotsLabel={slotsLabel}
+            />
+          </div>
+        </aside>
+      </div>
+
+      {
+        isEditing && campaign && (
+          <section class="mt-16 border-t border-[#18181B] pt-8">
+            <h2 class="text-[14px] font-semibold leading-5 text-[#FAFAFA]">
+              Eliminar esta preventa
+            </h2>
+            <p class="mt-2 max-w-[520px] text-[13px] leading-5 text-[#71717A]">
+              Puedes borrar solo la campaña o también la figura y sus fotos. Si
+              hay reservas pagadas, no se podrá.
+            </p>
+            <button
+              type="button"
+              data-preorder-delete-open
+              data-campaign-id={campaign.id}
+              data-product-name={productName}
+              data-has-reservations={hasReservations ? "true" : "false"}
+              class="mt-4 inline-flex h-9 items-center rounded-md border border-[#7F1D1D] px-3.5 text-[13px] font-medium leading-[18px] text-[#F87171] transition-colors duration-150 hover:bg-[rgba(248,113,113,0.08)]"
+            >
+              Eliminar preventa
+            </button>
+          </section>
+        )
       }
-      depositValueInput.readOnly = true;
-      depositValueLabel.textContent = "Valor de abono";
-      depositValueSuffix.textContent = "";
-      depositValueHelp.textContent = "No se solicita un abono separado: el cliente paga el total al reservar.";
-      return;
-    }
+    </div>
 
-    depositValueField.classList.remove("opacity-60");
-    if (!depositValueField.querySelector("p.text-zinc-500")) {
-      depositValueInput.readOnly = false;
-    }
+    <div
+      class="fixed inset-x-0 bottom-0 z-20 flex h-16 items-center gap-2 border-t border-[#18181B] bg-black px-4 lg:hidden"
+    >
+      <button type="button" data-discard class="preorder-ghost h-11">
+        Descartar
+      </button>
+      <button type="submit" data-save class="preorder-save inline-flex h-11 flex-1">
+        {isEditing ? "Guardar cambios" : "Crear preventa"}
+      </button>
+    </div>
+  </form>
 
-    if (type === "FIXED") {
-      depositValueLabel.textContent = "Monto de abono";
-      depositValueSuffix.textContent = "$";
-      depositValueHelp.textContent = "Monto fijo que el cliente paga ahora. No puede superar el precio del producto.";
-      return;
-    }
+  <dialog
+    data-receipt-dialog
+    class="w-[calc(100%-2rem)] max-w-md rounded-[14px] border border-[#27272A] bg-[#09090B] p-6 text-white backdrop:bg-black/70"
+  >
+    <div class="mb-4 flex items-center justify-between">
+      <p class="text-[13px] font-medium text-[#A1A1AA]">Recibo</p>
+      <button
+        type="button"
+        data-receipt-close
+        class="text-[13px] text-[#71717A] hover:text-[#FAFAFA]"
+      >
+        Cerrar
+      </button>
+    </div>
+    <AdminPreorderReceipt
+      productName={productName}
+      productImage={productImage || null}
+      productPriceLabel={productPrice ? formatPrice(productPrice) : ""}
+      hoyLabel={formatPrice(dueNow)}
+      despuesLabel={despuesLabel}
+      etaLabel={etaLabel}
+      etaRangeLabel={etaRange}
+      windowLabel={
+        campaign?.opensAt || campaign?.closesAt
+          ? `Se puede reservar ${formatDisplayDate(campaign?.opensAt) || "—"} – ${formatDisplayDate(campaign?.closesAt) || "—"}`
+          : "Mientras esté en vitrina."
+      }
+      slotsLabel={slotsLabel}
+    />
+  </dialog>
 
-    depositValueLabel.textContent = "Porcentaje de abono";
-    depositValueSuffix.textContent = "%";
-    depositValueHelp.textContent = "Ejemplo: 30 significa que el cliente paga el 30% ahora y el resto queda pendiente.";
-  };
+  {isEditing && <AdminPreorderDeleteDialog />}
 
-  const updatePreview = () => {
-    const price = getSelectedProductPrice();
-    const type = depositTypeSelect?.value ?? "PERCENT";
-    const value = Number(depositValueInput?.value ?? 0);
-    const deposit = calculateDeposit(price, type, Number.isFinite(value) ? value : 0);
-    const balance = Math.max(price - deposit, 0);
-    const slots = Number(totalSlotsInput?.value ?? 0);
-    const eta =
-      etaLabelInput?.value.trim() ||
-      etaStartInput?.value ||
-      releaseDateInput?.value ||
-      "Sin informar";
+  <div
+    id="preorder-toast"
+    class="pointer-events-none fixed bottom-20 left-1/2 z-40 hidden -translate-x-1/2 rounded-md border border-[#27272A] bg-[#09090B] px-4 py-2.5 text-[13px] font-medium leading-[18px] text-[#FAFAFA] lg:bottom-8"
+    role="status"
+  >
+    {isEditing ? "Preventa actualizada" : "Preventa creada"}
+  </div>
+</div>
 
-    if (previewDueNow) previewDueNow.textContent = moneyFormatter.format(deposit);
-    if (previewBalance) previewBalance.textContent = moneyFormatter.format(balance);
-    if (previewEta) previewEta.textContent = eta;
-    if (previewSlots) previewSlots.textContent = Number.isFinite(slots) && slots > 0 ? String(slots) : "0";
-  };
+{
+  !isEditing && (
+    <script
+      id="preorder-product-catalog"
+      type="application/json"
+      set:html={JSON.stringify(productCatalog).replace(/</g, "\\u003c")}
+    />
+  )
+}
 
-  const syncForm = () => {
-    updateDepositControls();
-    updatePreview();
-  };
+        <script src="../../../scripts/adminPreorderFicha.ts"></script>
 
-  [
-    productSelect,
-    depositTypeSelect,
-    depositValueInput,
-    totalSlotsInput,
-    etaLabelInput,
-    etaStartInput,
-    releaseDateInput,
-  ].forEach((element) => {
-    element?.addEventListener("input", syncForm);
-    element?.addEventListener("change", syncForm);
-  });
+<style is:global>
+  .preorder-ficha {
+    color-scheme: dark;
+    --preorder-radius: 6px;
+    --preorder-radius-lg: 14px;
+  }
 
-  syncForm();
-</script>
+  .preorder-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid #18181b;
+  }
+
+  .preorder-act + .preorder-act {
+    margin-top: 48px;
+    padding-top: 40px;
+    border-top: 1px solid #18181b;
+  }
+
+  .preorder-act-title {
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: #fafafa;
+  }
+
+  .preorder-lead {
+    margin-top: 8px;
+    margin-bottom: 28px;
+    font-size: 14px;
+    line-height: 22px;
+    font-weight: 400;
+    color: #a1a1aa;
+  }
+
+  .preorder-label {
+    display: block;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+    color: #a1a1aa;
+  }
+
+  .preorder-help {
+    margin-top: 8px;
+    font-size: 12px;
+    line-height: 18px;
+    color: #71717a;
+  }
+
+  .preorder-input {
+    height: 44px;
+    border: 1px solid #27272a;
+    border-radius: var(--preorder-radius);
+    background: #000;
+    padding: 0 12px;
+    font-size: 14px;
+    line-height: 20px;
+    color: #fafafa;
+    transition: border-color 150ms ease, background-color 150ms ease;
+  }
+
+  .preorder-input-copy {
+    height: 48px;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 500;
+  }
+
+  textarea.preorder-textarea {
+    height: auto;
+    min-height: 128px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 22px;
+    resize: vertical;
+  }
+
+  .preorder-affix {
+    display: inline-flex;
+    width: 240px;
+    max-width: 100%;
+    overflow: hidden;
+    border: 1px solid #27272a;
+    border-radius: var(--preorder-radius);
+    background: #000;
+    transition: border-color 150ms ease;
+  }
+
+  .preorder-affix:focus-within {
+    border-color: #d4af37;
+  }
+
+  .preorder-affix .preorder-input {
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 22px;
+  }
+
+  .preorder-affix .preorder-input:focus {
+    border-color: transparent;
+  }
+
+  .preorder-affix-addon {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    padding: 0 12px;
+    border-right: 1px solid #27272a;
+    background: #09090b;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 18px;
+    color: #71717a;
+  }
+
+  .preorder-affix-suffix {
+    border-right: 0;
+    border-left: 1px solid #27272a;
+  }
+
+  .preorder-affix-addon.hidden {
+    display: none;
+  }
+
+  .preorder-affix .preorder-input::-webkit-outer-spin-button,
+  .preorder-affix .preorder-input::-webkit-inner-spin-button {
+    margin: 0;
+    appearance: none;
+  }
+
+  .preorder-affix .preorder-input[type="number"] {
+    appearance: textfield;
+  }
+
+  .preorder-input::placeholder {
+    color: #52525b;
+  }
+
+  .preorder-input:hover {
+    border-color: #3f3f46;
+  }
+
+  .preorder-input:focus {
+    border-color: #d4af37;
+    outline: none;
+  }
+
+  .preorder-input:read-only,
+  .preorder-input:disabled {
+    color: #52525b;
+    border-color: #18181b;
+  }
+
+  .preorder-ghost {
+    height: 36px;
+    align-items: center;
+    padding: 0 12px;
+    border: 1px solid #27272a;
+    border-radius: var(--preorder-radius);
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+    color: #a1a1aa;
+    transition: border-color 150ms ease, color 150ms ease;
+  }
+
+  button[data-discard] {
+    display: none;
+  }
+
+  form[data-dirty="true"] button[data-discard] {
+    display: inline-flex;
+  }
+
+  .preorder-ghost:hover {
+    border-color: #3f3f46;
+    color: #fafafa;
+  }
+
+  .preorder-save {
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    border-radius: var(--preorder-radius);
+    background: #fafafa;
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #000;
+    transition: background-color 150ms ease, opacity 150ms ease;
+  }
+
+  form[data-editing="false"] .preorder-save,
+  form[data-dirty="true"] .preorder-save,
+  .preorder-save.is-dirty {
+    background: #d4af37;
+  }
+
+  .preorder-save:disabled {
+    opacity: 0.45;
+    cursor: wait;
+  }
+
+  .preorder-segment {
+    display: inline-flex;
+    overflow: hidden;
+    border: 1px solid #27272a;
+    border-radius: var(--preorder-radius);
+  }
+
+  .preorder-segment button {
+    display: inline-flex;
+    height: 36px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 500;
+    color: #a1a1aa;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .preorder-segment button[aria-pressed="true"] {
+    background: rgba(212, 175, 55, 0.12);
+    color: #fafafa;
+  }
+
+  .preorder-segment button [data-status-dot] {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: #52525b;
+  }
+
+  .preorder-segment button [data-status-dot="live"] {
+    background: #4ade80;
+  }
+
+  .preorder-segment button [data-status-dot="paused"] {
+    background: #a1a1aa;
+  }
+
+  .preorder-choice {
+    display: flex;
+    cursor: pointer;
+    align-items: flex-start;
+    gap: 14px;
+    min-height: 72px;
+    border: 1px solid #27272a;
+    border-radius: var(--preorder-radius);
+    padding: 16px 18px;
+    transition: border-color 150ms ease, background-color 150ms ease;
+  }
+
+  .preorder-choice:hover {
+    border-color: #3f3f46;
+    background: #18181b;
+  }
+
+  .preorder-choice:has(input:checked),
+  .preorder-choice.is-selected {
+    border-color: #d4af37;
+    background: rgba(212, 175, 55, 0.12);
+  }
+
+  .preorder-choice input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .preorder-choice-mark {
+    display: flex;
+    height: 16px;
+    width: 16px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+    border: 1px solid #3f3f46;
+    border-radius: 4px;
+    background: transparent;
+  }
+
+  .preorder-choice:has(input:checked) .preorder-choice-mark,
+  .preorder-choice.is-selected .preorder-choice-mark {
+    border-color: #d4af37;
+    background: #d4af37;
+  }
+
+  .preorder-choice:has(input:checked) .preorder-choice-mark span,
+  .preorder-choice.is-selected .preorder-choice-mark span {
+    display: block;
+    height: 8px;
+    width: 8px;
+    border-radius: 2px;
+    background: #000;
+  }
+
+  .preorder-choice:has(input:disabled) {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .preorder-choice-panel {
+    padding: 28px 0 0;
+  }
+
+  .preorder-choice-extra {
+    margin-top: 32px;
+    padding-top: 28px;
+    border-top: 1px solid #18181b;
+  }
+
+  .preorder-toggle {
+    position: relative;
+    display: inline-flex;
+    height: 20px;
+    width: 36px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .preorder-toggle input {
+    position: absolute;
+    opacity: 0;
+  }
+
+  .preorder-toggle-track {
+    display: block;
+    height: 20px;
+    width: 36px;
+    border-radius: 9999px;
+    background: #27272a;
+    transition: background-color 150ms ease;
+  }
+
+  .preorder-toggle-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    height: 16px;
+    width: 16px;
+    border-radius: 9999px;
+    background: #fafafa;
+    transition: transform 150ms ease, background-color 150ms ease;
+  }
+
+  .preorder-toggle input:checked + .preorder-toggle-track {
+    background: #d4af37;
+  }
+
+  .preorder-toggle input:checked + .preorder-toggle-track::after {
+    transform: translateX(16px);
+    background: #000;
+  }
+
+  .preorder-receipt-overline {
+    margin-bottom: 16px;
+    font-size: 11px;
+    line-height: 14px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #71717a;
+  }
+
+  .preorder-more {
+    position: relative;
+    width: fit-content;
+  }
+
+  .preorder-more summary {
+    display: inline-flex;
+    height: 36px;
+    cursor: pointer;
+    list-style: none;
+    align-items: center;
+    padding: 0 12px;
+    border: 1px solid #27272a;
+    border-radius: var(--preorder-radius);
+    font-size: 13px;
+    font-weight: 500;
+    color: #a1a1aa;
+  }
+
+  .preorder-more summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .preorder-more-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 20;
+    min-width: 220px;
+    overflow: hidden;
+    border: 1px solid #27272a;
+    border-radius: var(--preorder-radius);
+    background: #000;
+    padding: 4px;
+  }
+
+  .preorder-more-menu button {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 4px;
+    text-align: left;
+    font-size: 13px;
+    line-height: 18px;
+    color: #a1a1aa;
+  }
+
+  .preorder-more-menu button:hover {
+    background: #18181b;
+    color: #fafafa;
+  }
+
+  .preorder-internal summary {
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .preorder-internal summary::-webkit-details-marker {
+    display: none;
+  }
+
+  #product-results button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    text-align: left;
+  }
+
+  #product-results button:hover,
+  #product-results button[aria-selected="true"] {
+    background: #18181b;
+  }
+</style>

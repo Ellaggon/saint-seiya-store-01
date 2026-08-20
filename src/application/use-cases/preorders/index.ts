@@ -9,3 +9,4 @@ export * from "./GetPreorderDetail";
 export * from "./ListPreorderReservations";
 export * from "./RegisterManualPreorderPayment";
 export * from "./ExpirePendingReservations";
+export * from "./DeletePreorderCampaign";

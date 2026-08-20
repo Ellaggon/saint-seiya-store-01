@@ -1,0 +1,219 @@
+---
+interface Props {
+  action?: string;
+}
+
+const { action = "/admin/preorders/actions" } = Astro.props;
+---
+
+<dialog
+  id="preorder-delete-dialog"
+  class="preorder-delete-dialog relative z-[90] w-[calc(100%-1.5rem)] max-w-lg overflow-hidden rounded-[14px] border border-zinc-800 bg-black p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.8)]"
+  aria-labelledby="preorder-delete-title"
+>
+  <div
+    class="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/70 to-transparent"
+    aria-hidden="true"
+  >
+  </div>
+  <form method="POST" action={action} class="flex flex-col">
+    <input type="hidden" name="_action" value="delete" />
+    <input type="hidden" name="id" data-preorder-delete-id />
+
+    <div class="border-b border-zinc-900 px-6 py-5">
+      <div class="flex items-start justify-between gap-6">
+        <div class="min-w-0 space-y-2">
+          <p class="text-[10px] font-black uppercase tracking-[0.35em] text-red-500">
+            Zona de riesgo
+          </p>
+          <h2
+            id="preorder-delete-title"
+            class="text-xl font-black uppercase tracking-[0.08em] text-white"
+          >
+            Eliminar preventa
+          </h2>
+          <p
+            data-preorder-delete-name
+            class="truncate text-xs leading-5 text-zinc-400"
+          >
+          </p>
+        </div>
+        <button
+          type="button"
+          data-preorder-delete-close
+          class="p-2 text-zinc-500 transition-colors hover:text-amber-500"
+          aria-label="Cerrar"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="space-y-4 px-6 py-6">
+      <p class="text-xs leading-5 text-zinc-500">
+        Elige el alcance. Si hay reservas o pagos confirmados, el borrado se
+        bloqueará para conservar el historial.
+      </p>
+
+      <p
+        data-preorder-delete-warning
+        class="hidden border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-amber-400"
+      >
+        Esta campaña tiene reservas activas o pendientes.
+      </p>
+
+      <fieldset class="space-y-3">
+        <legend class="sr-only">Alcance de la eliminación</legend>
+        <label class="block cursor-pointer">
+          <input
+            type="radio"
+            name="deleteProduct"
+            value="false"
+            checked
+            class="peer sr-only"
+            data-preorder-delete-scope
+          />
+          <div class="border border-zinc-800 bg-zinc-950 px-4 py-4 transition-colors peer-checked:border-amber-500 peer-focus-visible:border-amber-500">
+            <p class="text-[11px] font-black uppercase tracking-widest text-white">
+              Solo esta preventa
+            </p>
+            <p class="mt-2 text-xs leading-5 text-zinc-500">
+              Borra la campaña. El producto permanece en el catálogo y puedes
+              publicarlo o usarlo de nuevo.
+            </p>
+          </div>
+        </label>
+        <label class="block cursor-pointer">
+          <input
+            type="radio"
+            name="deleteProduct"
+            value="true"
+            class="peer sr-only"
+            data-preorder-delete-scope
+          />
+          <div class="border border-zinc-800 bg-zinc-950 px-4 py-4 transition-colors peer-checked:border-red-500 peer-focus-visible:border-red-500">
+            <p class="text-[11px] font-black uppercase tracking-widest text-red-400">
+              Preventa y catálogo
+            </p>
+            <p class="mt-2 text-xs leading-5 text-zinc-500">
+              También elimina la figura y sus imágenes en Cloudflare R2. No se
+              puede deshacer.
+            </p>
+          </div>
+        </label>
+      </fieldset>
+    </div>
+
+    <div class="flex flex-col gap-3 border-t border-zinc-900 px-6 py-5 sm:flex-row sm:justify-end">
+      <button
+        type="button"
+        data-preorder-delete-close
+        class="border border-zinc-800 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-400 transition-colors hover:border-zinc-600 hover:text-white"
+      >
+        Cancelar
+      </button>
+      <button
+        type="submit"
+        data-preorder-delete-submit
+        class="bg-red-600 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:bg-zinc-800 disabled:text-zinc-500"
+      >
+        Eliminar preventa
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<style>
+  .preorder-delete-dialog {
+    margin: auto;
+  }
+
+  .preorder-delete-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+  }
+</style>
+
+<script>
+  const bindPreorderDeleteDialog = () => {
+    const dialog = document.getElementById(
+      "preorder-delete-dialog",
+    ) as HTMLDialogElement | null;
+    if (!dialog || dialog.dataset.bound === "1") return;
+    dialog.dataset.bound = "1";
+
+    const form = dialog.querySelector("form");
+    const submitBtn = dialog.querySelector<HTMLButtonElement>(
+      "[data-preorder-delete-submit]",
+    );
+
+    const closeDialog = () => {
+      if (dialog.open) dialog.close();
+    };
+
+    const syncSubmitLabel = () => {
+      if (!submitBtn || !form) return;
+      const selected = form.querySelector<HTMLInputElement>(
+        'input[name="deleteProduct"]:checked',
+      );
+      submitBtn.textContent =
+        selected?.value === "true"
+          ? "Eliminar preventa y catálogo"
+          : "Eliminar preventa";
+    };
+
+    const openDialog = (trigger: HTMLElement) => {
+      const idInput = dialog.querySelector<HTMLInputElement>(
+        "[data-preorder-delete-id]",
+      );
+      const nameEl = dialog.querySelector("[data-preorder-delete-name]");
+      const warningEl = dialog.querySelector("[data-preorder-delete-warning]");
+      if (!form || !idInput) return;
+      idInput.value = trigger.dataset.campaignId ?? "";
+      if (nameEl) nameEl.textContent = trigger.dataset.productName ?? "";
+      if (warningEl) {
+        warningEl.classList.toggle(
+          "hidden",
+          trigger.dataset.hasReservations !== "true",
+        );
+      }
+      const campaignOnly = form.querySelector<HTMLInputElement>(
+        'input[name="deleteProduct"][value="false"]',
+      );
+      if (campaignOnly) campaignOnly.checked = true;
+      if (submitBtn) submitBtn.disabled = false;
+      syncSubmitLabel();
+      dialog.showModal();
+    };
+
+    document.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement | null;
+      const currentDialog = document.getElementById(
+        "preorder-delete-dialog",
+      ) as HTMLDialogElement | null;
+      if (!currentDialog) return;
+
+      const trigger = target?.closest<HTMLElement>("[data-preorder-delete-open]");
+      if (trigger) {
+        event.preventDefault();
+        openDialog(trigger);
+        return;
+      }
+      if (target?.closest("[data-preorder-delete-close]")) {
+        event.preventDefault();
+        closeDialog();
+      }
+    });
+
+    form?.addEventListener("change", syncSubmitLabel);
+    form?.addEventListener("submit", () => {
+      if (submitBtn) submitBtn.disabled = true;
+    });
+  };
+
+  bindPreorderDeleteDialog();
+  document.addEventListener("astro:page-load", bindPreorderDeleteDialog);
+</script>

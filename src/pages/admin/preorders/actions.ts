@@ -87,6 +87,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (!response.ok) return redirectWithError(request, "/admin/preorders/new", response);
+
+    const payload = (await response.json().catch(() => null)) as {
+      data?: { id?: string };
+    } | null;
+    const createdId = payload?.data?.id;
+    if (createdId) {
+      const url = new URL(`/admin/preorders/${createdId}`, request.url);
+      url.searchParams.set("saved", "1");
+      return Response.redirect(url, 303);
+    }
     return redirectTo(request, "/admin/preorders");
   }
 
@@ -102,7 +112,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!response.ok) {
       return redirectWithError(request, `/admin/preorders/${id}`, response);
     }
-    return redirectTo(request, `/admin/preorders/${id}`);
+    const url = new URL(`/admin/preorders/${id}`, request.url);
+    url.searchParams.set("saved", "1");
+    return Response.redirect(url, 303);
   }
 
   if (action === "close") {
@@ -114,9 +126,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return redirectTo(request, "/admin/preorders");
   }
 
-  if (action === "archive") {
+  if (action === "delete" || action === "archive") {
+    const deleteProduct = formData.get("deleteProduct") === "true";
     const response = await apiFetch(request, `/api/admin/preorders/${id}`, {
       method: "DELETE",
+      body: JSON.stringify({ deleteProduct }),
     });
     if (!response.ok) return redirectWithError(request, "/admin/preorders", response);
     return redirectTo(request, "/admin/preorders");

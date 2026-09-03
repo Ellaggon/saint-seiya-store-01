@@ -10,14 +10,10 @@ interface CacheEntry<T> {
   expires: number;
 }
 
-const CATALOG_METADATA_TTL_MS = 10 * 60 * 1000;
 const CATALOG_PRODUCTS_TTL_MS = 60 * 1000;
 const CATALOG_PRODUCTS_CACHE_LIMIT = 50;
 const CACHEABLE_PAGE = 1;
 const CACHEABLE_PAGE_SIZE = 24;
-
-let metadataCache: CacheEntry<CatalogMetadataDTO> | null = null;
-let metadataInFlight: Promise<CatalogMetadataDTO> | null = null;
 
 const productCache = new Map<string, CacheEntry<CatalogProductsResponseDTO>>();
 const productInFlight = new Map<string, Promise<CatalogProductsResponseDTO>>();
@@ -60,8 +56,6 @@ const rememberProductResult = (
 };
 
 export const invalidateCatalogCache = (): void => {
-  metadataCache = null;
-  metadataInFlight = null;
   productCache.clear();
   productInFlight.clear();
 };
@@ -101,27 +95,8 @@ export class CatalogQueryService {
   }
 
   async getCatalogMetadata(): Promise<CatalogMetadataDTO> {
-    const now = Date.now();
-
-    if (metadataCache && metadataCache.expires > now) {
-      return metadataCache.value;
-    }
-
-    if (metadataInFlight) return metadataInFlight;
-
-    metadataInFlight = this.repository
-      .getCatalogMetadata()
-      .then((filters) => {
-        metadataCache = {
-          value: filters,
-          expires: Date.now() + CATALOG_METADATA_TTL_MS,
-        };
-        return filters;
-      })
-      .finally(() => {
-        metadataInFlight = null;
-      });
-
-    return metadataInFlight;
+    // Category banners are managed from the admin panel. Keeping this data in
+    // process memory causes Vercel instances to disagree after an update.
+    return this.repository.getCatalogMetadata();
   }
 }

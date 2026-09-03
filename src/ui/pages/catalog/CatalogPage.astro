@@ -21,19 +21,13 @@ const getCatalogPageData = new GetCatalogPageDataUseCase(queryService);
 // Read search params for filtering
 const params = Astro.url.searchParams;
 const currentFilters = parseCatalogFilters(params, { page: 1, pageSize: 24 });
-const isBaseCatalogPage = params.toString().length === 0;
-
 Astro.response.headers.set(
   "Cache-Control",
-  isBaseCatalogPage
-    ? "public, max-age=0, s-maxage=300, stale-while-revalidate=600"
-    : "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
+  "no-store, max-age=0, must-revalidate",
 );
 Astro.response.headers.set(
   "CDN-Cache-Control",
-  isBaseCatalogPage
-    ? "public, max-age=300, stale-while-revalidate=600"
-    : "public, max-age=60, stale-while-revalidate=300",
+  "no-store",
 );
 
 // Execute Use Case for consolidated data fetching and caching

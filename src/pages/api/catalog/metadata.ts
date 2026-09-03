@@ -17,7 +17,7 @@ export const GET: APIRoute = async () => {
     // Keep this unwrapped until all consumers are migrated to { data }.
     return legacySuccess(data, {
       headers: {
-        "Cache-Control": "public, max-age=60, stale-while-revalidate=120",
+        "Cache-Control": "no-store, max-age=0, must-revalidate",
       },
     });
   } catch (error: unknown) {

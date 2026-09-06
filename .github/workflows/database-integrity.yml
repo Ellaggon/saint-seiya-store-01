@@ -34,6 +34,12 @@ jobs:
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/saint_ci?schema=public
       NODE_ENV: test
       SMOKE_BASE_URL: http://127.0.0.1:4322
+      PUBLIC_SITE_URL: http://127.0.0.1:4322
+      # Placeholder values so Astro middleware can load; smoke hits public routes only.
+      SUPABASE_URL: http://127.0.0.1:54321
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+      PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
       MIGRATION_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
     steps:
       - uses: actions/checkout@v4
